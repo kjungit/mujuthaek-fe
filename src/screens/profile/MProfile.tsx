@@ -7,6 +7,8 @@ import {
   ChipGroup,
   KidsStepper,
   PriorityChips,
+  RankCriteriaFields,
+  StatusChips,
   UnitInput,
   pInput,
   pLabel,
@@ -94,6 +96,7 @@ export function MProfile() {
               />
               <span className="text-text-sub text-[13px]">주민등록등본에서 확인할 수 있어요</span>
             </div>
+            <StatusChips form={form} />
           </div>
         )}
 
@@ -125,6 +128,7 @@ export function MProfile() {
                 <input type="checkbox" className="m-[3px_3px_3px_4px] size-[18px]" /> 잘 모르겠어요
               </span>
             </label>
+            <RankCriteriaFields form={form} compact />
           </div>
         )}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { RankCriteria } from "@/mocks/profile";
 import { useProfileFormData } from "./queries";
 
 export type Head = "head" | "member";
@@ -17,6 +18,20 @@ export const marryOptions: { key: Marry; label: string }[] = [
   { key: "planned", label: "결혼 예정" },
 ];
 
+/** 체크한 세부 요건으로 가장 높은 순위를 찾아요. 없으면 null */
+export function estimateRank(criteria: RankCriteria[], checked: string[]) {
+  const sorted = [...criteria].sort((a, b) => a.rank - b.rank);
+  const hit = sorted.find((c) =>
+    c.rule === "any"
+      ? c.items.some((i) => checked.includes(i.key))
+      : c.items.every((i) => checked.includes(i.key)),
+  );
+  return hit?.rank ?? null;
+}
+
+const toggle = (xs: string[], x: string) =>
+  xs.includes(x) ? xs.filter((v) => v !== x) : [...xs, x];
+
 /** 조건 입력 3단계 상태 (PC/모바일 공통) */
 export function useProfileForm() {
   const { data } = useProfileFormData();
@@ -26,6 +41,8 @@ export function useProfileForm() {
   const [kids, setKids] = useState(0);
   const [prios, setPrios] = useState<string[]>(data.defaultPriorities);
   const [anon, setAnon] = useState(true);
+  const [statuses, setStatuses] = useState<string[]>([]);
+  const [rankChecks, setRankChecks] = useState<string[]>([]);
 
   return {
     data,
@@ -45,6 +62,11 @@ export function useProfileForm() {
     prios,
     togglePrio: (p: string) =>
       setPrios((xs) => (xs.includes(p) ? xs.filter((x) => x !== p) : [...xs, p])),
+    statuses,
+    toggleStatus: (s: string) => setStatuses((xs) => toggle(xs, s)),
+    rankChecks,
+    toggleRankCheck: (key: string) => setRankChecks((xs) => toggle(xs, key)),
+    estimatedRank: estimateRank(data.rankCriteria, rankChecks),
     anon,
     setAnon,
   };
