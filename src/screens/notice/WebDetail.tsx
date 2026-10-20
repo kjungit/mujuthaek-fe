@@ -1,0 +1,569 @@
+"use client";
+
+import Link from "next/link";
+import {
+  ArrowRight,
+  Building,
+  ChevronRight,
+  CircleAlert,
+  CircleCheck,
+  Clock4,
+  FileText,
+  Heart,
+  MapPin,
+  MessageSquareWarning,
+  TrainFront,
+  Trees,
+  type LucideIcon,
+} from "lucide-react";
+import { WebHeader } from "@/components/layout/WebHeader";
+import { WebMain, WebPage } from "@/components/layout/Responsive";
+import { NoticeTags } from "@/components/notice/NoticeTags";
+import { WebUnitFilter } from "@/components/notice/UnitFilter";
+import { WebRankCard } from "@/components/notice/RankCard";
+import { VerdictBadge } from "@/components/ui/Badge";
+import { useNotice } from "@/features/notice/queries";
+import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
+import { cn } from "@/lib/cn";
+import { routes } from "@/lib/routes";
+import type { NoticeLifeItem, NoticeUnit } from "@/mocks/notice";
+
+const lifeIcon: Record<NoticeLifeItem["kind"], LucideIcon> = {
+  commute: Clock4,
+  station: TrainFront,
+  park: Trees,
+};
+
+const sectionTitle = "tracking-title m-0 text-[21px] font-extrabold";
+
+/** 지도 그림 위 블록 이름 */
+const mapBlocks = [
+  { label: "A-1블록", box: "left-[8%] top-[12%] w-[36%] h-[34%]", text: "left-[10%] top-[14%]" },
+  { label: "A-2블록", box: "left-[54%] top-[16%] w-[34%] h-[30%]", text: "left-[56%] top-[18%]" },
+  { label: "B-1블록", box: "left-[24%] top-[58%] w-[40%] h-[30%]", text: "left-[26%] top-[60%]" },
+];
+
+function BlockUnits({ units }: { units: NoticeUnit[] }) {
+  const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
+
+  return (
+    <section
+      aria-label="공급 주택 목록"
+      className="rounded-card-lg bg-surface flex flex-col gap-[16px] px-[30px] pt-[26px] pb-[30px]"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-[12px]">
+        <div className="flex flex-col gap-[4px]">
+          <h2 className={sectionTitle}>
+            공급 주택 목록 <span className="text-brand">{countAll}곳</span>
+          </h2>
+          <span className="text-text-sub text-[14px]">집을 고르면 지도에서 위치를 보여드려요</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-[6px]">
+          <WebUnitFilter
+            onlyOk={onlyOk}
+            setOnlyOk={setOnlyOk}
+            countAll={countAll}
+            countOk={countOk}
+          />
+          <button
+            type="button"
+            className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent px-[6px] text-[14px] font-bold"
+          >
+            <FileText size={16} aria-hidden />
+            원본 엑셀
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-stretch gap-[14px]">
+        <div
+          role="group"
+          aria-label="주택 목록"
+          className="box-content flex max-h-[400px] min-w-0 flex-col gap-[8px] overflow-y-auto pr-[2px]"
+          style={{ flex: "1 1 270px" }}
+        >
+          {shown.map((u) => {
+            const on = u.id === selected?.id;
+            return (
+              <button
+                key={u.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => select(u.id)}
+                className={cn(
+                  "text-text rounded-tile flex cursor-pointer flex-col gap-[4px] border-2 border-solid px-[14px] py-[12px] text-left",
+                  on ? "bg-row-selected border-brand" : "bg-surface border-line-soft",
+                )}
+              >
+                <span className="flex w-full items-center justify-between gap-[8px]">
+                  <span className="text-[15px] font-bold">{u.name}</span>
+                  <span
+                    className={cn(
+                      "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
+                      u.ok ? "bg-ok-bg text-ok-text" : "bg-fill text-text-sub",
+                    )}
+                  >
+                    {unitStatus(u)}
+                  </span>
+                </span>
+                <span className="text-text-sub text-[13px]">
+                  {u.type} · {u.area} · {u.floor}
+                </span>
+                <span className="text-[14px] font-bold">
+                  보증금 {u.deposit} · {u.rent}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div
+          aria-label="주택 위치 지도"
+          role="group"
+          className="bg-map-road relative h-[400px] min-w-0 overflow-hidden rounded-[20px]"
+          style={{ flex: "999 1 360px" }}
+        >
+          {mapBlocks.map((b) => (
+            <span
+              key={b.label}
+              aria-hidden
+              className={cn("bg-map-road-2 absolute rounded-[18px]", b.box)}
+            />
+          ))}
+          <span
+            aria-hidden
+            className="bg-map-park absolute top-[56%] left-[70%] h-[26%] w-[22%] rounded-[45%_55%_50%_50%]"
+          />
+          <span aria-hidden className="absolute top-1/2 right-0 left-0 h-[10px] bg-white" />
+          <span aria-hidden className="absolute top-0 bottom-0 left-[49%] w-[9px] bg-white" />
+          {mapBlocks.map((b) => (
+            <span
+              key={b.label}
+              aria-hidden
+              className={cn("text-text-tertiary absolute text-[12px] font-bold", b.text)}
+            >
+              {b.label}
+            </span>
+          ))}
+          <span aria-hidden className="text-brand-strong absolute top-[66%] left-[73%] text-[12px]">
+            근린공원
+          </span>
+          <span
+            aria-hidden
+            className="rounded-tag text-text-sub absolute top-[52%] left-[51%] bg-white px-[6px] py-[2px] text-[12px] font-bold"
+          >
+            ○○역
+          </span>
+
+          {shown
+            .filter((u) => u.id !== selected?.id)
+            .map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                aria-label={`${u.name}, ${unitStatus(u)} 위치 보기`}
+                onClick={() => select(u.id)}
+                className="absolute mt-[-15px] ml-[-15px] flex size-[30px] cursor-pointer items-center justify-center border-0 bg-transparent p-0"
+                style={{ left: `${u.x}%`, top: `${u.y}%` }}
+              >
+                <span
+                  className={cn(
+                    "rounded-pill box-content size-[16px] border-[3px] border-solid border-white shadow-[0_2px_6px_rgba(25,31,40,0.25)]",
+                    u.ok ? "bg-brand" : "bg-placeholder-icon",
+                  )}
+                />
+              </button>
+            ))}
+
+          {selected && (
+            <div
+              className="pointer-events-none absolute flex -translate-x-1/2 -translate-y-full flex-col items-center"
+              style={{ left: `${selected.x}%`, top: `${selected.y}%` }}
+            >
+              <span className="flex flex-col gap-[2px] rounded-sm bg-white px-[11px] py-[7px] whitespace-nowrap shadow-[0_6px_18px_rgba(25,31,40,0.18)]">
+                <span className="text-[13px] font-extrabold">{selected.name}</span>
+                <span className="text-text-sub text-[12px]">
+                  {selected.deposit} · {selected.rent}
+                </span>
+              </span>
+              <MapPin
+                size={36}
+                strokeWidth={1.5}
+                aria-hidden
+                className="fill-brand mt-[2px] text-white drop-shadow-[0_3px_4px_rgba(25,31,40,0.3)]"
+              />
+            </div>
+          )}
+
+          <div className="text-text-sub absolute bottom-[12px] left-[12px] flex gap-[10px] rounded-[10px] bg-white px-[10px] py-[6px] text-[12px]">
+            <span className="inline-flex items-center gap-[5px]">
+              <span className="rounded-pill bg-brand size-[10px]" />
+              신청 가능
+            </span>
+            <span className="inline-flex items-center gap-[5px]">
+              <span className="rounded-pill bg-placeholder-icon size-[10px]" />
+              다른 대상
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {selected && (
+        <div
+          aria-live="polite"
+          className="bg-bg flex flex-wrap items-center justify-between gap-[14px] rounded-[20px] px-[20px] py-[18px]"
+        >
+          <div className="flex min-w-0 flex-col gap-[5px]">
+            <span className="flex flex-wrap items-center gap-[8px]">
+              <span className="tracking-title text-[18px] font-extrabold">{selected.name}</span>
+              <span
+                className={cn(
+                  "rounded-badge px-[8px] py-[3px] text-[12px] font-bold",
+                  selected.ok ? "bg-ok-bg text-ok-text" : "bg-surface text-text-sub",
+                )}
+              >
+                {unitStatus(selected)}
+              </span>
+            </span>
+            <span className="text-text-sub text-[14px]">
+              {selected.type} {selected.area} · {selected.floor} · {selected.station}
+            </span>
+            <span className="text-[15px]">
+              보증금 <strong>{selected.deposit}</strong> · <strong>{selected.rent}</strong> · 준비할
+              돈 <strong className="text-brand-strong">{selected.prep}</strong>
+            </span>
+          </div>
+          <div className="flex gap-[8px]">
+            <Link
+              href={routes.life}
+              className="text-text hover:text-text inline-flex min-h-[46px] items-center gap-[6px] rounded-sm bg-white px-[14px] text-[14px] font-bold no-underline"
+            >
+              <MapPin size={17} aria-hidden />이 집 생활권
+            </Link>
+            <button
+              type="button"
+              className="bg-brand inline-flex min-h-[46px] cursor-pointer items-center gap-[6px] rounded-sm border-0 px-[14px] text-[14px] font-bold text-white"
+            >
+              <ArrowRight size={17} strokeWidth={2.2} aria-hidden />
+              길찾기
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function WebDetail({ id }: { id: string }) {
+  const { data: n } = useNotice(id);
+  if (n.kind !== "standard") return null;
+
+  return (
+    <WebPage>
+      <WebHeader mode="home" current={routes.homes} unread={3} />
+      <WebMain className="gap-[20px] pt-[24px] pb-[80px]">
+        <nav
+          aria-label="위치"
+          className="text-text-tertiary flex items-center gap-[4px] text-[14px]"
+        >
+          <Link
+            href={routes.homes}
+            className="text-text-sub hover:text-text-sub inline-flex min-h-[36px] items-center font-semibold no-underline"
+          >
+            내 집
+          </Link>
+          <ChevronRight size={16} aria-hidden />
+          <span aria-current="page">{n.title}</span>
+        </nav>
+
+        <div className="flex flex-wrap items-start gap-[28px]">
+          <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 600px" }}>
+            <section aria-label="공고 요약" className="rounded-card-lg bg-surface overflow-hidden">
+              <div className="bg-placeholder-bg text-off flex h-[280px] items-center justify-center">
+                <Building size={64} strokeWidth={1.2} aria-hidden />
+              </div>
+              <div className="flex flex-col gap-[20px] px-[30px] pt-[28px] pb-[30px]">
+                <div className="flex flex-col gap-[10px]">
+                  <NoticeTags
+                    verdict={n.verdict}
+                    rank={n.ranking.myRank}
+                    dday={n.dday}
+                    tags={n.tags}
+                    size="lg"
+                  />
+                  <h1 className="tracking-h1 m-0 text-[34px] font-extrabold">{n.title}</h1>
+                  <span className="text-text-sub text-[16px]">{n.meta}</span>
+                </div>
+                <dl
+                  className="m-0 grid gap-[10px]"
+                  style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}
+                >
+                  {n.facts.map((f) => (
+                    <div key={f.label} className="bg-bg rounded-tile px-[18px] py-[16px]">
+                      <dt className="text-text-sub text-[13px]">{f.label}</dt>
+                      <dd className="mx-0 mt-[4px] mb-0 text-[17px] font-bold">{f.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </section>
+
+            <section
+              aria-label="일정"
+              className="rounded-card-lg bg-surface flex flex-col gap-[20px] px-[30px] py-[28px]"
+            >
+              <h2 className={sectionTitle}>일정</h2>
+              <ol
+                className="m-0 grid list-none gap-[12px] p-0"
+                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))" }}
+              >
+                {n.schedule.map((s) => (
+                  <li key={s.label} className="flex flex-col gap-[8px]">
+                    <span
+                      className={cn(
+                        "h-[4px] rounded-[2px]",
+                        s.state === "todo" ? "bg-line" : "bg-brand",
+                      )}
+                    />
+                    {s.state === "now" ? (
+                      <span className="text-brand-strong text-[13px] font-bold">
+                        {s.label} · 지금
+                      </span>
+                    ) : (
+                      <span className="text-text-sub text-[13px]">{s.label}</span>
+                    )}
+                    <span className="text-[16px] font-bold">{s.date}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            <section
+              aria-label="주택형별 임대 조건"
+              className="rounded-card-lg bg-surface flex flex-col gap-[16px] px-[30px] py-[28px]"
+            >
+              <div className="flex items-baseline justify-between">
+                <h2 className={sectionTitle}>주택형별 임대 조건</h2>
+                <span className="text-text-tertiary text-[13px]">{n.rentBasis}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] border-collapse text-[15px]">
+                  <thead>
+                    <tr className="text-text-sub text-left text-[13px]">
+                      {["주택형", "전용면적", "임대보증금", "월 임대료", "공급"].map((h, i) => (
+                        <th
+                          key={h}
+                          className={cn(
+                            "border-line border-b border-solid px-[12px] py-[10px] font-semibold",
+                            i >= 2 && "text-right",
+                          )}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {n.rentTable.map((r, i) => {
+                      const line =
+                        !r.mine && i < n.rentTable.length - 1 && !n.rentTable[i + 1]?.mine
+                          ? "border-line-soft border-b border-solid"
+                          : "";
+                      const td = cn("px-[12px] py-[14px]", line);
+                      return (
+                        <tr key={r.type} className={cn(r.mine && "bg-brand-soft")}>
+                          <td className={cn(td, "font-bold", r.mine && "rounded-l-[12px]")}>
+                            {r.type}
+                          </td>
+                          <td className={td}>{r.area}</td>
+                          <td className={cn(td, "text-right", r.mine && "font-bold")}>
+                            {r.deposit}
+                          </td>
+                          <td className={cn(td, "text-right", r.mine && "font-bold")}>{r.rent}</td>
+                          <td className={cn(td, "text-right", r.mine && "rounded-r-[12px]")}>
+                            {r.supply}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <span className="text-text-sub text-[13px]">
+                초록색 줄은 내 조건으로 신청할 수 있는 주택형이에요
+              </span>
+            </section>
+
+            {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
+
+            <section
+              aria-label="생활권"
+              className="rounded-card-lg bg-surface flex flex-col gap-[18px] px-[30px] py-[28px]"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className={sectionTitle}>
+                  생활권 <span className="text-brand">{n.life.score}점</span>
+                </h2>
+                <Link
+                  href={routes.life}
+                  className="text-brand-strong inline-flex min-h-[44px] items-center gap-[2px] text-[15px] font-bold no-underline"
+                >
+                  자세히
+                  <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
+                </Link>
+              </div>
+              <div
+                className="grid gap-[16px]"
+                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}
+              >
+                {n.life.items.map((it) => {
+                  const Icon = lifeIcon[it.kind];
+                  return (
+                    <div key={it.kind} className="flex flex-col gap-[8px]">
+                      <span className="flex justify-between text-[15px]">
+                        <span className="inline-flex items-center gap-[6px]">
+                          <Icon size={18} className="text-text-sub" aria-hidden />
+                          {it.label}
+                        </span>
+                        <strong>{it.value}</strong>
+                      </span>
+                      <span className="bg-fill h-[8px] overflow-hidden rounded-[4px]">
+                        <span
+                          className="bg-brand block h-full rounded-[4px]"
+                          style={{ width: `${it.pct}%` }}
+                        />
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section
+              aria-label="이 지역 정책"
+              className="rounded-card-lg bg-surface flex flex-col px-[30px] pt-[24px] pb-[14px]"
+            >
+              <div className="mb-[8px] flex items-baseline justify-between">
+                <h2 className={sectionTitle}>입주하면 받을 수 있는 혜택</h2>
+                <span className="text-text-tertiary text-[13px]">
+                  {n.benefitArea} · 내 조건 판정
+                </span>
+              </div>
+              {n.benefits.map((b, i) => (
+                <Link
+                  key={b.id}
+                  href={routes.benefit(b.id)}
+                  className={cn(
+                    "text-text hover:text-text flex items-center gap-[14px] py-[14px] no-underline",
+                    i < n.benefits.length - 1 && "border-line-soft border-b border-solid",
+                  )}
+                >
+                  <span className="flex flex-1 flex-col gap-[2px]">
+                    <span className="text-[16px] font-bold">{b.title}</span>
+                    <span className="text-text-sub text-[14px]">{b.desc}</span>
+                  </span>
+                  <VerdictBadge verdict={b.verdict} />
+                  <ChevronRight size={18} className="text-text-tertiary" aria-hidden />
+                </Link>
+              ))}
+            </section>
+          </div>
+
+          <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 360px" }}>
+            <section
+              aria-label="내 자격"
+              className="rounded-card-lg bg-surface flex flex-col px-[26px] pt-[26px] pb-[18px]"
+            >
+              <div className="mb-[6px] flex items-center justify-between">
+                <h2 className="tracking-title m-0 text-[20px] font-extrabold">내 자격</h2>
+                <button
+                  type="button"
+                  className="text-brand-strong inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[14px] font-bold"
+                >
+                  <FileText size={16} aria-hidden />
+                  근거 원문
+                </button>
+              </div>
+              {n.eligibility.map((e, i) => (
+                <div
+                  key={e.label}
+                  className={cn(
+                    "flex items-center justify-between gap-[10px] py-[12px]",
+                    i < n.eligibility.length - 1 && "border-line-soft border-b border-solid",
+                  )}
+                >
+                  <span className="text-[15px]">{e.label}</span>
+                  {e.status === "met" ? (
+                    <span className="text-brand-strong inline-flex items-center gap-[5px] text-[15px] font-bold">
+                      <CircleCheck size={19} aria-hidden />
+                      충족
+                    </span>
+                  ) : (
+                    <Link
+                      href={routes.profile}
+                      className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center gap-[5px] rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
+                    >
+                      <CircleAlert size={17} aria-hidden />
+                      입력하고 확인
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </section>
+
+            <WebRankCard ranking={n.ranking} />
+
+            <section
+              aria-label="내가 준비할 돈"
+              className="rounded-card-lg bg-surface flex flex-col gap-[10px] p-[26px]"
+            >
+              <h2 className="tracking-title mx-0 mt-0 mb-[4px] text-[20px] font-extrabold">
+                내가 준비할 돈 · {n.money.type}
+              </h2>
+              <div className="text-text-sub flex justify-between text-[15px]">
+                <span>임대보증금</span>
+                <span>{n.money.deposit}</span>
+              </div>
+              <div className="text-text-sub flex justify-between text-[15px]">
+                <span>{n.money.loanName}</span>
+                <span>− {n.money.loan}</span>
+              </div>
+              <div className="border-line mt-[4px] flex items-baseline justify-between border-t border-solid pt-[14px]">
+                <span className="text-[16px] font-bold">준비할 돈</span>
+                <span className="tracking-h1 text-[30px] font-extrabold">{n.money.prep}</span>
+              </div>
+              <span className="text-text-sub text-[14px]">{n.money.note}</span>
+            </section>
+
+            <button
+              type="button"
+              className="bg-brand rounded-tile flex min-h-[60px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[18px] font-extrabold text-white"
+            >
+              <Heart size={20} strokeWidth={2.2} aria-hidden />
+              관심 등록하고 마감 알림 받기
+            </button>
+            <button
+              type="button"
+              className="rounded-tile bg-surface text-text flex min-h-[56px] cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold"
+            >
+              <FileText size={18} aria-hidden />
+              {n.agency} 공고 원문 보기
+            </button>
+            <div className="flex flex-col items-center gap-[2px] pt-[4px]">
+              <span className="text-text-sub text-[13px]">
+                판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
+              </span>
+              <button
+                type="button"
+                className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[13px] font-bold"
+              >
+                <MessageSquareWarning size={15} aria-hidden />
+                정보가 틀렸어요 · 제보하기
+              </button>
+            </div>
+          </aside>
+        </div>
+      </WebMain>
+    </WebPage>
+  );
+}
