@@ -1,14 +1,19 @@
 "use client";
 
 import { useOffline } from "next/offline";
+import { OfflineNotice } from "@/components/states/OfflineNotice";
 
+/** 인터넷이 끊기면 화면 위에 떠서 알려줘요 (디자인 MStates 4 · 오프라인) */
 export function OfflineBanner() {
   const isOffline = useOffline();
   if (!isOffline) return null;
 
   return (
-    <div role="status" className="bg-neutral-900 px-4 py-2 text-center text-sm text-white">
-      오프라인 상태예요. 연결되면 자동으로 다시 불러올게요.
+    <div className="fixed inset-x-0 top-[12px] z-50 flex justify-center px-[16px]">
+      <OfflineNotice
+        onReconnect={() => window.location.reload()}
+        className="shadow-float w-full max-w-[560px]"
+      />
     </div>
   );
 }
