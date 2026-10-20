@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
-import { routes } from "@/lib/routes";
+import { Responsive } from "@/components/layout/Responsive";
+import { MMain } from "@/screens/main/MMain";
+import { WebMain } from "@/screens/main/WebMain";
 
-// 메인(소개) 화면이 생기기 전까지 홈으로 보내요
-export default function Page() {
-  redirect(routes.home);
+export default function MainPage() {
+  return <Responsive web={<WebMain />} mobile={<MMain />} />;
 }
