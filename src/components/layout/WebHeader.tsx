@@ -12,12 +12,18 @@ type WebHeaderProps = {
   current?: string;
   /** 새 알림 수. 0이면 초록 점 없음 */
   unread?: number;
+  /** 검색 · 알림 · 내 정보 화면이면 오른쪽 아이콘을 현재 화면으로 강조 */
+  active?: HeaderIcon;
 };
 
-const iconLink =
-  "inline-flex size-[44px] items-center justify-center rounded-sm text-text-sub hover:text-text-sub";
+export type HeaderIcon = "search" | "alerts" | "me";
 
-export function WebHeader({ mode = "home", current, unread = 0 }: WebHeaderProps) {
+const iconLink = "inline-flex size-[44px] items-center justify-center rounded-sm";
+const iconTone = (on: boolean) =>
+  on ? "bg-brand-soft text-brand hover:text-brand" : "text-text-sub hover:text-text-sub";
+
+export function WebHeader({ mode = "home", current, unread = 0, active }: WebHeaderProps) {
+  const showDot = unread > 0 && active !== "alerts";
   return (
     <header className="border-line bg-surface border-b border-solid">
       <div className="mx-auto box-border flex min-h-[68px] w-full max-w-[1200px] flex-wrap items-center justify-between gap-x-[28px] gap-y-[12px] px-[32px]">
@@ -33,15 +39,15 @@ export function WebHeader({ mode = "home", current, unread = 0 }: WebHeaderProps
           <Segment items={modeSegment(mode)} />
           <nav aria-label="주 메뉴" className="flex flex-wrap gap-[2px]">
             {webMenu[mode].map((item) => {
-              const active = item.href === current;
+              const isCurrent = item.href === current;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  aria-current={active ? "page" : undefined}
+                  aria-current={isCurrent ? "page" : undefined}
                   className={cn(
                     "inline-flex min-h-[44px] items-center px-[12px] text-[16px] no-underline",
-                    active
+                    isCurrent
                       ? "text-text hover:text-text font-bold"
                       : "text-text-sub hover:text-text-sub font-medium",
                   )}
@@ -53,19 +59,25 @@ export function WebHeader({ mode = "home", current, unread = 0 }: WebHeaderProps
           </nav>
         </div>
         <div className="flex items-center gap-[4px]">
-          <Link href={routes.search} aria-label="검색" className={iconLink}>
+          <Link
+            href={routes.search}
+            aria-label="검색"
+            aria-current={active === "search" ? "page" : undefined}
+            className={cn(iconLink, iconTone(active === "search"))}
+          >
             <Search size={22} aria-hidden />
           </Link>
           <Link
             href={routes.alerts}
-            aria-label={unread > 0 ? `알림, 새 알림 ${unread}개` : "알림"}
-            className={cn(iconLink, "relative")}
+            aria-label={showDot ? `알림, 새 알림 ${unread}개` : "알림"}
+            aria-current={active === "alerts" ? "page" : undefined}
+            className={cn(iconLink, iconTone(active === "alerts"), "relative")}
           >
             <Bell size={22} aria-hidden />
-            {unread > 0 && (
+            {showDot && (
               <span
                 aria-hidden
-                className="rounded-pill bg-brand absolute top-[10px] right-[11px] size-[8px] border-2 border-solid border-white"
+                className="rounded-pill bg-brand absolute top-[10px] right-[11px] size-[12px] border-2 border-solid border-white"
               />
             )}
           </Link>

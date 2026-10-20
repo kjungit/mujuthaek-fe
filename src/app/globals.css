@@ -123,7 +123,8 @@
     letter-spacing: normal;
   }
 
-  input[type="checkbox"] {
+  input[type="checkbox"],
+  input[type="range"] {
     accent-color: var(--color-brand);
   }
 

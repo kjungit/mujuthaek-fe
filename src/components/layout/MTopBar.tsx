@@ -32,7 +32,7 @@ export function MTopBar({ mode = "home", unread = 0 }: { mode?: Mode; unread?: n
           {unread > 0 && (
             <span
               aria-hidden
-              className="rounded-pill bg-brand absolute top-[10px] right-[11px] size-[8px] border-2 border-solid border-white"
+              className="rounded-pill bg-brand absolute top-[10px] right-[11px] size-[12px] border-2 border-solid border-white"
             />
           )}
         </Link>
