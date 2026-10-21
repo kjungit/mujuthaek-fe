@@ -17,8 +17,11 @@ import {
   type FilterKey,
   type SortOption,
 } from "@/features/homes/filters";
+import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomes } from "@/features/homes/queries";
+import { listingRegionLabel, matchesRegion, useRegionFilter } from "@/features/homes/region";
 import { cn } from "@/lib/cn";
+import { regionLabel } from "@/lib/regions";
 import { routes } from "@/lib/routes";
 import type { HomeListing } from "@/mocks/homes";
 
@@ -68,7 +71,9 @@ function ListingCard({
         href={routes.notice(item.id)}
         className="text-text hover:text-text flex flex-col gap-[8px] px-[20px] pt-[18px] pb-[20px] no-underline"
       >
-        <span className="text-text-tertiary text-[13px]">{item.org}</span>
+        <span className="text-text-tertiary text-[13px]">
+          {item.org} · {listingRegionLabel(item)}
+        </span>
         <span className="tracking-title text-[18px] font-extrabold">{item.title}</span>
         <span className="text-[15px] font-semibold">{item.price}</span>
         <span className="flex flex-wrap gap-[4px]">
@@ -98,6 +103,11 @@ export function WebHomes() {
   const [mode, setMode] = useState(defaultMode);
   const [sort, setSort] = useState<SortOption>(defaultSort);
   const [checked, setChecked] = useState(defaultChecked);
+  const region = useRegionFilter();
+  const visible = data.listings.filter((l) => matchesRegion(l, region.region));
+  const regionLabelText = region.isAll
+    ? "전체 지역"
+    : regionLabel(region.region.sido, region.region.sigungu || undefined);
   const [liked, setLiked] = useState(
     () => new Set(data.listings.filter((l) => l.liked).map((l) => l.id)),
   );
@@ -113,9 +123,12 @@ export function WebHomes() {
   const resetFilters = () => {
     setMode(defaultMode);
     setChecked(defaultChecked);
+    region.reset();
   };
 
-  const more = data.total - data.listings.length;
+  // 지역을 고르면 고른 지역의 공고만 세요 (목업은 첫 페이지 기준)
+  const count = region.isAll ? data.total : visible.length;
+  const more = region.isAll ? data.total - data.listings.length : 0;
 
   return (
     <WebPage>
@@ -125,8 +138,7 @@ export function WebHomes() {
           <div className="flex flex-col gap-[6px]">
             <h1 className="tracking-h1 m-0 text-[32px] font-extrabold">내 집</h1>
             <span className="text-text-sub text-[16px]">
-              내 조건으로 지원할 수 있는 곳{" "}
-              <strong className="text-brand-strong">{data.total}곳</strong>
+              내 조건으로 지원할 수 있는 곳 <strong className="text-brand-strong">{count}곳</strong>
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-[10px]">
@@ -167,6 +179,10 @@ export function WebHomes() {
             className="rounded-card bg-surface box-content flex min-w-0 flex-col gap-[22px] p-[22px]"
             style={{ flex: "1 1 250px" }}
           >
+            <fieldset className="m-0 flex flex-col border-0 p-0">
+              <legend className="mb-[8px] p-0 text-[15px] font-extrabold">지역</legend>
+              <RegionSelect filter={region} />
+            </fieldset>
             <div
               role="group"
               aria-label="입주 방식"
@@ -231,7 +247,19 @@ export function WebHomes() {
               className="grid gap-[16px]"
               style={{ gridTemplateColumns: "repeat(auto-fill, minmax(262px, 1fr))" }}
             >
-              {data.listings.map((item) => (
+              {visible.length === 0 && (
+                <div className="rounded-card bg-surface text-text-sub col-span-full flex flex-col items-center gap-[12px] px-[24px] py-[48px] text-center text-[15px]">
+                  {regionLabelText}에는 지금 지원할 수 있는 공고가 없어요
+                  <button
+                    type="button"
+                    onClick={region.reset}
+                    className="bg-fill text-text min-h-[44px] cursor-pointer rounded-sm border-0 px-[16px] text-[14px] font-bold"
+                  >
+                    전체 지역 보기
+                  </button>
+                </div>
+              )}
+              {visible.map((item) => (
                 <ListingCard
                   key={item.id}
                   item={item}
