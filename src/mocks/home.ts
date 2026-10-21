@@ -15,7 +15,6 @@ export type HomeNewsItem = {
 export type HomeDeadline = { id: string; title: string; meta: string; dday: number };
 
 export type HomeSummary = {
-  conditions: string[];
   homes: { count: number; newThisWeek: number; closingSoon: number };
   benefits: { yearlyAmount: string; count: number; needCheck: number };
   life: { score: number; area: string; commuteMinutes: number };
@@ -25,15 +24,6 @@ export type HomeSummary = {
 };
 
 export const homeSummary: HomeSummary = {
-  conditions: [
-    "만 29세",
-    "서울 마포구",
-    "연소득 3,200만 원",
-    "미혼",
-    "청년",
-    "2순위",
-    "무주택 4년",
-  ],
   homes: { count: 7, newThisWeek: 2, closingSoon: 1 },
   benefits: { yearlyAmount: "480만 원", count: 5, needCheck: 1 },
   life: { score: 82, area: "마포구", commuteMinutes: 28 },

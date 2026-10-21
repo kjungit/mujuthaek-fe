@@ -7,6 +7,9 @@ import { WebHeader } from "@/components/layout/WebHeader";
 import { WebPage } from "@/components/layout/Responsive";
 import { Toggle } from "@/components/ui/Toggle";
 import { usePush } from "@/features/alerts/usePush";
+import { daysLeft } from "@/features/conditions/format";
+import { DEVICE_TTL_MS, clearConditions, setSaveOnDevice } from "@/features/conditions/store";
+import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useMe } from "@/features/me/queries";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -61,7 +64,14 @@ export function WebMe() {
   const { data } = useMe();
   const push = usePush();
   const [tab, setTab] = useState<Tab>("cond");
-  const [anon, setAnon] = useState(data.anon);
+  const conditions = useConditionSummary();
+  const saveOnDevice = conditions.status === "ready" ? conditions.saveOnDevice : true;
+  const deviceStatus =
+    conditions.status !== "ready" || !conditions.hasConditions
+      ? "없음"
+      : conditions.savedAt
+        ? `이 기기 · ${daysLeft(conditions.savedAt, DEVICE_TTL_MS)}일 뒤 삭제`
+        : "이번 탭에서만";
   const [favIds, setFavIds] = useState(() => data.favorites.map((f) => f.id));
   const [notif, setNotif] = useState(data.notif);
   const [channels, setChannels] = useState(data.channels);
@@ -186,30 +196,31 @@ export function WebMe() {
 
           {tab === "cond" && (
             <div className="flex flex-col gap-[16px]">
-              <dl className="m-0 grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-[10px]">
-                {data.conditions.map((c) => {
-                  const muted = c.sensitive && anon;
-                  const value = c.sensitive && !anon ? (data.savedSensitive[c.k] ?? c.v) : c.v;
-                  return (
-                    <div key={c.k} className="rounded-tile bg-bg px-[16px] py-[14px]">
-                      <dt className="text-text-sub text-[13px]">{c.k}</dt>
-                      <dd
-                        className={cn(
-                          "m-0 mt-[4px] text-[16px] font-bold",
-                          muted ? "text-text-sub" : "text-text",
-                        )}
-                      >
-                        {value}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
+              {conditions.status === "ready" && !conditions.hasConditions ? (
+                <span className="rounded-tile bg-bg text-text-sub px-[16px] py-[18px] text-[15px]">
+                  아직 입력한 조건이 없어요. 조건을 입력하면 이 기기에 저장해 둘게요.
+                </span>
+              ) : (
+                <dl className="m-0 grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-[10px]">
+                  {conditions.status === "ready" &&
+                    conditions.rows.map((c) => (
+                      <div key={c.k} className="rounded-tile bg-bg px-[16px] py-[14px]">
+                        <dt className="text-text-sub text-[13px]">{c.k}</dt>
+                        <dd
+                          className={cn(
+                            "m-0 mt-[4px] text-[16px] font-bold",
+                            c.muted ? "text-text-sub" : "text-text",
+                          )}
+                        >
+                          {c.v}
+                        </dd>
+                      </div>
+                    ))}
+                </dl>
+              )}
               <span className="text-text-sub inline-flex items-center gap-[6px] text-[14px]">
                 <Lock size={16} aria-hidden />
-                {anon
-                  ? "익명 모드라 소득·자산은 판정할 때만 입력해요"
-                  : "소득·자산까지 저장하고 있어요. 개인정보 설정에서 지울 수 있어요"}
+                소득·자산은 저장하지 않아요. 판정할 때만 입력해요
               </span>
             </div>
           )}
@@ -318,37 +329,46 @@ export function WebMe() {
             <div className="flex flex-col gap-[16px]">
               <div className="bg-brand-soft flex items-center justify-between gap-[16px] rounded-[20px] px-[22px] py-[20px]">
                 <span className="flex flex-col gap-[4px]">
-                  <span className="text-brand-strong text-[17px] font-extrabold">익명 모드</span>
+                  <span className="text-brand-strong text-[17px] font-extrabold">
+                    이 기기에 조건 저장
+                  </span>
                   <span className="text-brand-strong text-[14px] leading-[1.6]">
-                    {anon
-                      ? "소득·자산은 판정에만 쓰고 저장하지 않아요"
-                      : "소득·자산까지 저장해서 바로 결과를 보여드려요"}
+                    {saveOnDevice
+                      ? "나이·지역·가족·주택 조건을 30일 동안 이 기기에만 저장해요"
+                      : "이 기기에 저장하지 않아요. 탭을 닫으면 입력한 조건이 지워져요"}
                   </span>
                 </span>
-                <Toggle checked={anon} onChange={setAnon} label="익명 모드" />
+                <Toggle
+                  checked={saveOnDevice}
+                  onChange={setSaveOnDevice}
+                  label="이 기기에 조건 저장"
+                />
               </div>
               <div className="flex flex-col">
                 <span className="mb-[4px] text-[16px] font-extrabold">저장된 정보</span>
-                <div className="border-line-soft flex justify-between border-b border-solid py-[12px] text-[15px]">
+                <div className="border-line-soft flex justify-between gap-[12px] border-b border-solid py-[12px] text-[15px]">
                   <span>나이 · 지역 · 가족 · 주택 조건</span>
-                  <span className="font-bold">저장됨</span>
+                  <span className="font-bold">{deviceStatus}</span>
                 </div>
-                <div className="border-line-soft flex justify-between border-b border-solid py-[12px] text-[15px]">
-                  <span>소득 · 자산</span>
-                  <span className={cn("font-bold", anon ? "text-brand-strong" : "text-text")}>
-                    {anon ? "저장 안 함" : "저장됨"}
-                  </span>
+                <div className="border-line-soft flex justify-between gap-[12px] border-b border-solid py-[12px] text-[15px]">
+                  <span>소득 · 자산 · 순위 세부 조건</span>
+                  <span className="text-brand-strong font-bold">저장 안 함</span>
                 </div>
-                <div className="flex justify-between py-[12px] text-[15px]">
+                <div className="flex justify-between gap-[12px] py-[12px] text-[15px]">
                   <span>관심 공고 · 알림 설정</span>
-                  <span className="font-bold">저장됨</span>
+                  <span className="font-bold">계정에 저장</span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-[8px]">
                 <button type="button" className={grayButton}>
                   내 데이터 내려받기
                 </button>
-                <button type="button" className={grayButton}>
+                <button
+                  type="button"
+                  onClick={clearConditions}
+                  disabled={!conditions.hasConditions}
+                  className={cn(grayButton, "disabled:text-text-sub disabled:cursor-default")}
+                >
                   저장한 조건 모두 지우기
                 </button>
               </div>
