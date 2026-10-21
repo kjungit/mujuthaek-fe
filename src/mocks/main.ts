@@ -71,6 +71,7 @@ export const mainLanding: MainLanding = {
         "LH 청약플러스 · 마이홈",
         "청약홈",
         "SH 서울",
+        "청년안심주택",
         "GH 경기",
         "iH 인천",
         "부산",
@@ -80,7 +81,8 @@ export const mainLanding: MainLanding = {
         "경북",
         "경남",
       ],
-      summary: "LH · 청약홈 · SH · GH · iH · 부산 · 대구 · 대전 · 울산 · 경북 · 경남",
+      summary:
+        "LH · 청약홈 · SH · 청년안심주택 · GH · iH · 부산 · 대구 · 대전 · 울산 · 경북 · 경남",
     },
     {
       key: "policy",

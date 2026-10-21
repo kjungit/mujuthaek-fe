@@ -7,6 +7,8 @@ import {
   ChipGroup,
   KidsStepper,
   PriorityChips,
+  RankCriteriaFields,
+  StatusChips,
   UnitInput,
   pInput,
   pLabel,
@@ -67,6 +69,7 @@ function Step1({ form }: { form: ProfileForm }) {
         />
         <span className="text-text-sub text-[13px]">주민등록등본에서 확인할 수 있어요</span>
       </div>
+      <StatusChips form={form} />
     </div>
   );
 }
@@ -110,6 +113,7 @@ function Step2({ form }: { form: ProfileForm }) {
           조건은 &apos;확인 필요&apos;로 보여주세요
         </span>
       </label>
+      <RankCriteriaFields form={form} />
     </div>
   );
 }
