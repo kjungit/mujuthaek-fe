@@ -1,0 +1,342 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowRight, Check, Lock, Search, X } from "lucide-react";
+import { Logo } from "@/components/brand/Logo";
+import {
+  ChipGroup,
+  KidsStepper,
+  PriorityChips,
+  UnitInput,
+  pInput,
+  pLabel,
+  pSelect,
+} from "@/components/profile/parts";
+import { Toggle } from "@/components/ui/Toggle";
+import {
+  headOptions,
+  marryOptions,
+  useProfileForm,
+  type ProfileForm,
+} from "@/features/profile/useProfileForm";
+import { cn } from "@/lib/cn";
+import { routes } from "@/lib/routes";
+
+const steps = [
+  { n: 1, title: "기본 정보", sub: "나이 · 사는 곳" },
+  { n: 2, title: "가족 · 소득 · 자산", sub: "결혼 · 소득 · 자산" },
+  { n: 3, title: "주택 · 생활권", sub: "무주택 · 청약 · 직장" },
+];
+
+const help = "text-text-sub text-[13px] font-medium";
+const headerLink =
+  "text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[4px] px-[12px] text-[15px] font-semibold no-underline";
+
+function Options({ items }: { items: string[] }) {
+  return items.map((o) => <option key={o}>{o}</option>);
+}
+
+function Step1({ form }: { form: ProfileForm }) {
+  const { options } = form.data;
+  return (
+    <div className="flex flex-col gap-[20px]">
+      <label className={pLabel}>
+        생년월일
+        <input type="text" inputMode="numeric" placeholder="예: 1997.03.15" className={pInput} />
+      </label>
+      <div className="flex flex-col gap-[8px]">
+        <span className="text-[15px] font-bold">지금 사는 곳</span>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-[10px]">
+          <select aria-label="시·도" className={pSelect}>
+            <Options items={options.sido} />
+          </select>
+          <select aria-label="시·군·구" className={pSelect}>
+            <Options items={options.sigungu} />
+          </select>
+        </div>
+      </div>
+      <div className="flex flex-col gap-[8px]">
+        <span className="text-[15px] font-bold">세대주인가요?</span>
+        <ChipGroup
+          label="세대주 여부"
+          options={headOptions}
+          value={form.head}
+          onPick={form.setHead}
+          className="grid-cols-2"
+          chipClassName="min-h-[56px]"
+        />
+        <span className="text-text-sub text-[13px]">주민등록등본에서 확인할 수 있어요</span>
+      </div>
+    </div>
+  );
+}
+
+function Step2({ form }: { form: ProfileForm }) {
+  return (
+    <div className="flex flex-col gap-[20px]">
+      <div className="flex flex-col gap-[8px]">
+        <span className="text-[15px] font-bold">결혼 여부</span>
+        <ChipGroup
+          label="결혼 여부"
+          options={marryOptions}
+          value={form.marry}
+          onPick={form.setMarry}
+          className="grid-cols-3"
+          chipClassName="min-h-[56px]"
+        />
+      </div>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-[12px]">
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[15px] font-bold">자녀 수</span>
+          <KidsStepper form={form} />
+        </div>
+        <label className={pLabel}>
+          함께 사는 가족 (나 포함)
+          <select className={cn(pSelect, "font-medium")}>
+            <Options items={form.data.options.householdSize} />
+          </select>
+        </label>
+      </div>
+      <label className={pLabel}>
+        연소득 (세전)
+        <UnitInput unit="만 원" placeholder="3,200" />
+        <span className={help}>작년 원천징수영수증의 총급여를 넣으면 가장 정확해요</span>
+      </label>
+      <label className={pLabel}>
+        자산 합계 (예금 · 자동차 · 부동산)
+        <UnitInput unit="만 원" placeholder="4,500" />
+        <span className="text-text-sub flex items-center gap-[8px] text-[14px] font-medium">
+          <input type="checkbox" className="m-[3px_3px_3px_4px] size-[18px]" /> 잘 모르겠어요 · 자산
+          조건은 &apos;확인 필요&apos;로 보여주세요
+        </span>
+      </label>
+    </div>
+  );
+}
+
+function Step3({ form }: { form: ProfileForm }) {
+  const { options } = form.data;
+  return (
+    <div className="flex flex-col gap-[20px]">
+      <label className={pLabel}>
+        무주택 기간
+        <select className={cn(pSelect, "font-medium")}>
+          <Options items={options.homelessPeriod} />
+        </select>
+      </label>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-[12px]">
+        <label className={pLabel}>
+          청약통장 가입 기간
+          <select className={cn(pSelect, "font-medium")}>
+            <Options items={options.bankbookPeriod} />
+          </select>
+        </label>
+        <label className={pLabel}>
+          납입 횟수
+          <UnitInput unit="회" placeholder="26" />
+        </label>
+      </div>
+      <label className={pLabel}>
+        지금 쓸 수 있는 돈
+        <UnitInput unit="만 원" placeholder="1,500" />
+        <span className={help}>공고마다 &apos;내가 준비할 돈&apos;과 비교해 드려요</span>
+      </label>
+      <label className={pLabel}>
+        직장 · 학교 위치
+        <span className="relative flex">
+          <Search
+            size={20}
+            className="text-text-tertiary absolute top-1/2 left-[16px] -translate-y-1/2"
+            aria-hidden
+          />
+          <input
+            type="search"
+            placeholder="회사 주소나 역 이름"
+            className={cn(pInput, "flex-1 pl-[46px]")}
+          />
+        </span>
+      </label>
+      <div className="flex flex-col gap-[8px]">
+        <span className="text-[15px] font-bold">
+          살 곳을 고를 때 중요한 것{" "}
+          <span className="text-text-sub font-medium">· 여러 개 고를 수 있어요</span>
+        </span>
+        <PriorityChips form={form} />
+      </div>
+    </div>
+  );
+}
+
+export function WebProfile() {
+  const form = useProfileForm();
+  const current = steps[form.step - 1];
+  const primary =
+    "rounded-control bg-brand inline-flex min-h-[56px] items-center gap-[8px] px-[26px] text-[17px] font-extrabold text-white";
+
+  return (
+    <div className="bg-bg text-text flex min-h-screen w-full flex-col">
+      <header className="border-line bg-surface border-b border-solid">
+        <div className="mx-auto box-border flex min-h-[68px] w-full max-w-[1200px] items-center justify-between gap-[16px] px-[32px]">
+          <Link
+            href={routes.main}
+            aria-label="무주택자들 소개"
+            className="text-text hover:text-text inline-flex items-center gap-[9px] no-underline"
+          >
+            <Logo size={30} />
+            <span className="tracking-logo text-[19px] font-extrabold">무주택자들</span>
+          </Link>
+          <div className="flex items-center gap-[8px]">
+            <Link href={routes.login} className={headerLink}>
+              로그인
+            </Link>
+            <Link href={routes.main} className={headerLink}>
+              <X size={18} aria-hidden />
+              나가기
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto box-border flex w-full max-w-[1200px] flex-1 flex-col gap-[28px] px-[32px] pt-[40px] pb-[72px]">
+        <div className="flex flex-col gap-[8px]">
+          <h1 className="tracking-h1 m-0 text-[32px] font-extrabold">내 조건을 알려주세요</h1>
+          <p className="text-text-sub m-0 text-[17px] leading-[1.6]">
+            입력한 만큼 판정해요. 모르는 칸은 비워도 되고, 그 조건은 &apos;확인 필요&apos;로
+            보여드려요
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-start gap-[24px]">
+          <nav
+            aria-label="입력 단계"
+            className="flex min-w-0 flex-col gap-[6px]"
+            style={{ flex: "1 1 220px" }}
+          >
+            {steps.map((s) => {
+              const done = s.n < form.step;
+              const cur = s.n === form.step;
+              return (
+                <button
+                  key={s.n}
+                  type="button"
+                  onClick={() => form.goTo(s.n)}
+                  aria-current={cur ? "step" : undefined}
+                  className={cn(
+                    "text-text flex min-h-[64px] cursor-pointer items-center gap-[12px] rounded-[16px] border-0 px-[16px] py-[14px] text-left",
+                    cur ? "bg-surface" : "bg-transparent",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "rounded-pill flex size-[32px] flex-none items-center justify-center text-[14px] font-extrabold",
+                      done || cur ? "bg-brand text-white" : "bg-line text-text-sub",
+                    )}
+                  >
+                    {done ? <Check size={16} strokeWidth={3} aria-label="완료" /> : s.n}
+                  </span>
+                  <span className="flex flex-col gap-[2px]">
+                    <span className={cn("text-[16px]", cur ? "font-extrabold" : "font-semibold")}>
+                      {s.title}
+                    </span>
+                    <span className="text-text-sub text-[13px]">{s.sub}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <section
+            aria-label="입력"
+            className="rounded-card-lg bg-surface flex min-w-0 flex-col gap-[24px] p-[32px]"
+            style={{ flex: "999 1 520px" }}
+          >
+            <div className="flex items-baseline justify-between">
+              <h2 className="tracking-title m-0 text-[22px] font-extrabold">{current.title}</h2>
+              <span className="text-brand-strong text-[14px] font-bold">{form.step} / 3</span>
+            </div>
+
+            {form.step === 1 && <Step1 form={form} />}
+            {form.step === 2 && <Step2 form={form} />}
+            {form.step === 3 && <Step3 form={form} />}
+
+            <div className="border-line-soft flex items-center justify-between gap-[10px] border-t border-solid pt-[20px]">
+              {form.step > 1 && (
+                <button
+                  type="button"
+                  onClick={form.prev}
+                  className="rounded-control bg-fill text-text min-h-[56px] cursor-pointer border-0 px-[22px] text-[16px] font-bold"
+                >
+                  이전
+                </button>
+              )}
+              <span className="flex-1" />
+              {form.isLast ? (
+                <Link href={routes.home} className={cn(primary, "no-underline hover:text-white")}>
+                  결과 보기
+                  <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={form.next}
+                  className={cn(primary, "cursor-pointer border-0")}
+                >
+                  다음
+                  <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
+                </button>
+              )}
+            </div>
+          </section>
+
+          <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 280px" }}>
+            <section
+              aria-label="지금 조건으로"
+              className="rounded-card bg-surface flex flex-col gap-[14px] p-[24px]"
+            >
+              <span className="text-text-sub text-[15px] font-bold">지금 조건으로</span>
+              <div className="flex items-baseline justify-between">
+                <span className="text-[15px]">지원 가능한 공고</span>
+                <span className="tracking-title text-[26px] font-extrabold">
+                  {form.preview.homes}곳
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-[15px]">받을 수 있는 혜택</span>
+                <span className="tracking-title text-[26px] font-extrabold">
+                  {form.preview.benefits}개
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[15px]">확인 필요한 조건</span>
+                <span className="rounded-badge bg-check-bg text-check-text px-[10px] py-[4px] text-[14px] font-extrabold">
+                  {form.preview.needCheck}개
+                </span>
+              </div>
+              <span className="border-line-soft text-text-sub border-t border-solid pt-[12px] text-[13px]">
+                입력할수록 정확해져요
+              </span>
+            </section>
+
+            <section
+              aria-label="개인정보"
+              className="rounded-card bg-brand-soft flex flex-col gap-[12px] px-[24px] py-[22px]"
+            >
+              <div className="flex items-center justify-between gap-[12px]">
+                <span className="text-brand-strong inline-flex items-center gap-[8px] text-[16px] font-extrabold">
+                  <Lock size={20} aria-hidden />
+                  익명 모드
+                </span>
+                <Toggle checked={form.anon} onChange={form.setAnon} label="익명 모드" />
+              </div>
+              <span className="text-brand-strong text-[14px] leading-[1.6]">
+                {form.anon
+                  ? "소득·자산은 판정에만 쓰고 저장하지 않아요. 다음에 다시 입력해야 해요."
+                  : "로그인하면 소득·자산까지 저장해서 다음에 다시 입력하지 않아도 돼요."}
+              </span>
+            </section>
+          </aside>
+        </div>
+      </main>
+    </div>
+  );
+}
