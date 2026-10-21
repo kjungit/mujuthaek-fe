@@ -36,11 +36,20 @@ PR마다 GitHub Actions가 format·lint·typecheck·build를 돌려요.
 src/app/manifest.ts             웹 앱 매니페스트
 src/app/offline/                오프라인 폴백 페이지
 src/app/providers.tsx           QueryClient + 서비스 워커 등록
-src/components/pwa/             설치 안내, 푸시 토글, 오프라인 배너
-src/lib/api/                    fetch 래퍼, 엔드포인트, 쿼리 키
+src/components/pwa/             서비스 워커 등록, 오프라인 배너
+src/lib/api/                    fetch 래퍼, 엔드포인트
 src/lib/push.ts                 웹 푸시 구독/해지
 public/sw.js                    서비스 워커 (오프라인 폴백, 정적 자산 캐시, 푸시)
 ```
+
+## UI
+
+- 디자인 원본은 `.design/`에 두고 로컬에서만 봐요 (git에 안 올라가요). 기준은 `.design/DESIGN.md`와 화면 파일의 인라인 스타일이에요.
+- 색·둥글기·자간은 `src/app/globals.css`의 토큰만 써요 (`bg-brand`, `text-text-sub`, `rounded-card` 등).
+- 라우트마다 PC(`Web*`)와 모바일(`M*`) 화면을 따로 만들고 `Responsive`로 1024px 기준 하나만 보여줘요 (`src/screens/`).
+- 예시 데이터는 `src/mocks/`, 화면은 `src/features/*/queries.ts`의 쿼리로 받아요. API가 생기면 쿼리의 `queryFn`만 바꾸면 돼요.
+- 공통 부품: `src/components/ui/`(배지·버튼·칩·세그먼트·토글·입력칸), `src/components/layout/`(헤더·하단 탭).
+- `/states`는 빈 상태·오류 미리보기예요 (개발 서버에서만).
 
 ## PWA
 
