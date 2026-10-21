@@ -1,17 +1,7 @@
-import { InstallPrompt } from "@/components/pwa/InstallPrompt";
-import { PushToggle } from "@/components/pwa/PushToggle";
+import { redirect } from "next/navigation";
+import { routes } from "@/lib/routes";
 
-export default function Home() {
-  return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-10">
-      <header>
-        <h1 className="text-2xl font-bold">무주택자들</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          공공 주거·창업지원 공고를 모아 지원 가능 여부를 알려드려요.
-        </p>
-      </header>
-      <PushToggle />
-      <InstallPrompt />
-    </main>
-  );
+// 메인(소개) 화면이 생기기 전까지 홈으로 보내요
+export default function Page() {
+  redirect(routes.home);
 }
