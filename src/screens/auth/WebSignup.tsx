@@ -8,24 +8,11 @@ import {
   authInput,
   authLabel,
 } from "@/components/auth/parts";
-import { SaveOptions, SignupSubmit, TermsList } from "@/components/auth/SignupParts";
+import { SignupSubmit, TermsList } from "@/components/auth/SignupParts";
 import { useAuthSession } from "@/features/auth/queries";
 import { useSignupForm } from "@/features/auth/useSignupForm";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-
-const saveOptions = [
-  {
-    key: "basic" as const,
-    title: "나이·지역·가족만 저장",
-    desc: "소득·자산은 저장하지 않아요. 판정할 때마다 다시 입력해요",
-  },
-  {
-    key: "full" as const,
-    title: "소득·자산까지 저장",
-    desc: "다음부터 바로 결과를 볼 수 있어요. 내 정보에서 언제든 지울 수 있어요",
-  },
-];
 
 export function WebSignup() {
   const form = useSignupForm();
@@ -141,16 +128,15 @@ export function WebSignup() {
         </section>
 
         <section
-          aria-label="입력한 조건 저장"
+          aria-label="저장하는 정보"
           className="rounded-card bg-surface flex flex-col gap-[12px] p-[24px]"
         >
-          <div className="flex flex-col gap-[4px]">
-            <span className="text-[17px] font-extrabold">아까 입력한 조건, 어떻게 할까요?</span>
-            <span className="text-text-sub text-[14px] leading-[1.6]">
-              로그인 없이 입력한 조건을 계정에 이어서 쓸 수 있어요
-            </span>
-          </div>
-          <SaveOptions form={form} options={saveOptions} optionClassName="px-[16px] py-[14px]" />
+          <span className="text-[17px] font-extrabold">어떤 정보를 저장하나요?</span>
+          <ul className="text-text-sub m-0 flex list-none flex-col gap-[8px] p-0 text-[14px] leading-[1.6]">
+            <li>계정에는 이메일과 관심 공고·알림 설정만 저장하고, 탈퇴하면 바로 지워요</li>
+            <li>입력한 조건은 계정과 상관없이 이 기기에만 30일 동안 저장해요</li>
+            <li className="text-brand-strong font-bold">소득·자산은 어디에도 저장하지 않아요</li>
+          </ul>
         </section>
 
         <section

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CheckBox, RadioDot } from "@/components/auth/parts";
-import { signupTerms, type SaveMode, type useSignupForm } from "@/features/auth/useSignupForm";
+import { CheckBox } from "@/components/auth/parts";
+import { signupTerms, type useSignupForm } from "@/features/auth/useSignupForm";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
@@ -13,47 +13,6 @@ const termLinks: Partial<Record<(typeof signupTerms)[number]["key"], string>> = 
   privacy: routes.privacy,
   marketing: routes.privacy,
 };
-
-/** 조건 저장 방식 라디오 */
-export function SaveOptions({
-  form,
-  options,
-  descClassName,
-  optionClassName,
-}: {
-  form: Form;
-  options: { key: SaveMode; title: string; desc: string }[];
-  descClassName?: string;
-  optionClassName?: string;
-}) {
-  return (
-    <div role="radiogroup" aria-label="조건 저장 방식" className="flex flex-col gap-[8px]">
-      {options.map((o) => {
-        const on = form.save === o.key;
-        return (
-          <button
-            key={o.key}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            onClick={() => form.setSave(o.key)}
-            className={cn(
-              "text-text flex cursor-pointer items-start gap-[12px] rounded-[16px] border-2 border-solid text-left",
-              on ? "border-brand bg-row-selected" : "border-line bg-surface",
-              optionClassName,
-            )}
-          >
-            <RadioDot checked={on} />
-            <span className="flex flex-col gap-[2px]">
-              <span className="text-[16px] font-bold">{o.title}</span>
-              <span className={cn("text-text-sub text-[14px]", descClassName)}>{o.desc}</span>
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 /** 약관 동의 목록 */
 export function TermsList({ form, allClassName }: { form: Form; allClassName?: string }) {

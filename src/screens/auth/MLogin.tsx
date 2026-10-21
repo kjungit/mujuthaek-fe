@@ -26,9 +26,7 @@ export function MLogin() {
             <br />
             마감을 놓치지 않아요
           </h1>
-          <span className="text-text-sub text-[15px]">
-            관심 공고 저장 · 새 공고 알림 · 조건 저장
-          </span>
+          <span className="text-text-sub text-[15px]">관심 공고 저장 · 새 공고 알림</span>
         </div>
 
         <SocialButtons

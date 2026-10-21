@@ -18,7 +18,7 @@ const perks = [
   {
     icon: ListChecks,
     title: "조건은 한 번만",
-    desc: "원할 때만 저장해서 다시 입력하지 않아도 돼요",
+    desc: "로그인하지 않아도 이 기기에 30일 동안 저장해 둬요",
   },
 ];
 
