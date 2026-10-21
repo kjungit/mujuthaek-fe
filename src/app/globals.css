@@ -119,6 +119,8 @@
   textarea,
   button {
     font-family: inherit;
+    /* 브라우저 기본처럼 폼 요소는 자간을 물려받지 않아요 (디자인 기준) */
+    letter-spacing: normal;
   }
 
   input[type="checkbox"] {

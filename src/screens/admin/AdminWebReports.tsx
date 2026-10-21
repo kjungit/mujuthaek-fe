@@ -1,0 +1,224 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
+import { useAdminReports, useSetAdminCounts } from "@/features/admin/queries";
+import { cn } from "@/lib/cn";
+import { routes } from "@/lib/routes";
+import type { ReportItem, ReportStatus } from "@/mocks/admin";
+
+const TABS: { key: ReportStatus; label: string }[] = [
+  { key: "new", label: "새 제보" },
+  { key: "doing", label: "확인 중" },
+  { key: "done", label: "처리 완료" },
+];
+
+type Finish = "fix" | "same";
+
+const secondary =
+  "rounded-control bg-fill text-text hover:text-text min-h-[52px] px-[18px] text-[15px] font-bold";
+
+export function AdminWebReports() {
+  const { data } = useAdminReports();
+  const setCounts = useSetAdminCounts();
+  const items = data.items;
+
+  const [tab, setTab] = useState<ReportStatus>("new");
+  const [sel, setSel] = useState<string>(items[0].id);
+  const [done, setDone] = useState<Record<string, Finish>>({});
+  const [replies, setReplies] = useState<Record<string, string>>({});
+
+  const statusOf = (d: ReportItem, doneMap = done): ReportStatus => (doneMap[d.id] ? "done" : d.st);
+  const list = items.filter((d) => statusOf(d) === tab);
+  const selId = list.some((d) => d.id === sel) ? sel : (list[0]?.id ?? null);
+  const cur = items.find((d) => d.id === selId);
+
+  const finish = (kind: Finish) => {
+    if (!cur) return;
+    const next = { ...done, [cur.id]: kind };
+    setDone(next);
+    setTab("done");
+    setSel(cur.id);
+    setCounts({
+      newReports: items.filter((d) => statusOf(d, next) === "new").length + data.newBefore,
+    });
+  };
+
+  return (
+    <>
+      <AdminTitleRow>
+        <AdminTitle
+          title="제보"
+          desc="사용자가 '정보가 틀렸어요'로 보낸 내용이에요 · 같은 곳을 가리키는 제보는 묶어서 보여드려요"
+        />
+        <div role="group" aria-label="처리 상태" className="flex flex-wrap gap-[6px]">
+          {TABS.map((t) => {
+            const on = t.key === tab;
+            const count =
+              (t.key === "done" ? data.doneBefore : 0) +
+              items.filter((d) => statusOf(d) === t.key).length;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "rounded-pill min-h-[40px] cursor-pointer border-0 px-[16px] text-[14px] font-bold",
+                  on ? "bg-text text-white" : "bg-surface text-text-sub",
+                )}
+              >
+                {t.label} {count}
+              </button>
+            );
+          })}
+        </div>
+      </AdminTitleRow>
+
+      <div className="flex flex-wrap items-start gap-[20px]">
+        <section
+          aria-label="제보 목록"
+          className="rounded-card bg-surface flex min-w-0 flex-col overflow-hidden"
+          style={{ flex: "1 1 300px" }}
+        >
+          {list.length === 0 && (
+            <div className="text-text-sub px-[24px] py-[40px] text-center text-[15px]">
+              이 상태의 제보가 없어요
+            </div>
+          )}
+          {list.map((r) => {
+            const on = r.id === selId;
+            return (
+              <button
+                key={r.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setSel(r.id)}
+                className={cn(
+                  "border-b-line-soft text-text flex cursor-pointer flex-col gap-[6px] border-0 border-b border-l-4 border-solid py-[16px] pr-[18px] pl-[14px] text-left",
+                  on ? "bg-row-selected border-l-brand" : "bg-surface border-l-transparent",
+                )}
+              >
+                <span className="flex w-full justify-between gap-[8px]">
+                  <span className="text-text-sub text-[12px] font-bold">{r.where}</span>
+                  <span className="text-text-sub text-[12px]">{r.age}</span>
+                </span>
+                <span className="text-[15px] font-bold">{r.target}</span>
+                <span className="text-text-body-long text-[14px]">{r.summary}</span>
+                {r.groupCount > 1 && (
+                  <span className="rounded-tag bg-check-bg text-check-text self-start px-[8px] py-[2px] text-[12px] font-extrabold">
+                    같은 제보 {r.groupCount}건
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </section>
+
+        {cur && (
+          <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 560px" }}>
+            <section
+              aria-label="제보 내용"
+              className="rounded-card bg-surface flex flex-col gap-[16px] px-[26px] py-[24px]"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-[12px]">
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-text-sub text-[13px] font-bold">{cur.where}</span>
+                  <h2 className="tracking-title m-0 text-[22px] font-extrabold">{cur.target}</h2>
+                </div>
+                <Link
+                  href={cur.link}
+                  className="bg-fill text-text hover:text-text inline-flex min-h-[44px] items-center gap-[6px] rounded-sm px-[14px] text-[14px] font-bold no-underline"
+                >
+                  사용자 화면에서 보기
+                </Link>
+              </div>
+              <div
+                className="grid gap-[12px]"
+                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}
+              >
+                <div className="bg-bg flex flex-col gap-[6px] rounded-[18px] px-[18px] py-[16px]">
+                  <span className="text-text-sub text-[13px] font-bold">
+                    지금 서비스 값 · {cur.field}
+                  </span>
+                  <span className="text-[20px] font-extrabold">{cur.current}</span>
+                </div>
+                <div className="bg-lowconf-bg flex flex-col gap-[6px] rounded-[18px] px-[18px] py-[16px] shadow-[inset_0_0_0_1px_var(--color-lowconf-line)]">
+                  <span className="text-check-text text-[13px] font-bold">사용자가 말한 값</span>
+                  <span className="text-[20px] font-extrabold">{cur.reported}</span>
+                </div>
+                <div className="bg-bg flex flex-col gap-[6px] rounded-[18px] px-[18px] py-[16px]">
+                  <span className="text-text-sub text-[13px] font-bold">원문</span>
+                  <span className="text-[15px] leading-[1.5] font-semibold">{cur.source}</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[15px] font-extrabold">사용자 메모</span>
+                {cur.notes.map((n) => (
+                  <div
+                    key={n.meta + n.text}
+                    className="rounded-control bg-bg flex flex-col gap-[4px] px-[14px] py-[12px]"
+                  >
+                    <span className="text-[15px] leading-[1.6]">{n.text}</span>
+                    <span className="text-text-sub text-[12px]">{n.meta}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section
+              aria-label="처리"
+              className="rounded-card bg-surface flex flex-col gap-[14px] px-[26px] py-[22px]"
+            >
+              {done[cur.id] && (
+                <div
+                  role="status"
+                  className="rounded-control bg-ok-bg text-ok-text px-[16px] py-[12px] text-[15px] font-bold"
+                >
+                  {done[cur.id] === "fix"
+                    ? "값을 고치고 답변을 보냈어요 · 판정이 다시 계산됐어요"
+                    : "원문과 같다고 답변을 보냈어요"}
+                </div>
+              )}
+              <label className="flex flex-col gap-[8px] text-[15px] font-extrabold">
+                사용자에게 보낼 답변
+                <textarea
+                  rows={3}
+                  value={replies[cur.id] ?? cur.reply}
+                  onChange={(e) => setReplies({ ...replies, [cur.id]: e.target.value })}
+                  className="rounded-control border-line text-text resize-y border border-solid px-[14px] py-[12px] text-[15px] leading-[1.6] font-medium"
+                />
+                <span className="text-text-sub text-[13px] font-medium">
+                  알림으로 보내요 · 같은 제보를 보낸 {cur.groupCount}명 모두에게 가요
+                </span>
+              </label>
+              <div className="flex flex-wrap gap-[8px]">
+                <button
+                  type="button"
+                  onClick={() => finish("fix")}
+                  className="rounded-control bg-brand min-h-[52px] cursor-pointer border-0 px-[20px] text-[16px] font-extrabold text-white"
+                >
+                  값 고치고 답변 보내기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => finish("same")}
+                  className={cn(secondary, "cursor-pointer border-0")}
+                >
+                  원문과 같아요 · 답변만
+                </button>
+                <Link
+                  href={routes.adminReview}
+                  className={cn(secondary, "inline-flex items-center no-underline")}
+                >
+                  다시 검수로 보내기
+                </Link>
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
