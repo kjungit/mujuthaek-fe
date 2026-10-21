@@ -5,6 +5,9 @@ import { ChevronRight, Lock, User } from "lucide-react";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
+import { Toggle } from "@/components/ui/Toggle";
+import { clearConditions, setSaveOnDevice } from "@/features/conditions/store";
+import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useMe } from "@/features/me/queries";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -33,6 +36,8 @@ function RowInner({ label, value, accent }: { label: string; value: string; acce
 
 export function MMe() {
   const { data } = useMe();
+  const conditions = useConditionSummary();
+  const saveOnDevice = conditions.status === "ready" ? conditions.saveOnDevice : true;
 
   return (
     <MPage>
@@ -68,8 +73,13 @@ export function MMe() {
               수정
             </Link>
           </div>
+          {conditions.status === "ready" && !conditions.hasConditions && (
+            <span className="text-text-sub text-[14px]">
+              아직 입력한 조건이 없어요. 조건을 입력하면 이 기기에 저장해 둘게요.
+            </span>
+          )}
           <div className="flex flex-wrap gap-[6px]">
-            {data.conditionChips.map((c) => (
+            {(conditions.status === "ready" ? conditions.shortChips : []).map((c) => (
               <span
                 key={c}
                 className="rounded-pill bg-fill text-text-sub px-[12px] py-[6px] text-[14px] font-semibold"
@@ -77,13 +87,10 @@ export function MMe() {
                 {c}
               </span>
             ))}
-            <span className="rounded-pill bg-check-bg text-check-text px-[12px] py-[6px] text-[14px] font-bold">
-              {data.missingChip}
-            </span>
           </div>
           <span className="text-text-sub flex items-center gap-[6px] text-[13px]">
             <Lock size={15} aria-hidden />
-            소득·자산은 익명 모드라 저장하지 않았어요
+            소득·자산은 저장하지 않아요
           </span>
         </section>
 
@@ -94,13 +101,22 @@ export function MMe() {
           <Link href={routes.alerts} className={row}>
             <RowInner label="알림 설정" value={data.mobileMenu.notif} />
           </Link>
-          <Link href={routes.privacy} className={row}>
-            <RowInner
-              label="개인정보 · 익명 모드"
-              value={data.anon ? "켜짐" : "꺼짐"}
-              accent={data.anon}
-            />
-          </Link>
+          <div className={cn(row, "justify-between")}>
+            <span className="flex flex-col gap-[2px]">
+              <span className="text-[16px] font-semibold">이 기기에 조건 저장</span>
+              <span className="text-text-sub text-[13px]">소득·자산은 저장하지 않아요</span>
+            </span>
+            <Toggle checked={saveOnDevice} onChange={setSaveOnDevice} label="이 기기에 조건 저장" />
+          </div>
+          {conditions.status === "ready" && conditions.hasConditions && (
+            <button
+              type="button"
+              onClick={clearConditions}
+              className={cn(row, "cursor-pointer border-0 bg-transparent text-left")}
+            >
+              <span className="flex-1 text-[16px] font-semibold">저장한 조건 지우기</span>
+            </button>
+          )}
           <Link href={routes.bizOnboarding} className={row}>
             <RowInner label="사업 정보" value={data.mobileMenu.business} />
           </Link>

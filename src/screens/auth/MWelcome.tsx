@@ -11,6 +11,7 @@ import {
   setupCard,
 } from "@/components/auth/WelcomeParts";
 import { useAuthSession } from "@/features/auth/queries";
+import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useWelcomeSetup } from "@/features/auth/useWelcomeSetup";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -18,6 +19,7 @@ import { routes } from "@/lib/routes";
 export function MWelcome() {
   const setup = useWelcomeSetup();
   const { data } = useAuthSession();
+  const conditions = useConditionSummary();
 
   return (
     <div className="bg-bg text-text flex min-h-screen w-full flex-col">
@@ -66,9 +68,18 @@ export function MWelcome() {
         >
           <span className="flex flex-col gap-[2px]">
             <span className="text-[17px] font-extrabold">입력한 조건이 맞나요?</span>
-            <span className="text-text-sub text-[14px]">소득·자산은 저장하지 않았어요</span>
+            <span className="text-text-sub text-[14px]">
+              이 기기에 저장돼 있어요 · 소득·자산 제외
+            </span>
           </span>
-          <ConditionTags items={data.savedConditions} className="px-[12px] py-[6px]" />
+          {conditions.status === "ready" && !conditions.hasConditions ? (
+            <span className="text-text-sub text-[14px]">아직 입력한 조건이 없어요</span>
+          ) : (
+            <ConditionTags
+              items={conditions.status === "ready" ? conditions.shortChips : []}
+              className="px-[12px] py-[6px]"
+            />
+          )}
           <div className="grid grid-cols-2 gap-[8px]">
             <ConfirmCondButton setup={setup} />
             <Link

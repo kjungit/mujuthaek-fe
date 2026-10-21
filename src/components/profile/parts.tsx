@@ -1,6 +1,8 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import { RankChip } from "@/components/ui/Badge";
+import { Toggle } from "@/components/ui/Toggle";
 import { SelectChip } from "@/components/ui/Chip";
 import type { ProfileForm } from "@/features/profile/useProfileForm";
 import { cn } from "@/lib/cn";
@@ -17,11 +19,15 @@ export function UnitInput({
   placeholder,
   className,
   describedBy,
+  value,
+  onChange,
 }: {
   unit: string;
   placeholder: string;
   className?: string;
   describedBy?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
     <span className="relative flex">
@@ -30,12 +36,65 @@ export function UnitInput({
         inputMode="numeric"
         placeholder={placeholder}
         aria-describedby={describedBy}
+        value={value}
+        onChange={onChange}
         className={cn(pInput, "flex-1", unit.length > 1 ? "pr-[60px]" : "pr-[44px]", className)}
       />
       <span className="text-text-sub pointer-events-none absolute top-1/2 right-[16px] -translate-y-1/2 text-[16px] font-semibold">
         {unit}
       </span>
     </span>
+  );
+}
+
+/** 선택지에 지금 값이 없으면(모바일은 일부만 보여줘요) 맨 앞에 붙여요 */
+export function SelectOptions({ items, value }: { items: string[]; value: string }) {
+  const list = value && !items.includes(value) ? [value, ...items] : items;
+  return list.map((o) => <option key={o}>{o}</option>);
+}
+
+/** 이 기기에 조건 저장: 켜고 끄기 + 지우기 */
+export function DeviceSaveCard({ form, compact }: { form: ProfileForm; compact?: boolean }) {
+  return (
+    <section
+      aria-label="이 기기에 조건 저장"
+      className={cn(
+        "bg-brand-soft flex flex-col gap-[12px]",
+        compact ? "rounded-[18px] px-[18px] py-[16px]" : "rounded-card px-[24px] py-[22px]",
+      )}
+    >
+      <div className="flex items-center justify-between gap-[12px]">
+        <span
+          className={cn(
+            "text-brand-strong inline-flex items-center gap-[8px] font-extrabold",
+            compact ? "text-[15px]" : "text-[16px]",
+          )}
+        >
+          <Lock size={compact ? 18 : 20} aria-hidden />이 기기에 조건 저장
+        </span>
+        <Toggle
+          checked={form.saveOnDevice}
+          onChange={form.setSaveOnDevice}
+          label="이 기기에 조건 저장"
+        />
+      </div>
+      <span
+        className={cn("text-brand-strong leading-[1.6]", compact ? "text-[13px]" : "text-[14px]")}
+      >
+        {form.saveOnDevice
+          ? "소득·자산은 저장하지 않아요. 나머지 조건은 30일 동안 이 기기에만 저장해요."
+          : "이 기기에 저장하지 않아요. 탭을 닫으면 입력한 조건이 지워져요."}
+      </span>
+      {form.hasSaved && (
+        <button
+          type="button"
+          onClick={form.clearSaved}
+          className="text-brand-strong min-h-[44px] cursor-pointer self-start rounded-[10px] border-0 bg-white px-[14px] text-[14px] font-bold"
+        >
+          저장한 조건 지우기
+        </button>
+      )}
+    </section>
   );
 }
 

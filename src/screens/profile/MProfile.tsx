@@ -10,6 +10,8 @@ import {
   RankCriteriaFields,
   StatusChips,
   UnitInput,
+  DeviceSaveCard,
+  SelectOptions,
   pInput,
   pLabel,
   pSelect,
@@ -25,10 +27,6 @@ const mSelect = cn(pSelect, "min-h-[54px] px-[12px] text-[16px]");
 
 // 모바일은 선택지 일부만 보여줘요
 const pickIdx = (xs: string[], idx: number[]) => idx.map((i) => xs[i]).filter(Boolean);
-
-function Options({ items }: { items: string[] }) {
-  return items.map((o) => <option key={o}>{o}</option>);
-}
 
 export function MProfile() {
   const form = useProfileForm();
@@ -72,16 +70,23 @@ export function MProfile() {
                 inputMode="numeric"
                 placeholder="예: 1997.03.15"
                 className={mInput}
+                {...form.field("birth")}
               />
             </label>
             <div className="flex flex-col gap-[8px]">
               <span className="text-[15px] font-bold">지금 사는 곳</span>
               <div className="grid grid-cols-2 gap-[8px]">
-                <select aria-label="시·도" className={mSelect}>
-                  <Options items={options.sido.slice(0, 2)} />
+                <select aria-label="시·도" className={mSelect} {...form.field("sido")}>
+                  <SelectOptions
+                    items={options.sido.slice(0, 2)}
+                    value={form.field("sido").value}
+                  />
                 </select>
-                <select aria-label="시·군·구" className={mSelect}>
-                  <Options items={options.sigungu.slice(0, 2)} />
+                <select aria-label="시·군·구" className={mSelect} {...form.field("sigungu")}>
+                  <SelectOptions
+                    items={options.sigungu.slice(0, 2)}
+                    value={form.field("sigungu").value}
+                  />
                 </select>
               </div>
             </div>
@@ -119,13 +124,29 @@ export function MProfile() {
             </div>
             <label className={pLabel}>
               연소득 (세전)
-              <UnitInput unit="만 원" placeholder="3,200" className="min-h-[54px]" />
+              <UnitInput
+                unit="만 원"
+                placeholder="3,200"
+                className="min-h-[54px]"
+                {...form.sessionField("income")}
+              />
             </label>
             <label className={pLabel}>
               자산 합계
-              <UnitInput unit="만 원" placeholder="4,500" className="min-h-[54px]" />
+              <UnitInput
+                unit="만 원"
+                placeholder="4,500"
+                className="min-h-[54px]"
+                {...form.sessionField("asset")}
+              />
               <span className="text-text-sub flex min-h-[32px] items-center gap-[8px] text-[14px] font-medium">
-                <input type="checkbox" className="m-[3px_3px_3px_4px] size-[18px]" /> 잘 모르겠어요
+                <input
+                  type="checkbox"
+                  checked={form.assetUnknown}
+                  onChange={(e) => form.setAssetUnknown(e.target.checked)}
+                  className="m-[3px_3px_3px_4px] size-[18px]"
+                />{" "}
+                잘 모르겠어요
               </span>
             </label>
             <RankCriteriaFields form={form} compact />
@@ -136,28 +157,45 @@ export function MProfile() {
           <div className="flex flex-col gap-[20px]">
             <label className={pLabel}>
               무주택 기간
-              <select className={cn(mSelect, "font-medium")}>
-                <Options items={pickIdx(options.homelessPeriod, [0, 1, 3])} />
+              <select className={cn(mSelect, "font-medium")} {...form.field("homelessPeriod")}>
+                <SelectOptions
+                  items={pickIdx(options.homelessPeriod, [0, 1, 3])}
+                  value={form.field("homelessPeriod").value}
+                />
               </select>
             </label>
             <label className={pLabel}>
               청약통장 가입 기간
-              <select className={cn(mSelect, "font-medium")}>
-                <Options items={options.bankbookPeriod.slice(0, 3)} />
+              <select className={cn(mSelect, "font-medium")} {...form.field("bankbookPeriod")}>
+                <SelectOptions
+                  items={options.bankbookPeriod.slice(0, 3)}
+                  value={form.field("bankbookPeriod").value}
+                />
               </select>
             </label>
             <label className={pLabel}>
               지금 쓸 수 있는 돈
-              <UnitInput unit="만 원" placeholder="1,500" className="min-h-[54px]" />
+              <UnitInput
+                unit="만 원"
+                placeholder="1,500"
+                className="min-h-[54px]"
+                {...form.sessionField("available")}
+              />
             </label>
             <label className={pLabel}>
               직장 · 학교 위치
-              <input type="search" placeholder="회사 주소나 역 이름" className={mInput} />
+              <input
+                type="search"
+                placeholder="회사 주소나 역 이름"
+                className={mInput}
+                {...form.field("workplace")}
+              />
             </label>
             <div className="flex flex-col gap-[8px]">
               <span className="text-[15px] font-bold">살 곳을 고를 때 중요한 것</span>
               <PriorityChips form={form} chipClassName="px-[16px]" />
             </div>
+            <DeviceSaveCard form={form} compact />
           </div>
         )}
 
@@ -180,12 +218,13 @@ export function MProfile() {
           </button>
         )}
         {form.isLast ? (
-          <Link
-            href={routes.home}
-            className="rounded-control bg-brand flex min-h-[56px] flex-1 items-center justify-center text-[17px] font-extrabold text-white no-underline hover:text-white"
+          <button
+            type="button"
+            onClick={form.submit}
+            className="rounded-control bg-brand min-h-[56px] flex-1 cursor-pointer border-0 text-[17px] font-extrabold text-white"
           >
-            결과 보기
-          </Link>
+            확인하기
+          </button>
         ) : (
           <button
             type="button"

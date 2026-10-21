@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Check, Lock, Search, X } from "lucide-react";
+import { ArrowRight, Check, Search, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import {
   ChipGroup,
@@ -10,11 +10,12 @@ import {
   RankCriteriaFields,
   StatusChips,
   UnitInput,
+  DeviceSaveCard,
+  SelectOptions,
   pInput,
   pLabel,
   pSelect,
 } from "@/components/profile/parts";
-import { Toggle } from "@/components/ui/Toggle";
 import {
   headOptions,
   marryOptions,
@@ -34,26 +35,28 @@ const help = "text-text-sub text-[13px] font-medium";
 const headerLink =
   "text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[4px] px-[12px] text-[15px] font-semibold no-underline";
 
-function Options({ items }: { items: string[] }) {
-  return items.map((o) => <option key={o}>{o}</option>);
-}
-
 function Step1({ form }: { form: ProfileForm }) {
   const { options } = form.data;
   return (
     <div className="flex flex-col gap-[20px]">
       <label className={pLabel}>
         생년월일
-        <input type="text" inputMode="numeric" placeholder="예: 1997.03.15" className={pInput} />
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="예: 1997.03.15"
+          className={pInput}
+          {...form.field("birth")}
+        />
       </label>
       <div className="flex flex-col gap-[8px]">
         <span className="text-[15px] font-bold">지금 사는 곳</span>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-[10px]">
-          <select aria-label="시·도" className={pSelect}>
-            <Options items={options.sido} />
+          <select aria-label="시·도" className={pSelect} {...form.field("sido")}>
+            <SelectOptions items={options.sido} value={form.field("sido").value} />
           </select>
-          <select aria-label="시·군·구" className={pSelect}>
-            <Options items={options.sigungu} />
+          <select aria-label="시·군·구" className={pSelect} {...form.field("sigungu")}>
+            <SelectOptions items={options.sigungu} value={form.field("sigungu").value} />
           </select>
         </div>
       </div>
@@ -95,22 +98,30 @@ function Step2({ form }: { form: ProfileForm }) {
         </div>
         <label className={pLabel}>
           함께 사는 가족 (나 포함)
-          <select className={cn(pSelect, "font-medium")}>
-            <Options items={form.data.options.householdSize} />
+          <select className={cn(pSelect, "font-medium")} {...form.field("householdSize")}>
+            <SelectOptions
+              items={form.data.options.householdSize}
+              value={form.field("householdSize").value}
+            />
           </select>
         </label>
       </div>
       <label className={pLabel}>
         연소득 (세전)
-        <UnitInput unit="만 원" placeholder="3,200" />
+        <UnitInput unit="만 원" placeholder="3,200" {...form.sessionField("income")} />
         <span className={help}>작년 원천징수영수증의 총급여를 넣으면 가장 정확해요</span>
       </label>
       <label className={pLabel}>
         자산 합계 (예금 · 자동차 · 부동산)
-        <UnitInput unit="만 원" placeholder="4,500" />
+        <UnitInput unit="만 원" placeholder="4,500" {...form.sessionField("asset")} />
         <span className="text-text-sub flex items-center gap-[8px] text-[14px] font-medium">
-          <input type="checkbox" className="m-[3px_3px_3px_4px] size-[18px]" /> 잘 모르겠어요 · 자산
-          조건은 &apos;확인 필요&apos;로 보여주세요
+          <input
+            type="checkbox"
+            checked={form.assetUnknown}
+            onChange={(e) => form.setAssetUnknown(e.target.checked)}
+            className="m-[3px_3px_3px_4px] size-[18px]"
+          />{" "}
+          잘 모르겠어요 · 자산 조건은 &apos;확인 필요&apos;로 보여주세요
         </span>
       </label>
       <RankCriteriaFields form={form} />
@@ -124,25 +135,31 @@ function Step3({ form }: { form: ProfileForm }) {
     <div className="flex flex-col gap-[20px]">
       <label className={pLabel}>
         무주택 기간
-        <select className={cn(pSelect, "font-medium")}>
-          <Options items={options.homelessPeriod} />
+        <select className={cn(pSelect, "font-medium")} {...form.field("homelessPeriod")}>
+          <SelectOptions
+            items={options.homelessPeriod}
+            value={form.field("homelessPeriod").value}
+          />
         </select>
       </label>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-[12px]">
         <label className={pLabel}>
           청약통장 가입 기간
-          <select className={cn(pSelect, "font-medium")}>
-            <Options items={options.bankbookPeriod} />
+          <select className={cn(pSelect, "font-medium")} {...form.field("bankbookPeriod")}>
+            <SelectOptions
+              items={options.bankbookPeriod}
+              value={form.field("bankbookPeriod").value}
+            />
           </select>
         </label>
         <label className={pLabel}>
           납입 횟수
-          <UnitInput unit="회" placeholder="26" />
+          <UnitInput unit="회" placeholder="26" {...form.field("paymentCount")} />
         </label>
       </div>
       <label className={pLabel}>
         지금 쓸 수 있는 돈
-        <UnitInput unit="만 원" placeholder="1,500" />
+        <UnitInput unit="만 원" placeholder="1,500" {...form.sessionField("available")} />
         <span className={help}>공고마다 &apos;내가 준비할 돈&apos;과 비교해 드려요</span>
       </label>
       <label className={pLabel}>
@@ -157,6 +174,7 @@ function Step3({ form }: { form: ProfileForm }) {
             type="search"
             placeholder="회사 주소나 역 이름"
             className={cn(pInput, "flex-1 pl-[46px]")}
+            {...form.field("workplace")}
           />
         </span>
       </label>
@@ -275,10 +293,14 @@ export function WebProfile() {
               )}
               <span className="flex-1" />
               {form.isLast ? (
-                <Link href={routes.home} className={cn(primary, "no-underline hover:text-white")}>
-                  결과 보기
+                <button
+                  type="button"
+                  onClick={form.submit}
+                  className={cn(primary, "cursor-pointer border-0")}
+                >
+                  확인하기
                   <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
-                </Link>
+                </button>
               ) : (
                 <button
                   type="button"
@@ -321,23 +343,7 @@ export function WebProfile() {
               </span>
             </section>
 
-            <section
-              aria-label="개인정보"
-              className="rounded-card bg-brand-soft flex flex-col gap-[12px] px-[24px] py-[22px]"
-            >
-              <div className="flex items-center justify-between gap-[12px]">
-                <span className="text-brand-strong inline-flex items-center gap-[8px] text-[16px] font-extrabold">
-                  <Lock size={20} aria-hidden />
-                  익명 모드
-                </span>
-                <Toggle checked={form.anon} onChange={form.setAnon} label="익명 모드" />
-              </div>
-              <span className="text-brand-strong text-[14px] leading-[1.6]">
-                {form.anon
-                  ? "소득·자산은 판정에만 쓰고 저장하지 않아요. 다음에 다시 입력해야 해요."
-                  : "로그인하면 소득·자산까지 저장해서 다음에 다시 입력하지 않아도 돼요."}
-              </span>
-            </section>
+            <DeviceSaveCard form={form} />
           </aside>
         </div>
       </main>

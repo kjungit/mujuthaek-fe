@@ -112,7 +112,7 @@ const trust: { icon: LucideIcon; title: string; desc: string }[] = [
   {
     icon: Lock,
     title: "소득·자산은 저장하지 않아요",
-    desc: "판정에만 쓰고 저장하지 않아요. 다시 입력하기 싫을 때만 직접 켜서 저장해요",
+    desc: "판정할 때만 쓰고 어디에도 저장하지 않아요. 나머지 조건은 이 기기에만 30일 동안 둬요",
   },
   {
     icon: Scale,

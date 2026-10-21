@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { passwordOk } from "./password";
 
-export type SaveMode = "basic" | "full";
-
 export const signupTerms = [
   { key: "age", required: true, label: "만 14세 이상이에요" },
   { key: "tos", required: true, label: "이용약관 동의" },
@@ -26,7 +24,6 @@ const initialAgree: Record<TermKey, boolean> = {
 /** 회원가입 화면 상태 (PC/모바일 공통) */
 export function useSignupForm() {
   const [pw, setPw] = useState("");
-  const [save, setSave] = useState<SaveMode>("basic");
   const [agree, setAgree] = useState(initialAgree);
 
   const all = signupTerms.every((t) => agree[t.key]);
@@ -36,8 +33,6 @@ export function useSignupForm() {
   return {
     pw,
     setPw,
-    save,
-    setSave,
     agree,
     all,
     ready,
