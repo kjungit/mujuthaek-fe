@@ -44,3 +44,6 @@ next-env.d.ts
 
 # design handoff (local only)
 .design/
+
+# 로컬 확인용 공고 원문 PDF (기관 파일이라 저장소에 올리지 않아요)
+public/mock/*.pdf

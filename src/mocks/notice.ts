@@ -1,14 +1,8 @@
 // 화면용 예시 데이터 (디자인 WebDetail · WebDetailUnits · MDetail · MDetailUnits). 실제 값은 API에서 받아요.
 import type { Verdict } from "@/components/ui/Badge";
+import { happyHousingDoc, parkvilleDoc, youthPurchaseDoc, type NoticeDoc } from "./notice-doc";
 
 export type NoticeFact = { label: string; value: string };
-
-export type NoticeScheduleStep = {
-  label: string;
-  date: string;
-  /** done: 지난 단계 · now: 지금 단계 · todo: 남은 단계 */
-  state: "done" | "now" | "todo";
-};
 
 export type NoticeEligibility = {
   /** PC 문구 */
@@ -71,19 +65,11 @@ type NoticeBase = {
   /** 공고 원문을 낸 기관(버튼 문구에 써요) */
   agency: string;
   facts: NoticeFact[];
-  schedule: NoticeScheduleStep[];
   eligibility: NoticeEligibility[];
-  ranking: NoticeRanking;
-};
-
-export type NoticeRentRow = {
-  type: string;
-  area: string;
-  deposit: string;
-  rent: string;
-  supply: string;
-  /** 내 조건으로 신청할 수 있는 주택형 */
-  mine: boolean;
+  /** 순위로 뽑는 공고만 (선착순 · 추첨만 하는 공고는 없어요) */
+  ranking?: NoticeRanking;
+  /** 공고 원문을 목차별로 정리한 내용 */
+  doc: NoticeDoc;
 };
 
 export type NoticeLifeItem = {
@@ -101,11 +87,9 @@ export type NoticeBenefit = {
   verdict: Verdict;
 };
 
-/** 일반 공고: 주택형별 임대 조건 + (있으면) 블록별 공급 주택 */
+/** 일반 공고: 주택형별 임대 조건(doc.housing) + (있으면) 블록별 공급 주택 */
 export type StandardNotice = NoticeBase & {
   kind: "standard";
-  rentBasis: string;
-  rentTable: NoticeRentRow[];
   /** 단지 안 블록별 공급 주택. 없으면 목록·지도 칸을 숨겨요 */
   units?: NoticeUnit[];
   money: {
@@ -138,18 +122,12 @@ const happyHousing: Omit<StandardNotice, "id"> = {
   title: "○○지구 행복주택",
   meta: "LH · 공공임대 월세형 · 서울 마포구 · 직장까지 32분",
   agency: "LH",
+  doc: happyHousingDoc,
   facts: [
     { label: "모집 대상", value: "청년 · 신혼부부" },
     { label: "공급 호수", value: "120호" },
     { label: "전용면적", value: "26 ~ 44㎡" },
     { label: "거주 기간", value: "최대 6년" },
-  ],
-  schedule: [
-    { label: "공고", date: "10월 7일", state: "done" },
-    { label: "접수", date: "10월 14일 ~ 31일", state: "now" },
-    { label: "서류 제출", date: "11월 18일 ~ 24일", state: "todo" },
-    { label: "당첨 발표", date: "12월 18일", state: "todo" },
-    { label: "계약", date: "1월 13일 ~ 15일", state: "todo" },
   ],
   eligibility: [
     { label: "나이 · 청년 유형", shortLabel: "나이 · 청년 유형", status: "met" },
@@ -168,33 +146,6 @@ const happyHousing: Omit<StandardNotice, "id"> = {
     tieBreak: "추첨",
     sourcePage: 7,
   },
-  rentBasis: "청년 기준",
-  rentTable: [
-    {
-      type: "26A",
-      area: "26.3㎡",
-      deposit: "2,400만 원",
-      rent: "18만 원",
-      supply: "64호",
-      mine: true,
-    },
-    {
-      type: "36B",
-      area: "36.8㎡",
-      deposit: "3,300만 원",
-      rent: "25만 원",
-      supply: "40호",
-      mine: false,
-    },
-    {
-      type: "44C",
-      area: "44.1㎡",
-      deposit: "4,000만 원",
-      rent: "30만 원",
-      supply: "16호",
-      mine: false,
-    },
-  ],
   money: {
     type: "26A",
     deposit: "2,400만 원",
@@ -230,26 +181,25 @@ const blockUnit = (
   x: number,
   y: number,
 ): NoticeUnit => {
-  const row = happyHousing.rentTable.find((r) => r.type === type)!;
-  const prep: Record<string, string> = {
-    "26A": "960만 원",
-    "36B": "1,320만 원",
-    "44C": "1,600만 원",
+  const row: Record<string, { area: string; deposit: string; rent: string; prep: string }> = {
+    "26A": { area: "26.3㎡", deposit: "2,400만 원", rent: "18만 원", prep: "960만 원" },
+    "36B": { area: "36.8㎡", deposit: "3,300만 원", rent: "25만 원", prep: "1,320만 원" },
+    "44C": { area: "44.1㎡", deposit: "4,000만 원", rent: "30만 원", prep: "1,600만 원" },
   };
   return {
     id,
     name,
     type,
-    area: row.area,
+    area: row[type].area,
     floor,
-    deposit: row.deposit,
-    rent: `월 ${row.rent}`,
+    deposit: row[type].deposit,
+    rent: `월 ${row[type].rent}`,
     station,
     ok,
     otherTarget: "신혼부부 대상",
     x,
     y,
-    prep: prep[type],
+    prep: row[type].prep,
   };
 };
 
@@ -270,17 +220,11 @@ const youthPurchase: Omit<UnitListNotice, "id"> = {
   title: "2026년 2차 청년 매입임대주택",
   meta: "LH 서울지역본부 · 서울 마포구 · 접수 10월 20일 ~ 24일",
   agency: "LH",
+  doc: youthPurchaseDoc,
   facts: [
     { label: "모집 대상", value: "청년 · 신혼부부" },
     { label: "공급 주택", value: "8호" },
     { label: "거주 기간", value: "최대 6년" },
-  ],
-  schedule: [
-    { label: "공고", date: "10월 10일", state: "done" },
-    { label: "접수", date: "10월 20일 ~ 24일", state: "now" },
-    { label: "주택 공개", date: "11월 중", state: "todo" },
-    { label: "당첨 발표", date: "12월 5일", state: "todo" },
-    { label: "계약", date: "12월 중", state: "todo" },
   ],
   eligibility: [
     { label: "청년 (만 19~39세, 미혼)", shortLabel: "청년 (만 19~39세, 미혼)", status: "met" },
@@ -459,9 +403,56 @@ const youthPurchase: Omit<UnitListNotice, "id"> = {
   ],
 };
 
+/** 실제 추출 데이터로 만든 예시: 선착순 · 순위 없음 · 원문 PDF 있음 */
+const parkville: Omit<StandardNotice, "id"> = {
+  kind: "standard",
+  verdict: "ok",
+  dday: 20,
+  tags: ["선착순", "소득·자산 기준 없음"],
+  title: "양산 삼성파크빌 국민임대 선착순 모집",
+  meta: "LH 경남지역본부 · 국민임대 · 경남 양산시",
+  agency: "LH",
+  doc: parkvilleDoc,
+  facts: [
+    { label: "보증금", value: "1,855만 원" },
+    { label: "월 임대료", value: "11만 4,150원" },
+    { label: "모집 호수", value: "32호" },
+    { label: "전용면적", value: "55.68㎡" },
+  ],
+  eligibility: [
+    { label: "무주택", shortLabel: "무주택", status: "met" },
+    { label: "나이 · 만 19세 이상", shortLabel: "만 19세 이상", status: "met" },
+    { label: "자동차가액 4,542만 원 이하", shortLabel: "자동차 4,542만 원 이하", status: "input" },
+  ],
+  money: {
+    type: "55형",
+    deposit: "1,855만 원",
+    loanName: "버팀목 전세자금 대출 예상",
+    loanShortName: "버팀목 대출 예상",
+    loan: "1,100만 원",
+    prep: "755만 원",
+    note: "계약금 50만 원은 계약 당일에 넣어요 · 월 임대료 11만 4,150원",
+  },
+  life: {
+    score: 64,
+    items: [
+      { kind: "commute", label: "통근", value: "48분", pct: 45 },
+      { kind: "station", label: "역까지", value: "버스 12분", pct: 50 },
+      { kind: "park", label: "공원까지", value: "도보 8분", pct: 70 },
+    ],
+  },
+  benefitArea: "경남 양산시",
+  benefits: [
+    { id: "b1", title: "청년 월세 지원", desc: "월 최대 20만 원 · 전입 후 신청", verdict: "check" },
+    { id: "b3", title: "이사비 · 중개보수 지원", desc: "최대 40만 원 · 1회", verdict: "ok" },
+  ],
+};
+
 export const notices: Notice[] = [
   // 블록별 공급 주택이 있는 일반 공고
   { ...happyHousing, id: "n1", units: blockUnits },
+  // 원문 PDF · 목차가 모두 있는 공고 (실제 추출 데이터)
+  { ...parkville, id: "n7" },
   // 공급 주택 목록이 없는 일반 공고
   {
     ...happyHousing,

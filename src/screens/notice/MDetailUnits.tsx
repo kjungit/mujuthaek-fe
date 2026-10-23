@@ -2,9 +2,12 @@
 
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
+import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
+import { PdfViewer } from "@/components/notice/PdfViewer";
 import { MRankCard } from "@/components/notice/RankCard";
 import { useNotice } from "@/features/notice/queries";
+import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -23,7 +26,10 @@ export function MDetailUnits({ id }: { id: string }) {
   const { data: n } = useNotice(id);
   const units = n.kind === "units" ? n.units.slice(0, MOBILE_UNIT_COUNT) : [];
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
+  const pdf = usePdfViewer();
   if (n.kind !== "units") return null;
+  const { doc } = n;
+  const pdfUrl = doc.source.pdfUrl;
 
   const seg = (on: boolean) =>
     cn(
@@ -38,7 +44,7 @@ export function MDetailUnits({ id }: { id: string }) {
         <section className="bg-surface flex flex-col gap-[10px] p-[20px]">
           <NoticeTags
             verdict={n.verdict}
-            rank={n.ranking.myRank}
+            rank={n.ranking?.myRank}
             dday={n.dday}
             tags={n.tags}
             size="md"
@@ -173,30 +179,14 @@ export function MDetailUnits({ id }: { id: string }) {
           ))}
         </section>
 
-        <MRankCard ranking={n.ranking} />
+        {n.ranking && <MRankCard ranking={n.ranking} />}
 
-        <section aria-labelledby="sch-h" className={cn(card, "gap-[8px] px-[20px] py-[16px]")}>
-          <h3 id="sch-h" className="m-0 text-[17px] font-extrabold">
-            일정
-          </h3>
-          {n.schedule
-            .filter((s) => s.state !== "done")
-            .map((s) => (
-              <span
-                key={s.label}
-                className={cn(
-                  "flex justify-between text-[15px]",
-                  s.state === "now" && "text-brand-strong font-extrabold",
-                )}
-              >
-                <span>
-                  {s.label}
-                  {s.state === "now" && " · 지금"}
-                </span>
-                <span>{s.date}</span>
-              </span>
-            ))}
-        </section>
+        <NoticeToc doc={doc} variant="mobile" />
+        <NoticeSections
+          doc={doc}
+          variant="mobile"
+          onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
+        />
       </main>
       <MBottomActions>
         <div className="flex w-full flex-col gap-[6px]">
@@ -207,12 +197,26 @@ export function MDetailUnits({ id }: { id: string }) {
           )}
           <button
             type="button"
+            onClick={() =>
+              pdfUrl ? pdf.show() : window.open(doc.source.detailUrl, "_blank", "noreferrer")
+            }
             className="rounded-control bg-brand flex min-h-[56px] cursor-pointer items-center justify-center border-0 text-[17px] font-extrabold text-white"
           >
-            {n.agency} 공고 원문에서 신청
+            {n.agency} 공고 원문 보기
           </button>
         </div>
       </MBottomActions>
+      {pdfUrl && (
+        <PdfViewer
+          open={pdf.open}
+          onClose={pdf.close}
+          src={pdfUrl}
+          fileName={doc.source.fileName}
+          detailUrl={doc.source.detailUrl}
+          target={pdf.target}
+          variant="mobile"
+        />
+      )}
     </MPage>
   );
 }
