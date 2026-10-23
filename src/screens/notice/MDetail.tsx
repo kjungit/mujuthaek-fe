@@ -10,7 +10,7 @@ import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { MRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
-import { formatPeriod, statusLabel } from "@/features/notice/format";
+import { formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { cn } from "@/lib/cn";
@@ -224,6 +224,8 @@ export function MDetail({ id }: { id: string }) {
           fileName={doc.source.fileName}
           detailUrl={doc.source.detailUrl}
           target={pdf.target}
+          sections={pdfSections(doc)}
+          onJump={pdf.show}
           variant="mobile"
         />
       )}

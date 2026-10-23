@@ -75,7 +75,7 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
         {page && onOpenPage && (
           <button
             type="button"
-            onClick={() => onOpenPage(page, heading)}
+            onClick={() => onOpenPage(page, sectionTitles[k].toc)}
             className="text-brand-strong inline-flex min-h-[40px] flex-none cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[13px] font-bold"
           >
             <FileText size={15} aria-hidden />

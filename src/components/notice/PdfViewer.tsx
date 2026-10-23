@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, ExternalLink, Minus, Plus, X } from "lucide-react";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import type { PdfTarget } from "@/features/notice/usePdfViewer";
+import { cn } from "@/lib/cn";
 
 const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 2;
@@ -19,6 +20,10 @@ type PdfViewerProps = {
   /** 불러오지 못하면 보내는 기관 공고 페이지 */
   detailUrl: string;
   target: PdfTarget | null;
+  /** 뷰어 위 섹션 목차 (쪽 순서) */
+  sections?: { label: string; page: number }[];
+  /** 섹션을 누르면 그 쪽으로 이동해요 */
+  onJump?: (page: number, label: string) => void;
   /** web: 왼쪽 패널 · mobile: 아래 시트 */
   variant: "web" | "mobile";
 };
@@ -29,7 +34,16 @@ export function PdfViewer(props: PdfViewerProps) {
   return <PdfViewerPanel {...props} />;
 }
 
-function PdfViewerPanel({ onClose, src, fileName, detailUrl, target, variant }: PdfViewerProps) {
+function PdfViewerPanel({
+  onClose,
+  src,
+  fileName,
+  detailUrl,
+  target,
+  variant,
+  sections = [],
+  onJump,
+}: PdfViewerProps) {
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [error, setError] = useState(false);
   /** 첫 쪽의 세로/가로 비율 (그리기 전 자리 잡기용) */
@@ -117,6 +131,42 @@ function PdfViewerPanel({ onClose, src, fileName, detailUrl, target, variant }: 
   }, [onClose]);
 
   const numPages = doc?.numPages ?? 0;
+  /** 지금 쪽이 속한 섹션 쪽 (그 쪽 이전에서 가장 가까운 섹션) */
+  const activePage = sections.reduce((acc, sec) => (sec.page <= current ? sec.page : acc), 0);
+
+  const sectionBar = sections.length > 0 && onJump && (
+    <nav
+      aria-label="원문 섹션"
+      className="border-line-soft flex gap-[6px] overflow-x-auto border-b border-solid px-[12px] py-[8px]"
+    >
+      {sections.map((sec) => {
+        // 같은 쪽에 섹션이 여럿이면 누른 섹션만 표시해요
+        const picked =
+          target?.page === activePage && sections.some((x) => x.label === target.label);
+        const on = sec.page === activePage && (!picked || sec.label === target?.label);
+        return (
+          <button
+            key={sec.label}
+            type="button"
+            aria-current={on ? "true" : undefined}
+            ref={(el) => {
+              if (on) el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+            }}
+            onClick={() => onJump(sec.page, sec.label)}
+            className={cn(
+              "rounded-pill inline-flex min-h-[36px] flex-none cursor-pointer items-center gap-[4px] border-0 px-[12px] text-[13px] font-bold whitespace-nowrap",
+              on ? "bg-brand text-white" : "bg-fill text-text-sub",
+            )}
+          >
+            {sec.label}
+            <span className={cn("font-semibold", on ? "text-white" : "text-text-tertiary")}>
+              p.{sec.page}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
   const iconBtn =
     "text-text-sub inline-flex size-[40px] flex-none cursor-pointer items-center justify-center rounded-[10px] border-0 bg-transparent disabled:cursor-default disabled:opacity-40";
 
@@ -185,10 +235,11 @@ function PdfViewerPanel({ onClose, src, fileName, detailUrl, target, variant }: 
   const body = (
     <div className="relative flex min-h-0 flex-1 flex-col">
       {toolbar}
+      {sectionBar}
       {chip && (
         <span
           role="status"
-          className="rounded-pill bg-brand shadow-float absolute top-[60px] left-1/2 z-[1] -translate-x-1/2 px-[14px] py-[7px] text-[13px] font-bold whitespace-nowrap text-white"
+          className="rounded-pill bg-brand shadow-float absolute top-[108px] left-1/2 z-[1] -translate-x-1/2 px-[14px] py-[7px] text-[13px] font-bold whitespace-nowrap text-white"
         >
           {chip}
         </span>

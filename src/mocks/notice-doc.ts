@@ -454,18 +454,28 @@ export const parkvilleDoc: NoticeDoc = {
   ],
 };
 
-/** 행복주택 예시 (원문 PDF 없음 → 기관 사이트로 연결) */
+/** 행복주택 예시 */
 export const happyHousingDoc: NoticeDoc = {
   status: "OPEN",
   applyPeriod: { start: "2026-10-14", end: "2026-10-31", note: "LH 청약플러스 온라인 신청" },
   summary: "청년·신혼부부에게 시세보다 싸게 빌려주는 행복주택 120호 입주자 모집이에요.",
   source: {
     fileName: "○○지구 행복주택 입주자모집공고.pdf",
-    pdfUrl: null,
-    pageCount: null,
+    // 임시: 로컬 예시 PDF로 보여줘요 (쪽 번호는 실제와 달라요)
+    pdfUrl: "/mock/notice-n7.pdf",
+    pageCount: 8,
     detailUrl: "https://apply.lh.or.kr",
   },
-  pages: {},
+  pages: {
+    eligibility: 3,
+    housing: 2,
+    schedule: 5,
+    apply: 6,
+    selection: 5,
+    cautions: 1,
+    living: 7,
+    contacts: 8,
+  },
   eligibility: [
     {
       id: "age",
@@ -575,11 +585,12 @@ export const youthPurchaseDoc: NoticeDoc = {
   summary: "마포구 청년에게 빌라·원룸을 시세의 40~50%로 빌려주는 매입임대 8호 모집이에요.",
   source: {
     fileName: "2026년 2차 청년 매입임대주택 입주자모집공고.pdf",
-    pdfUrl: null,
-    pageCount: null,
+    // 임시: 로컬 예시 PDF로 보여줘요 (쪽 번호는 실제와 달라요)
+    pdfUrl: "/mock/notice-n7.pdf",
+    pageCount: 8,
     detailUrl: "https://apply.lh.or.kr",
   },
-  pages: {},
+  pages: { eligibility: 3, schedule: 5, apply: 6, selection: 5, living: 7, contacts: 8 },
   eligibility: [
     { id: "age", category: "AGE", text: "만 19~39세 미혼 청년이에요." },
     { id: "homeless", category: "HOME_OWNERSHIP", text: "본인이 집이 없어야 해요." },

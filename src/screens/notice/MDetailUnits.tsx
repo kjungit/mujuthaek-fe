@@ -6,6 +6,7 @@ import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { MRankCard } from "@/components/notice/RankCard";
+import { pdfSections } from "@/features/notice/format";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
@@ -214,6 +215,8 @@ export function MDetailUnits({ id }: { id: string }) {
           fileName={doc.source.fileName}
           detailUrl={doc.source.detailUrl}
           target={pdf.target}
+          sections={pdfSections(doc)}
+          onJump={pdf.show}
           variant="mobile"
         />
       )}

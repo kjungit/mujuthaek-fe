@@ -9,6 +9,7 @@ import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { WebRankCard } from "@/components/notice/RankCard";
 import { WebUnitFilter } from "@/components/notice/UnitFilter";
+import { pdfSections } from "@/features/notice/format";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
@@ -392,6 +393,8 @@ export function WebDetailUnits({ id }: { id: string }) {
           fileName={doc.source.fileName}
           detailUrl={doc.source.detailUrl}
           target={pdf.target}
+          sections={pdfSections(doc)}
+          onJump={pdf.show}
           variant="web"
         />
       )}
