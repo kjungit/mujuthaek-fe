@@ -44,3 +44,6 @@ next-env.d.ts
 
 # design handoff (local only)
 .design/
+
+# local docs (not committed)
+.docs/
