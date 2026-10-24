@@ -15,7 +15,6 @@ export type DeviceConditions = {
   homelessPeriod: string;
   bankbookPeriod: string;
   paymentCount: string;
-  workplace: string;
   priorities: string[];
 };
 

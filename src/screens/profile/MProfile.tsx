@@ -12,7 +12,6 @@ import {
   UnitInput,
   DeviceSaveCard,
   SelectOptions,
-  pInput,
   pLabel,
   pSelect,
 } from "@/components/profile/parts";
@@ -24,7 +23,6 @@ import { routes } from "@/lib/routes";
 
 const titles = ["기본 정보를 알려주세요", "가족 · 소득 · 자산", "주택 · 생활권"];
 
-const mInput = cn(pInput, "min-h-[54px]");
 const mSelect = cn(pSelect, "min-h-[54px] px-[12px] text-[16px]");
 
 // 모바일은 선택지 일부만 보여줘요
@@ -162,15 +160,6 @@ export function MProfile() {
                 placeholder="1,500"
                 className="min-h-[54px]"
                 {...form.sessionField("available")}
-              />
-            </label>
-            <label className={pLabel}>
-              직장 · 학교 위치
-              <input
-                type="search"
-                placeholder="회사 주소나 역 이름"
-                className={mInput}
-                {...form.field("workplace")}
               />
             </label>
             <div className="flex flex-col gap-[8px]">
