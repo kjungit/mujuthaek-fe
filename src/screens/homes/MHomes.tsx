@@ -8,7 +8,9 @@ import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
 import { RankChip, VerdictBadge } from "@/components/ui/Badge";
 import { activeFilterGroupCount, defaultMode, defaultSort } from "@/features/homes/filters";
+import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomes } from "@/features/homes/queries";
+import { listingRegionLabel, matchesRegion, useRegionFilter } from "@/features/homes/region";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { HomeMapPin } from "@/mocks/homes";
@@ -26,7 +28,11 @@ export function MHomes() {
   const { data } = useHomes();
   const [view, setView] = useState<"list" | "map">("list");
   const isMap = view === "map";
-  const items = isMap ? data.listings.slice(0, MAP_LIST_COUNT) : data.listings;
+  const region = useRegionFilter();
+  const visible = data.listings.filter((l) => matchesRegion(l, region.region));
+  const visibleIds = new Set(visible.map((l) => l.id));
+  const items = isMap ? visible.slice(0, MAP_LIST_COUNT) : visible;
+  const count = region.isAll ? data.total : visible.length;
 
   const viewButton = (v: "list" | "map", label: string) => (
     <button
@@ -50,7 +56,7 @@ export function MHomes() {
           <div className="flex flex-col gap-[4px]">
             <h1 className="tracking-h1 m-0 text-[26px] font-extrabold">내 집</h1>
             <span className="text-text-sub text-[15px]">
-              지원할 수 있는 곳 <strong className="text-brand-strong">{data.total}곳</strong>
+              지원할 수 있는 곳 <strong className="text-brand-strong">{count}곳</strong>
             </span>
           </div>
           <div role="group" aria-label="보기 방식" className="bg-surface flex rounded-sm p-[3px]">
@@ -58,6 +64,10 @@ export function MHomes() {
             {viewButton("map", "지도")}
           </div>
         </div>
+
+        <section aria-label="지역" className="px-[4px]">
+          <RegionSelect filter={region} compact />
+        </section>
 
         <div className="flex gap-[6px] overflow-x-auto px-[4px] pb-[2px]">
           <button
@@ -95,18 +105,33 @@ export function MHomes() {
               aria-hidden
               className="bg-map-park-2 absolute top-[40px] left-[30px] h-[70px] w-[90px] rounded-[18px]"
             />
-            {data.mapPins.map((p) => (
-              <span
-                key={p.id}
-                className={cn(
-                  "rounded-pill absolute px-[10px] py-[6px] text-[13px] font-extrabold shadow-[0_4px_10px_rgba(25,31,40,0.2)]",
-                  pinTone[p.tone],
-                )}
-                style={{ left: p.left, top: p.top }}
-              >
-                {p.label}
-              </span>
-            ))}
+            {data.mapPins
+              .filter((p) => visibleIds.has(p.id))
+              .map((p) => (
+                <span
+                  key={p.id}
+                  className={cn(
+                    "rounded-pill absolute px-[10px] py-[6px] text-[13px] font-extrabold shadow-[0_4px_10px_rgba(25,31,40,0.2)]",
+                    pinTone[p.tone],
+                  )}
+                  style={{ left: p.left, top: p.top }}
+                >
+                  {p.label}
+                </span>
+              ))}
+          </div>
+        )}
+
+        {visible.length === 0 && (
+          <div className="rounded-card bg-surface text-text-sub flex flex-col items-center gap-[12px] px-[20px] py-[36px] text-center text-[15px]">
+            고른 지역에는 지금 지원할 수 있는 공고가 없어요
+            <button
+              type="button"
+              onClick={region.reset}
+              className="bg-fill text-text min-h-[44px] cursor-pointer rounded-sm border-0 px-[16px] text-[14px] font-bold"
+            >
+              전체 지역 보기
+            </button>
           </div>
         )}
 
@@ -128,7 +153,9 @@ export function MHomes() {
                 <span className="text-[13px] font-extrabold">{h.due}</span>
               </span>
               <span className="text-[16px] font-extrabold tracking-[-0.02em]">{h.title}</span>
-              <span className="text-text-tertiary text-[12px]">{h.org}</span>
+              <span className="text-text-tertiary text-[12px]">
+                {h.org} · {listingRegionLabel(h)}
+              </span>
               <span className="text-[14px] font-semibold">{h.price}</span>
               <span className="text-text-sub text-[13px]">
                 {h.prepAmount ? `준비할 돈 ${h.prepAmount}` : h.prepNote}
