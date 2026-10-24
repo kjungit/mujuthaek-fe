@@ -33,9 +33,9 @@ const place = (c: DeviceConditions) => regionLabel(c.sido, c.sigungu || undefine
 const placeLabel = (p: Place) => regionLabel(p.sido, p.sigungu || undefined);
 
 /** "부산 해운대구 외 1곳" */
-const moveChip = (c: DeviceConditions) =>
-  c.moveRegions.length > 0 &&
-  `이사 갈 곳 ${placeLabel(c.moveRegions[0])}${c.moveRegions.length > 1 ? ` 외 ${c.moveRegions.length - 1}곳` : ""}`;
+const searchChip = (c: DeviceConditions) =>
+  c.searchRegions.length > 0 &&
+  `찾아볼 지역 ${placeLabel(c.searchRegions[0])}${c.searchRegions.length > 1 ? ` 외 ${c.searchRegions.length - 1}곳` : ""}`;
 
 /** 홈·가입 완료의 조건 칩. 소득·순위는 이번 탭에서 입력했을 때만 */
 export function conditionChips(
@@ -47,7 +47,7 @@ export function conditionChips(
   const rank = session ? estimateRank(criteria, session.rankChecks) : null;
   return [
     age !== null && `만 ${age}세`,
-    moveChip(c),
+    searchChip(c),
     place(c),
     session && won(session.income) && `연소득 ${won(session.income)}`,
     marryLabel(c),
@@ -62,7 +62,7 @@ export function shortConditionChips(c: DeviceConditions) {
   const age = ageOf(c.birth);
   return [
     age !== null && `만 ${age}세`,
-    moveChip(c),
+    searchChip(c),
     place(c),
     `${marryLabel(c)} · ${householdLabel(c.householdSize)}`,
     ...c.statuses,
@@ -81,9 +81,9 @@ export function conditionRows(c: DeviceConditions): ConditionRow[] {
   return [
     { k: "나이", v: age !== null ? `만 ${age}세` : MISSING, muted: age === null },
     {
-      k: "이사 갈 지역",
-      v: c.moveRegions.length ? c.moveRegions.map(placeLabel).join(" · ") : "사는 곳과 같아요",
-      muted: !c.moveRegions.length,
+      k: "찾아볼 지역",
+      v: c.searchRegions.length ? c.searchRegions.map(placeLabel).join(" · ") : "사는 곳과 같아요",
+      muted: !c.searchRegions.length,
     },
     { k: "사는 곳", v: place(c) },
     {

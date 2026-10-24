@@ -20,13 +20,13 @@ export function listingRegionLabel(item: HomeListing) {
   return item.region === "nationwide" ? "전국" : regionLabel(item.region.sido, item.region.sigungu);
 }
 
-/** 이사 갈 지역 중 하나에 들면 보여줘요 */
+/** 찾아볼 지역 중 하나에 들면 보여줘요 */
 export function matchesAnyRegion(item: HomeListing, places: RegionValue[]) {
   return places.length === 0 || places.some((p) => matchesRegion(item, p));
 }
 
 /**
- * 지역 선택 상태. 처음엔 내 조건의 이사 갈 지역(없으면 사는 곳)으로 보여주고,
+ * 지역 선택 상태. 처음엔 내 조건의 찾아볼 지역(없으면 사는 곳)으로 보여주고,
  * 시·도를 직접 고르면 그 지역으로 바꿔요
  */
 export function useRegionFilter() {
@@ -34,10 +34,10 @@ export function useRegionFilter() {
   const [picked, setPicked] = useState<RegionValue | "mine" | null>(null);
   const stored = useConditions();
   const device = stored.status === "ready" ? stored.device : null;
-  const moving = device?.moveRegions.filter((r) => sidoByName(r.sido)) ?? [];
+  const searching = device?.searchRegions.filter((r) => sidoByName(r.sido)) ?? [];
   const mine: RegionValue[] =
-    moving.length > 0
-      ? moving
+    searching.length > 0
+      ? searching
       : device && sidoByName(device.sido)
         ? [{ sido: device.sido, sigungu: device.sigungu }]
         : [];
@@ -52,9 +52,9 @@ export function useRegionFilter() {
     setSido: (sido: string) => setPicked({ sido, sigungu: "" }),
     setSigungu: (sigungu: string) => setPicked({ ...region, sigungu }),
     reset: () => setPicked(allRegions),
-    /** 내 지역: 이사 갈 지역, 없으면 사는 곳. 조건을 저장하지 않았으면 빈 배열 */
+    /** 내 지역: 찾아볼 지역, 없으면 사는 곳. 조건을 저장하지 않았으면 빈 배열 */
     mine,
-    mineKind: moving.length > 0 ? ("moving" as const) : ("residence" as const),
+    mineKind: searching.length > 0 ? ("search" as const) : ("residence" as const),
     pickMine: () => setPicked("mine"),
     isMine,
     isAll: places.length === 0,

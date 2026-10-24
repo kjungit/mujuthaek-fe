@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { MAX_MOVE_REGIONS, type ProfileForm } from "@/features/profile/useProfileForm";
+import { MAX_SEARCH_REGIONS, type ProfileForm } from "@/features/profile/useProfileForm";
 import { cn } from "@/lib/cn";
 import { regionLabel, regions, sidoByName } from "@/lib/regions";
 
@@ -80,8 +80,8 @@ export function ResidenceField({
   );
 }
 
-/** 이사 갈 지역: 내 집에서 볼 공고를 골라요 (최대 3곳) */
-export function MoveRegionsField({
+/** 찾아볼 지역: 내 집에서 볼 공고를 골라요 (최대 3곳) */
+export function SearchRegionsField({
   form,
   selectClassName,
 }: {
@@ -89,21 +89,21 @@ export function MoveRegionsField({
   selectClassName: string;
 }) {
   const [draft, setDraft] = useState({ sido: "", sigungu: "" });
-  const full = form.moveRegions.length >= MAX_MOVE_REGIONS;
+  const full = form.searchRegions.length >= MAX_SEARCH_REGIONS;
   const add = () => {
-    form.addMoveRegion(draft);
+    form.addSearchRegion(draft);
     setDraft({ sido: "", sigungu: "" });
   };
 
   return (
     <div className="flex flex-col gap-[8px]">
       <span className="text-[15px] font-bold">
-        어디로 이사 가고 싶나요?{" "}
-        <span className="text-text-sub font-medium">· 최대 {MAX_MOVE_REGIONS}곳</span>
+        어떤 지역 공고를 찾아볼까요?{" "}
+        <span className="text-text-sub font-medium">· 최대 {MAX_SEARCH_REGIONS}곳</span>
       </span>
-      {form.moveRegions.length > 0 && (
-        <ul aria-label="이사 갈 지역" className="m-0 flex list-none flex-wrap gap-[6px] p-0">
-          {form.moveRegions.map((r) => {
+      {form.searchRegions.length > 0 && (
+        <ul aria-label="찾아볼 지역" className="m-0 flex list-none flex-wrap gap-[6px] p-0">
+          {form.searchRegions.map((r) => {
             const label = regionLabel(r.sido, r.sigungu || undefined);
             return (
               <li key={`${r.sido}-${r.sigungu}`}>
@@ -112,7 +112,7 @@ export function MoveRegionsField({
                   <button
                     type="button"
                     aria-label={`${label} 빼기`}
-                    onClick={() => form.removeMoveRegion(r)}
+                    onClick={() => form.removeSearchRegion(r)}
                     className="text-brand-strong inline-flex size-[36px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent"
                   >
                     <X size={16} aria-hidden />

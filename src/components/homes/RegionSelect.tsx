@@ -11,7 +11,7 @@ const select =
 const chip =
   "rounded-pill inline-flex min-h-[36px] min-w-0 cursor-pointer items-center gap-[4px] border-0 px-[12px] text-[13px] font-bold";
 
-/** 지역 필터: 내 지역(이사 갈 지역 · 사는 곳) / 전체, 또는 시·도 → 시·군·구 */
+/** 지역 필터: 내 지역(찾아볼 지역 · 사는 곳) / 전체, 또는 시·도 → 시·군·구 */
 export function RegionSelect({ filter, compact }: { filter: RegionFilter; compact?: boolean }) {
   const { region, mine } = filter;
   const sigungu = sidoByName(region.sido)?.sigungu ?? [];
@@ -32,7 +32,7 @@ export function RegionSelect({ filter, compact }: { filter: RegionFilter; compac
           >
             <MapPin size={14} aria-hidden className="flex-none" />
             <span className="truncate">
-              {filter.mineKind === "moving" ? "이사 갈 지역" : "사는 곳"} · {mineLabel}
+              {filter.mineKind === "search" ? "찾아볼 지역" : "사는 곳"} · {mineLabel}
             </span>
           </button>
           <button

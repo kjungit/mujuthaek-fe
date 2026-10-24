@@ -38,7 +38,7 @@ export function estimateRank(criteria: RankCriteria[], checked: string[]) {
   return hit?.rank ?? null;
 }
 
-export const MAX_MOVE_REGIONS = 3;
+export const MAX_SEARCH_REGIONS = 3;
 
 const samePlace = (a: Place, b: Place) => a.sido === b.sido && a.sigungu === b.sigungu;
 
@@ -51,7 +51,7 @@ function defaultDevice(data: ProfileFormData): DeviceConditions {
     birth: "",
     sido: options.sido[0],
     sigungu: options.sigungu[0],
-    moveRegions: [],
+    searchRegions: [],
     head: "head",
     statuses: [],
     marry: "single",
@@ -126,15 +126,15 @@ export function useProfileForm() {
     /** 사는 곳 시·도를 바꾸면 시·군·구는 다시 골라요 */
     sido: device.sido,
     setSido: (sido: string) => patch({ sido, sigungu: "" }),
-    moveRegions: device.moveRegions,
-    addMoveRegion: (p: Place) =>
+    searchRegions: device.searchRegions,
+    addSearchRegion: (p: Place) =>
       setDevice((d) =>
-        d.moveRegions.length >= MAX_MOVE_REGIONS || d.moveRegions.some((r) => samePlace(r, p))
+        d.searchRegions.length >= MAX_SEARCH_REGIONS || d.searchRegions.some((r) => samePlace(r, p))
           ? d
-          : { ...d, moveRegions: [...d.moveRegions, p] },
+          : { ...d, searchRegions: [...d.searchRegions, p] },
       ),
-    removeMoveRegion: (p: Place) =>
-      setDevice((d) => ({ ...d, moveRegions: d.moveRegions.filter((r) => !samePlace(r, p)) })),
+    removeSearchRegion: (p: Place) =>
+      setDevice((d) => ({ ...d, searchRegions: d.searchRegions.filter((r) => !samePlace(r, p)) })),
     head: device.head,
     setHead: (head: Head) => patch({ head }),
     marry: device.marry,

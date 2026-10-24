@@ -8,8 +8,8 @@ export type DeviceConditions = {
   birth: string;
   sido: string;
   sigungu: string;
-  /** 이사 갈 지역 (최대 3곳). 공고를 고를 때 써요. 비어 있으면 사는 곳으로 */
-  moveRegions: Place[];
+  /** 찾아볼 지역 (최대 3곳). 공고를 고를 때 써요. 비어 있으면 사는 곳으로 */
+  searchRegions: Place[];
   head: Head;
   statuses: string[];
   marry: Marry;

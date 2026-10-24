@@ -16,7 +16,7 @@ import {
   pLabel,
   pSelect,
 } from "@/components/profile/parts";
-import { MoveRegionsField, ResidenceField } from "@/components/profile/RegionFields";
+import { SearchRegionsField, ResidenceField } from "@/components/profile/RegionFields";
 import { headOptions, marryOptions, useProfileForm } from "@/features/profile/useProfileForm";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -74,7 +74,7 @@ export function MProfile() {
                 {...form.field("birth")}
               />
             </label>
-            <MoveRegionsField form={form} selectClassName={mSelect} />
+            <SearchRegionsField form={form} selectClassName={mSelect} />
             <ResidenceField form={form} selectClassName={mSelect} />
             <div className="flex flex-col gap-[8px]">
               <span className="text-[15px] font-bold">세대주인가요?</span>
