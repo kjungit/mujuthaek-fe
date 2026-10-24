@@ -19,9 +19,8 @@ import {
 } from "@/features/homes/filters";
 import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomes } from "@/features/homes/queries";
-import { listingRegionLabel, matchesRegion, useRegionFilter } from "@/features/homes/region";
+import { listingRegionLabel, useRegionFilter } from "@/features/homes/region";
 import { cn } from "@/lib/cn";
-import { regionLabel } from "@/lib/regions";
 import { routes } from "@/lib/routes";
 import type { HomeListing } from "@/mocks/homes";
 
@@ -104,10 +103,7 @@ export function WebHomes() {
   const [sort, setSort] = useState<SortOption>(defaultSort);
   const [checked, setChecked] = useState(defaultChecked);
   const region = useRegionFilter();
-  const visible = data.listings.filter((l) => matchesRegion(l, region.region));
-  const regionLabelText = region.isAll
-    ? "전체 지역"
-    : regionLabel(region.region.sido, region.region.sigungu || undefined);
+  const visible = data.listings.filter(region.matches);
   const [liked, setLiked] = useState(
     () => new Set(data.listings.filter((l) => l.liked).map((l) => l.id)),
   );
@@ -249,7 +245,7 @@ export function WebHomes() {
             >
               {visible.length === 0 && (
                 <div className="rounded-card bg-surface text-text-sub col-span-full flex flex-col items-center gap-[12px] px-[24px] py-[48px] text-center text-[15px]">
-                  {regionLabelText}에는 지금 지원할 수 있는 공고가 없어요
+                  {region.label}에는 지금 지원할 수 있는 공고가 없어요
                   <button
                     type="button"
                     onClick={region.reset}

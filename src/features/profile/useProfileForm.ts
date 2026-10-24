@@ -8,7 +8,7 @@ import {
   setSaveOnDevice,
   useConditions,
 } from "@/features/conditions/store";
-import type { DeviceConditions, SessionConditions } from "@/features/conditions/types";
+import type { DeviceConditions, Place, SessionConditions } from "@/features/conditions/types";
 import { routes } from "@/lib/routes";
 import type { ProfileFormData, RankCriteria } from "@/mocks/profile";
 import { useProfileFormData } from "./queries";
@@ -38,6 +38,10 @@ export function estimateRank(criteria: RankCriteria[], checked: string[]) {
   return hit?.rank ?? null;
 }
 
+export const MAX_MOVE_REGIONS = 3;
+
+const samePlace = (a: Place, b: Place) => a.sido === b.sido && a.sigungu === b.sigungu;
+
 const toggle = (xs: string[], x: string) =>
   xs.includes(x) ? xs.filter((v) => v !== x) : [...xs, x];
 
@@ -47,6 +51,7 @@ function defaultDevice(data: ProfileFormData): DeviceConditions {
     birth: "",
     sido: options.sido[0],
     sigungu: options.sigungu[0],
+    moveRegions: [],
     head: "head",
     statuses: [],
     marry: "single",
@@ -70,7 +75,6 @@ const emptySession: SessionConditions = {
 
 type TextKey =
   | "birth"
-  | "sido"
   | "sigungu"
   | "householdSize"
   | "homelessPeriod"
@@ -119,6 +123,18 @@ export function useProfileForm() {
     preview: data.previewByStep[step - 1],
     field,
     sessionField,
+    /** 사는 곳 시·도를 바꾸면 시·군·구는 다시 골라요 */
+    sido: device.sido,
+    setSido: (sido: string) => patch({ sido, sigungu: "" }),
+    moveRegions: device.moveRegions,
+    addMoveRegion: (p: Place) =>
+      setDevice((d) =>
+        d.moveRegions.length >= MAX_MOVE_REGIONS || d.moveRegions.some((r) => samePlace(r, p))
+          ? d
+          : { ...d, moveRegions: [...d.moveRegions, p] },
+      ),
+    removeMoveRegion: (p: Place) =>
+      setDevice((d) => ({ ...d, moveRegions: d.moveRegions.filter((r) => !samePlace(r, p)) })),
     head: device.head,
     setHead: (head: Head) => patch({ head }),
     marry: device.marry,

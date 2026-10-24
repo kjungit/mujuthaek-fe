@@ -16,6 +16,7 @@ import {
   pLabel,
   pSelect,
 } from "@/components/profile/parts";
+import { MoveRegionsField, ResidenceField } from "@/components/profile/RegionFields";
 import { headOptions, marryOptions, useProfileForm } from "@/features/profile/useProfileForm";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -73,23 +74,8 @@ export function MProfile() {
                 {...form.field("birth")}
               />
             </label>
-            <div className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-bold">지금 사는 곳</span>
-              <div className="grid grid-cols-2 gap-[8px]">
-                <select aria-label="시·도" className={mSelect} {...form.field("sido")}>
-                  <SelectOptions
-                    items={options.sido.slice(0, 2)}
-                    value={form.field("sido").value}
-                  />
-                </select>
-                <select aria-label="시·군·구" className={mSelect} {...form.field("sigungu")}>
-                  <SelectOptions
-                    items={options.sigungu.slice(0, 2)}
-                    value={form.field("sigungu").value}
-                  />
-                </select>
-              </div>
-            </div>
+            <MoveRegionsField form={form} selectClassName={mSelect} />
+            <ResidenceField form={form} selectClassName={mSelect} />
             <div className="flex flex-col gap-[8px]">
               <span className="text-[15px] font-bold">세대주인가요?</span>
               <ChipGroup

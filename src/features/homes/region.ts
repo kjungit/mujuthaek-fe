@@ -20,25 +20,49 @@ export function listingRegionLabel(item: HomeListing) {
   return item.region === "nationwide" ? "전국" : regionLabel(item.region.sido, item.region.sigungu);
 }
 
-/** 지역 선택 상태 + 내 조건(사는 곳)으로 바로 고르기 */
+/** 이사 갈 지역 중 하나에 들면 보여줘요 */
+export function matchesAnyRegion(item: HomeListing, places: RegionValue[]) {
+  return places.length === 0 || places.some((p) => matchesRegion(item, p));
+}
+
+/**
+ * 지역 선택 상태. 처음엔 내 조건의 이사 갈 지역(없으면 사는 곳)으로 보여주고,
+ * 시·도를 직접 고르면 그 지역으로 바꿔요
+ */
 export function useRegionFilter() {
-  const [region, setRegion] = useState<RegionValue>(allRegions);
+  // null = 아직 안 고름 → 내 지역, "mine" = 내 지역 다시 고름
+  const [picked, setPicked] = useState<RegionValue | "mine" | null>(null);
   const stored = useConditions();
-  const mine =
-    stored.status === "ready" && stored.device && sidoByName(stored.device.sido)
-      ? { sido: stored.device.sido, sigungu: stored.device.sigungu }
-      : null;
+  const device = stored.status === "ready" ? stored.device : null;
+  const moving = device?.moveRegions.filter((r) => sidoByName(r.sido)) ?? [];
+  const mine: RegionValue[] =
+    moving.length > 0
+      ? moving
+      : device && sidoByName(device.sido)
+        ? [{ sido: device.sido, sigungu: device.sigungu }]
+        : [];
+  const selected = picked && picked !== "mine" ? picked : null;
+  const isMine = mine.length > 0 && !selected;
+  const region = selected ?? allRegions;
+  const places = isMine ? mine : region.sido ? [region] : [];
 
   return {
+    /** 시·도 칸에 보이는 값. 내 지역을 보는 중이면 비어 있어요 */
     region,
-    setSido: (sido: string) => setRegion({ sido, sigungu: "" }),
-    setSigungu: (sigungu: string) => setRegion((r) => ({ ...r, sigungu })),
-    reset: () => setRegion(allRegions),
-    /** 내 조건의 사는 곳. 조건을 저장하지 않았으면 null */
+    setSido: (sido: string) => setPicked({ sido, sigungu: "" }),
+    setSigungu: (sigungu: string) => setPicked({ ...region, sigungu }),
+    reset: () => setPicked(allRegions),
+    /** 내 지역: 이사 갈 지역, 없으면 사는 곳. 조건을 저장하지 않았으면 빈 배열 */
     mine,
-    pickMine: () => mine && setRegion(mine),
-    isMine: mine !== null && mine.sido === region.sido && mine.sigungu === region.sigungu,
-    isAll: !region.sido,
+    mineKind: moving.length > 0 ? ("moving" as const) : ("residence" as const),
+    pickMine: () => setPicked("mine"),
+    isMine,
+    isAll: places.length === 0,
+    /** "부산 해운대구 · 부산 수영구" / "전체 지역" */
+    label: places.length
+      ? places.map((p) => regionLabel(p.sido, p.sigungu || undefined)).join(" · ")
+      : "전체 지역",
+    matches: (item: HomeListing) => matchesAnyRegion(item, places),
   };
 }
 

@@ -64,6 +64,8 @@ function readSnapshot(): ConditionsSnapshot {
   } else {
     device = parse<DeviceConditions>(read(session, SESSION_DEVICE_KEY));
   }
+  // 이사 갈 지역이 생기기 전에 저장한 조건
+  if (device && !device.moveRegions) device = { ...device, moveRegions: [] };
 
   return {
     status: "ready",
