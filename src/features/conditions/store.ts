@@ -64,6 +64,8 @@ function readSnapshot(): ConditionsSnapshot {
   } else {
     device = parse<DeviceConditions>(read(session, SESSION_DEVICE_KEY));
   }
+  // 찾아볼 지역이 생기기 전에 저장한 조건
+  if (device && !device.searchRegions) device = { ...device, searchRegions: [] };
 
   return {
     status: "ready",

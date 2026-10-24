@@ -16,6 +16,7 @@ import {
   pLabel,
   pSelect,
 } from "@/components/profile/parts";
+import { SearchRegionsField, ResidenceField } from "@/components/profile/RegionFields";
 import {
   headOptions,
   marryOptions,
@@ -26,7 +27,7 @@ import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
 const steps = [
-  { n: 1, title: "기본 정보", sub: "나이 · 사는 곳" },
+  { n: 1, title: "기본 정보", sub: "나이 · 찾아볼 지역 · 사는 곳" },
   { n: 2, title: "가족 · 소득 · 자산", sub: "결혼 · 소득 · 자산" },
   { n: 3, title: "주택 · 생활권", sub: "무주택 · 청약 · 직장" },
 ];
@@ -36,7 +37,6 @@ const headerLink =
   "text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[4px] px-[12px] text-[15px] font-semibold no-underline";
 
 function Step1({ form }: { form: ProfileForm }) {
-  const { options } = form.data;
   return (
     <div className="flex flex-col gap-[20px]">
       <label className={pLabel}>
@@ -49,17 +49,8 @@ function Step1({ form }: { form: ProfileForm }) {
           {...form.field("birth")}
         />
       </label>
-      <div className="flex flex-col gap-[8px]">
-        <span className="text-[15px] font-bold">지금 사는 곳</span>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-[10px]">
-          <select aria-label="시·도" className={pSelect} {...form.field("sido")}>
-            <SelectOptions items={options.sido} value={form.field("sido").value} />
-          </select>
-          <select aria-label="시·군·구" className={pSelect} {...form.field("sigungu")}>
-            <SelectOptions items={options.sigungu} value={form.field("sigungu").value} />
-          </select>
-        </div>
-      </div>
+      <SearchRegionsField form={form} selectClassName={pSelect} />
+      <ResidenceField form={form} selectClassName={pSelect} />
       <div className="flex flex-col gap-[8px]">
         <span className="text-[15px] font-bold">세대주인가요?</span>
         <ChipGroup

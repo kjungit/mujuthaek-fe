@@ -10,7 +10,7 @@ import { RankChip, VerdictBadge } from "@/components/ui/Badge";
 import { activeFilterGroupCount, defaultMode, defaultSort } from "@/features/homes/filters";
 import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomes } from "@/features/homes/queries";
-import { listingRegionLabel, matchesRegion, useRegionFilter } from "@/features/homes/region";
+import { listingRegionLabel, useRegionFilter } from "@/features/homes/region";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { HomeMapPin } from "@/mocks/homes";
@@ -29,7 +29,7 @@ export function MHomes() {
   const [view, setView] = useState<"list" | "map">("list");
   const isMap = view === "map";
   const region = useRegionFilter();
-  const visible = data.listings.filter((l) => matchesRegion(l, region.region));
+  const visible = data.listings.filter(region.matches);
   const visibleIds = new Set(visible.map((l) => l.id));
   const items = isMap ? visible.slice(0, MAP_LIST_COUNT) : visible;
   const count = region.isAll ? data.total : visible.length;
