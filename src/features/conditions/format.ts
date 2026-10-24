@@ -1,7 +1,7 @@
 import { estimateRank, marryOptions } from "@/features/profile/useProfileForm";
-import { regionLabel } from "@/lib/regions";
+import type { Regions } from "@/lib/regions";
 import type { RankCriteria } from "@/mocks/profile";
-import type { DeviceConditions, Place, SessionConditions } from "./types";
+import type { DeviceConditions, SessionConditions } from "./types";
 
 /** 생년월일(1997.03.15 · 19970315 · 1997-03-15)로 만 나이 */
 export function ageOf(birth: string, today = new Date()) {
@@ -28,27 +28,29 @@ const householdLabel = (size: string) => size.replace("명", "인");
 
 const homelessChip = (period: string) => (period === "집이 있어요" ? "유주택" : `무주택 ${period}`);
 
-const place = (c: DeviceConditions) => regionLabel(c.sido, c.sigungu || undefined);
-
-const placeLabel = (p: Place) => regionLabel(p.sido, p.sigungu || undefined);
+/** 사는 곳 "서울 마포구". 안 골랐으면 "" */
+const place = (c: DeviceConditions, regions: Regions) =>
+  c.regionCode ? regions.label(c.regionCode) : "";
 
 /** "부산 해운대구 외 1곳" */
-const searchChip = (c: DeviceConditions) =>
-  c.searchRegions.length > 0 &&
-  `찾아볼 지역 ${placeLabel(c.searchRegions[0])}${c.searchRegions.length > 1 ? ` 외 ${c.searchRegions.length - 1}곳` : ""}`;
+const searchChip = (c: DeviceConditions, regions: Regions) => {
+  const [first, ...rest] = c.searchRegionCodes;
+  return first && `찾아볼 지역 ${regions.label(first)}${rest.length ? ` 외 ${rest.length}곳` : ""}`;
+};
 
 /** 홈·가입 완료의 조건 칩. 소득·순위는 이번 탭에서 입력했을 때만 */
 export function conditionChips(
   c: DeviceConditions,
   session: SessionConditions | null,
   criteria: RankCriteria[],
+  regions: Regions,
 ) {
   const age = ageOf(c.birth);
   const rank = session ? estimateRank(criteria, session.rankChecks) : null;
   return [
     age !== null && `만 ${age}세`,
-    searchChip(c),
-    place(c),
+    searchChip(c, regions),
+    place(c, regions),
     session && won(session.income) && `연소득 ${won(session.income)}`,
     marryLabel(c),
     ...c.statuses,
@@ -58,12 +60,12 @@ export function conditionChips(
 }
 
 /** 내 정보(모바일) 칩 */
-export function shortConditionChips(c: DeviceConditions) {
+export function shortConditionChips(c: DeviceConditions, regions: Regions) {
   const age = ageOf(c.birth);
   return [
     age !== null && `만 ${age}세`,
-    searchChip(c),
-    place(c),
+    searchChip(c, regions),
+    place(c, regions),
     `${marryLabel(c)} · ${householdLabel(c.householdSize)}`,
     ...c.statuses,
     homelessChip(c.homelessPeriod),
@@ -76,16 +78,18 @@ const MISSING = "미입력";
 const NOT_STORED = "저장 안 함";
 
 /** 내 정보 › 내 조건 표. 소득·자산·순위 세부 조건은 저장하지 않아요 */
-export function conditionRows(c: DeviceConditions): ConditionRow[] {
+export function conditionRows(c: DeviceConditions, regions: Regions): ConditionRow[] {
   const age = ageOf(c.birth);
   return [
     { k: "나이", v: age !== null ? `만 ${age}세` : MISSING, muted: age === null },
     {
       k: "찾아볼 지역",
-      v: c.searchRegions.length ? c.searchRegions.map(placeLabel).join(" · ") : "사는 곳과 같아요",
-      muted: !c.searchRegions.length,
+      v: c.searchRegionCodes.length
+        ? c.searchRegionCodes.map(regions.label).join(" · ")
+        : "사는 곳과 같아요",
+      muted: !c.searchRegionCodes.length,
     },
-    { k: "사는 곳", v: place(c) },
+    { k: "사는 곳", v: place(c, regions) || MISSING, muted: !c.regionCode },
     {
       k: "세대",
       v: `${c.head === "head" ? "세대주" : "세대원"} · ${householdLabel(c.householdSize)} 가구`,

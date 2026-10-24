@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { snapshotRegions } from "@/lib/regions";
 import type { ConditionsSnapshot, DeviceConditions, SessionConditions } from "./types";
 
 const DEVICE_KEY = "mujuthaek:conditions:v1";
@@ -48,6 +49,21 @@ function parse<T>(raw: string | null): T | null {
   }
 }
 
+type LegacyPlace = { sido: string; sigungu: string };
+type LegacyDevice = Partial<{ sido: string; sigungu: string; searchRegions: LegacyPlace[] }>;
+
+/** 지역을 이름으로 저장하던 예전 조건 → 코드 */
+function migrateDevice(raw: DeviceConditions & LegacyDevice): DeviceConditions {
+  if (typeof raw.regionCode === "string" && Array.isArray(raw.searchRegionCodes)) return raw;
+  const { sido, sigungu, searchRegions, ...rest } = raw;
+  const toCode = (p: LegacyPlace) => snapshotRegions.codeByNames(p.sido, p.sigungu);
+  return {
+    ...rest,
+    regionCode: (sido && toCode({ sido, sigungu: sigungu ?? "" })) || "",
+    searchRegionCodes: (searchRegions ?? []).map(toCode).filter((c): c is string => Boolean(c)),
+  };
+}
+
 function readSnapshot(): ConditionsSnapshot {
   const saveOnDevice = read(local, SAVE_PREF_KEY) !== "false";
   let device: DeviceConditions | null = null;
@@ -64,8 +80,7 @@ function readSnapshot(): ConditionsSnapshot {
   } else {
     device = parse<DeviceConditions>(read(session, SESSION_DEVICE_KEY));
   }
-  // 찾아볼 지역이 생기기 전에 저장한 조건
-  if (device && !device.searchRegions) device = { ...device, searchRegions: [] };
+  if (device) device = migrateDevice(device);
 
   return {
     status: "ready",

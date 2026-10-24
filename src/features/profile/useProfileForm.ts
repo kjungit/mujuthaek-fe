@@ -8,7 +8,7 @@ import {
   setSaveOnDevice,
   useConditions,
 } from "@/features/conditions/store";
-import type { DeviceConditions, Place, SessionConditions } from "@/features/conditions/types";
+import type { DeviceConditions, SessionConditions } from "@/features/conditions/types";
 import { routes } from "@/lib/routes";
 import type { ProfileFormData, RankCriteria } from "@/mocks/profile";
 import { useProfileFormData } from "./queries";
@@ -40,8 +40,6 @@ export function estimateRank(criteria: RankCriteria[], checked: string[]) {
 
 export const MAX_SEARCH_REGIONS = 3;
 
-const samePlace = (a: Place, b: Place) => a.sido === b.sido && a.sigungu === b.sigungu;
-
 const toggle = (xs: string[], x: string) =>
   xs.includes(x) ? xs.filter((v) => v !== x) : [...xs, x];
 
@@ -49,9 +47,8 @@ function defaultDevice(data: ProfileFormData): DeviceConditions {
   const { options } = data;
   return {
     birth: "",
-    sido: options.sido[0],
-    sigungu: options.sigungu[0],
-    searchRegions: [],
+    regionCode: "",
+    searchRegionCodes: [],
     head: "head",
     statuses: [],
     marry: "single",
@@ -74,13 +71,7 @@ const emptySession: SessionConditions = {
 };
 
 type TextKey =
-  | "birth"
-  | "sigungu"
-  | "householdSize"
-  | "homelessPeriod"
-  | "bankbookPeriod"
-  | "paymentCount"
-  | "workplace";
+  "birth" | "householdSize" | "homelessPeriod" | "bankbookPeriod" | "paymentCount" | "workplace";
 type SessionTextKey = "income" | "asset" | "available";
 
 /** 조건 입력 3단계 상태 (PC/모바일 공통). 처음 값은 이 기기에 저장한 조건에서 가져와요 */
@@ -124,17 +115,21 @@ export function useProfileForm() {
     field,
     sessionField,
     /** 사는 곳 시·도를 바꾸면 시·군·구는 다시 골라요 */
-    sido: device.sido,
-    setSido: (sido: string) => patch({ sido, sigungu: "" }),
-    searchRegions: device.searchRegions,
-    addSearchRegion: (p: Place) =>
+    /** 사는 곳 코드. 시·도만 고르면 2자리, 시·군·구까지 고르면 5자리 */
+    regionCode: device.regionCode,
+    setRegionCode: (regionCode: string) => patch({ regionCode }),
+    searchRegionCodes: device.searchRegionCodes,
+    addSearchRegion: (code: string) =>
       setDevice((d) =>
-        d.searchRegions.length >= MAX_SEARCH_REGIONS || d.searchRegions.some((r) => samePlace(r, p))
+        d.searchRegionCodes.length >= MAX_SEARCH_REGIONS || d.searchRegionCodes.includes(code)
           ? d
-          : { ...d, searchRegions: [...d.searchRegions, p] },
+          : { ...d, searchRegionCodes: [...d.searchRegionCodes, code] },
       ),
-    removeSearchRegion: (p: Place) =>
-      setDevice((d) => ({ ...d, searchRegions: d.searchRegions.filter((r) => !samePlace(r, p)) })),
+    removeSearchRegion: (code: string) =>
+      setDevice((d) => ({
+        ...d,
+        searchRegionCodes: d.searchRegionCodes.filter((c) => c !== code),
+      })),
     head: device.head,
     setHead: (head: Head) => patch({ head }),
     marry: device.marry,
