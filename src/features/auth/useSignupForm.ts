@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { passwordOk } from "./password";
 
 export const signupTerms = [
   { key: "age", required: true, label: "만 14세 이상이에요" },
@@ -21,30 +20,23 @@ const initialAgree: Record<TermKey, boolean> = {
   marketing: false,
 };
 
-/** 회원가입 화면 상태 (PC/모바일 공통) */
+/** 가입 마무리(약관 동의) 화면 상태 (PC/모바일 공통) */
 export function useSignupForm() {
-  const [pw, setPw] = useState("");
   const [agree, setAgree] = useState(initialAgree);
 
   const all = signupTerms.every((t) => agree[t.key]);
   const requiredOk = signupTerms.filter((t) => t.required).every((t) => agree[t.key]);
-  const ready = requiredOk && passwordOk(pw);
 
   return {
-    pw,
-    setPw,
     agree,
     all,
-    ready,
+    ready: requiredOk,
     toggle: (key: TermKey) => setAgree((a) => ({ ...a, [key]: !a[key] })),
     toggleAll: () =>
       setAgree(
         Object.fromEntries(signupTerms.map((t) => [t.key, !all])) as Record<TermKey, boolean>,
       ),
-    submitText: ready
-      ? "가입하기"
-      : requiredOk
-        ? "비밀번호 규칙을 확인해 주세요"
-        : "필수 약관에 동의해 주세요",
+    // 백엔드 동의 기록(POST /api/v1/me/consents)이 생기면 여기서 보내요
+    submitText: requiredOk ? "동의하고 시작하기" : "필수 약관에 동의해 주세요",
   };
 }

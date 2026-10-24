@@ -68,7 +68,27 @@ export function TermsList({ form, allClassName }: { form: Form; allClassName?: s
   );
 }
 
-/** 가입 버튼: 준비되면 가입 완료로 */
+/** 어떤 정보를 저장하나요? */
+export function StoredInfo({ className }: { className?: string }) {
+  return (
+    <section
+      aria-label="저장하는 정보"
+      className={cn("rounded-card bg-surface flex flex-col gap-[12px]", className)}
+    >
+      <span className="text-[17px] font-extrabold">어떤 정보를 저장하나요?</span>
+      <ul className="text-text-sub m-0 flex list-none flex-col gap-[8px] p-0 text-[14px] leading-[1.6]">
+        <li>
+          계정에는 간편 로그인 회원번호·닉네임과 관심 공고·알림 설정만 저장하고, 탈퇴하면 바로
+          지워요. 비밀번호는 받지 않아요
+        </li>
+        <li>입력한 조건은 계정과 상관없이 이 기기에만 30일 동안 저장해요</li>
+        <li className="text-brand-strong font-bold">소득·자산은 어디에도 저장하지 않아요</li>
+      </ul>
+    </section>
+  );
+}
+
+/** 가입 버튼: 필수 약관에 동의하면 가입 완료로 */
 export function SignupSubmit({ form, className }: { form: Form; className?: string }) {
   const cls = cn(
     "flex items-center justify-center rounded-[16px] font-extrabold no-underline",
