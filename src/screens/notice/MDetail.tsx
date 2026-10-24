@@ -5,10 +5,14 @@ import Link from "next/link";
 import { Heart } from "lucide-react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
+import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
+import { PdfViewer } from "@/components/notice/PdfViewer";
 import { MRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
+import { formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
 import { useNotice } from "@/features/notice/queries";
+import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
@@ -19,8 +23,14 @@ const card = "rounded-card bg-surface mx-[16px] flex flex-col";
 export function MDetail({ id }: { id: string }) {
   const { data: n } = useNotice(id);
   const [fav, setFav] = useState(false);
+  const pdf = usePdfViewer();
   if (n.kind !== "standard") return null;
   const benefits = n.benefits.slice(0, MOBILE_BENEFIT_COUNT);
+  const { doc } = n;
+  const pdfUrl = doc.source.pdfUrl;
+  /** 원문 PDF가 있으면 시트로 열고, 없으면 기관 사이트로 */
+  const openOriginal = (page = 1, label?: string) =>
+    pdfUrl ? pdf.show(page, label) : window.open(doc.source.detailUrl, "_blank", "noreferrer");
 
   return (
     <MPage>
@@ -29,13 +39,14 @@ export function MDetail({ id }: { id: string }) {
         <section className="bg-surface flex flex-col gap-[12px] px-[20px] pt-[20px] pb-[22px]">
           <NoticeTags
             verdict={n.verdict}
-            rank={n.ranking.myRank}
+            rank={n.ranking?.myRank}
             dday={n.dday}
             tags={n.tags.slice(0, 1)}
             size="md"
           />
           <h2 className="tracking-h1 m-0 text-[24px] font-extrabold">{n.title}</h2>
           <span className="text-text-sub text-[14px] leading-[1.5]">{n.meta}</span>
+          <p className="m-0 text-[15px] leading-[1.6]">{doc.summary}</p>
           <dl className="m-0 grid grid-cols-2 gap-[8px]">
             {n.facts.map((f) => (
               <div key={f.label} className="bg-bg rounded-control px-[14px] py-[12px]">
@@ -44,6 +55,19 @@ export function MDetail({ id }: { id: string }) {
               </div>
             ))}
           </dl>
+          {doc.applyPeriod && (
+            <div className="bg-brand-soft rounded-control flex flex-col gap-[2px] px-[14px] py-[12px]">
+              <span className="text-brand-strong text-[12px] font-bold">
+                신청 기간 · {statusLabel[doc.status]}
+              </span>
+              <span className="text-[15px] font-extrabold">
+                {formatPeriod(doc.applyPeriod.start, doc.applyPeriod.end)}
+              </span>
+              {doc.applyPeriod.note && (
+                <span className="text-text-sub text-[13px]">{doc.applyPeriod.note}</span>
+              )}
+            </div>
+          )}
         </section>
 
         <section
@@ -75,6 +99,7 @@ export function MDetail({ id }: { id: string }) {
             </h3>
             <button
               type="button"
+              onClick={() => openOriginal(doc.pages.eligibility ?? 1, "신청 자격")}
               className="text-brand inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-bold"
             >
               근거 원문
@@ -104,69 +129,14 @@ export function MDetail({ id }: { id: string }) {
           ))}
         </section>
 
-        <MRankCard ranking={n.ranking} />
+        {n.ranking && <MRankCard ranking={n.ranking} />}
 
-        <section aria-labelledby="type-h" className={cn(card, "gap-[10px] px-[20px] py-[16px]")}>
-          <h3 id="type-h" className="m-0 text-[17px] font-extrabold">
-            주택형별 임대 조건{" "}
-            <span className="text-text-sub text-[13px] font-medium">· {n.rentBasis}</span>
-          </h3>
-          {n.rentTable.map((r) => (
-            <div
-              key={r.type}
-              className={cn(
-                "rounded-tile flex items-center justify-between p-[14px]",
-                r.mine ? "bg-brand-soft" : "bg-bg",
-              )}
-            >
-              <span className="flex flex-col gap-[2px]">
-                <span className="text-[16px] font-extrabold">
-                  {r.type} · {r.area}
-                </span>
-                <span className={cn("text-[13px]", r.mine ? "text-brand-strong" : "text-text-sub")}>
-                  {r.supply}
-                  {r.mine && " · 신청 가능"}
-                </span>
-              </span>
-              <span className="text-right text-[14px] font-bold">
-                {r.deposit}
-                <br />월 {r.rent}
-              </span>
-            </div>
-          ))}
-        </section>
-
-        <section aria-labelledby="sch-h" className={cn(card, "gap-[4px] px-[20px] py-[16px]")}>
-          <h3 id="sch-h" className="mx-0 mt-0 mb-[8px] text-[17px] font-extrabold">
-            일정
-          </h3>
-          <ol className="m-0 flex list-none flex-col p-0">
-            {n.schedule.map((s) => (
-              <li
-                key={s.label}
-                className={cn(
-                  "flex gap-[12px] py-[8px] text-[15px]",
-                  s.state === "done" && "text-text-sub",
-                  s.state === "now" && "font-extrabold",
-                )}
-              >
-                <span
-                  className={cn(
-                    "rounded-pill mt-[6px] size-[10px] flex-none",
-                    s.state === "done" && "bg-off",
-                    s.state === "now" && "bg-brand shadow-[0_0_0_4px_var(--color-brand-soft)]",
-                    s.state === "todo" && "bg-check-off",
-                  )}
-                />
-                <span className="flex-1">
-                  {s.label}
-                  {s.state === "now" && " · 지금"}
-                </span>
-                <span>{s.date}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
+        <NoticeToc doc={doc} variant="mobile" />
+        <NoticeSections
+          doc={doc}
+          variant="mobile"
+          onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
+        />
 
         <section aria-labelledby="life-h" className={cn(card, "gap-[10px] px-[20px] py-[16px]")}>
           <div className="flex items-center justify-between">
@@ -240,11 +210,25 @@ export function MDetail({ id }: { id: string }) {
         </button>
         <button
           type="button"
+          onClick={() => openOriginal()}
           className="rounded-control bg-brand flex min-h-[56px] flex-1 cursor-pointer items-center justify-center border-0 text-[17px] font-extrabold text-white"
         >
-          {n.agency} 공고 원문에서 신청
+          {n.agency} 공고 원문 보기
         </button>
       </MBottomActions>
+      {pdfUrl && (
+        <PdfViewer
+          open={pdf.open}
+          onClose={pdf.close}
+          src={pdfUrl}
+          fileName={doc.source.fileName}
+          detailUrl={doc.source.detailUrl}
+          target={pdf.target}
+          sections={pdfSections(doc)}
+          onJump={pdf.show}
+          variant="mobile"
+        />
+      )}
     </MPage>
   );
 }

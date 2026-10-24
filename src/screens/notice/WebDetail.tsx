@@ -20,9 +20,13 @@ import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { WebUnitFilter } from "@/components/notice/UnitFilter";
+import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
+import { PdfViewer } from "@/components/notice/PdfViewer";
 import { WebRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
+import { formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
 import { useNotice } from "@/features/notice/queries";
+import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -256,314 +260,277 @@ function BlockUnits({ units }: { units: NoticeUnit[] }) {
 
 export function WebDetail({ id }: { id: string }) {
   const { data: n } = useNotice(id);
+  const pdf = usePdfViewer();
   if (n.kind !== "standard") return null;
+  const { doc } = n;
+  const pdfUrl = doc.source.pdfUrl;
+  /** 원문 PDF가 있으면 옆에 열고, 없으면 기관 사이트로 */
+  const openOriginal = (page = 1, label?: string) =>
+    pdfUrl ? pdf.show(page, label) : window.open(doc.source.detailUrl, "_blank", "noreferrer");
 
   return (
     <WebPage>
-      <WebHeader mode="home" current={routes.homes} unread={3} />
-      <WebMain className="gap-[20px] pt-[24px] pb-[80px]">
-        <nav
-          aria-label="위치"
-          className="text-text-tertiary flex items-center gap-[4px] text-[14px]"
-        >
-          <Link
-            href={routes.homes}
-            className="text-text-sub hover:text-text-sub inline-flex min-h-[36px] items-center font-semibold no-underline"
+      <div className={cn("flex flex-1 flex-col", pdf.open && pdfUrl && "pl-[min(46vw,680px)]")}>
+        <WebHeader mode="home" current={routes.homes} unread={3} />
+        <WebMain className="gap-[20px] pt-[24px] pb-[80px]">
+          <nav
+            aria-label="위치"
+            className="text-text-tertiary flex items-center gap-[4px] text-[14px]"
           >
-            내 집
-          </Link>
-          <ChevronRight size={16} aria-hidden />
-          <span aria-current="page">{n.title}</span>
-        </nav>
-
-        <div className="flex flex-wrap items-start gap-[28px]">
-          <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 600px" }}>
-            <section aria-label="공고 요약" className="rounded-card-lg bg-surface overflow-hidden">
-              <div className="bg-placeholder-bg text-off flex h-[280px] items-center justify-center">
-                <Building size={64} strokeWidth={1.2} aria-hidden />
-              </div>
-              <div className="flex flex-col gap-[20px] px-[30px] pt-[28px] pb-[30px]">
-                <div className="flex flex-col gap-[10px]">
-                  <NoticeTags
-                    verdict={n.verdict}
-                    rank={n.ranking.myRank}
-                    dday={n.dday}
-                    tags={n.tags}
-                    size="lg"
-                  />
-                  <h1 className="tracking-h1 m-0 text-[34px] font-extrabold">{n.title}</h1>
-                  <span className="text-text-sub text-[16px]">{n.meta}</span>
-                </div>
-                <dl
-                  className="m-0 grid gap-[10px]"
-                  style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}
-                >
-                  {n.facts.map((f) => (
-                    <div key={f.label} className="bg-bg rounded-tile px-[18px] py-[16px]">
-                      <dt className="text-text-sub text-[13px]">{f.label}</dt>
-                      <dd className="mx-0 mt-[4px] mb-0 text-[17px] font-bold">{f.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            </section>
-
-            <section
-              aria-label="일정"
-              className="rounded-card-lg bg-surface flex flex-col gap-[20px] px-[30px] py-[28px]"
+            <Link
+              href={routes.homes}
+              className="text-text-sub hover:text-text-sub inline-flex min-h-[36px] items-center font-semibold no-underline"
             >
-              <h2 className={sectionTitle}>일정</h2>
-              <ol
-                className="m-0 grid list-none gap-[12px] p-0"
-                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))" }}
+              내 집
+            </Link>
+            <ChevronRight size={16} aria-hidden />
+            <span aria-current="page">{n.title}</span>
+          </nav>
+
+          <div className="flex flex-wrap items-start gap-[28px]">
+            <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 600px" }}>
+              <section
+                aria-label="공고 요약"
+                className="rounded-card-lg bg-surface overflow-hidden"
               >
-                {n.schedule.map((s) => (
-                  <li key={s.label} className="flex flex-col gap-[8px]">
-                    <span
-                      className={cn(
-                        "h-[4px] rounded-[2px]",
-                        s.state === "todo" ? "bg-line" : "bg-brand",
-                      )}
+                <div className="bg-placeholder-bg text-off flex h-[220px] items-center justify-center">
+                  <Building size={64} strokeWidth={1.2} aria-hidden />
+                </div>
+                <div className="flex flex-col gap-[20px] px-[30px] pt-[28px] pb-[30px]">
+                  <div className="flex flex-col gap-[10px]">
+                    <NoticeTags
+                      verdict={n.verdict}
+                      rank={n.ranking?.myRank}
+                      dday={n.dday}
+                      tags={n.tags}
+                      size="lg"
                     />
-                    {s.state === "now" ? (
-                      <span className="text-brand-strong text-[13px] font-bold">
-                        {s.label} · 지금
+                    <h1 className="tracking-h1 m-0 text-[34px] font-extrabold">{n.title}</h1>
+                    <span className="text-text-sub text-[16px]">{n.meta}</span>
+                    <p className="m-0 text-[16px] leading-[1.6]">{doc.summary}</p>
+                  </div>
+                  <dl
+                    className="m-0 grid gap-[10px]"
+                    style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}
+                  >
+                    {n.facts.map((f) => (
+                      <div key={f.label} className="bg-bg rounded-tile px-[18px] py-[16px]">
+                        <dt className="text-text-sub text-[13px]">{f.label}</dt>
+                        <dd className="mx-0 mt-[4px] mb-0 text-[17px] font-bold">{f.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {doc.applyPeriod && (
+                    <div className="border-line-soft flex flex-wrap items-baseline gap-x-[14px] gap-y-[4px] border-t border-solid pt-[18px]">
+                      <span className="text-text-sub text-[14px]">신청 기간</span>
+                      <span className="text-[18px] font-extrabold">
+                        {formatPeriod(doc.applyPeriod.start, doc.applyPeriod.end)}
+                      </span>
+                      <span className="text-brand-strong text-[14px] font-bold">
+                        {statusLabel[doc.status]}
+                      </span>
+                      {doc.applyPeriod.note && (
+                        <span className="text-text-sub text-[14px]">{doc.applyPeriod.note}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <NoticeToc doc={doc} variant="web" />
+              <NoticeSections
+                doc={doc}
+                variant="web"
+                onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
+              />
+
+              {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
+
+              <section
+                aria-label="생활권"
+                className="rounded-card-lg bg-surface flex flex-col gap-[18px] px-[30px] py-[28px]"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className={sectionTitle}>
+                    생활권 <span className="text-brand">{n.life.score}점</span>
+                  </h2>
+                  <Link
+                    href={routes.life}
+                    className="text-brand-strong inline-flex min-h-[44px] items-center gap-[2px] text-[15px] font-bold no-underline"
+                  >
+                    자세히
+                    <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
+                  </Link>
+                </div>
+                <div
+                  className="grid gap-[16px]"
+                  style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}
+                >
+                  {n.life.items.map((it) => {
+                    const Icon = lifeIcon[it.kind];
+                    return (
+                      <div key={it.kind} className="flex flex-col gap-[8px]">
+                        <span className="flex justify-between text-[15px]">
+                          <span className="inline-flex items-center gap-[6px]">
+                            <Icon size={18} className="text-text-sub" aria-hidden />
+                            {it.label}
+                          </span>
+                          <strong>{it.value}</strong>
+                        </span>
+                        <span className="bg-fill h-[8px] overflow-hidden rounded-[4px]">
+                          <span
+                            className="bg-brand block h-full rounded-[4px]"
+                            style={{ width: `${it.pct}%` }}
+                          />
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section
+                aria-label="이 지역 정책"
+                className="rounded-card-lg bg-surface flex flex-col px-[30px] pt-[24px] pb-[14px]"
+              >
+                <div className="mb-[8px] flex items-baseline justify-between">
+                  <h2 className={sectionTitle}>입주하면 받을 수 있는 혜택</h2>
+                  <span className="text-text-tertiary text-[13px]">
+                    {n.benefitArea} · 내 조건 판정
+                  </span>
+                </div>
+                {n.benefits.map((b, i) => (
+                  <Link
+                    key={b.id}
+                    href={routes.benefit(b.id)}
+                    className={cn(
+                      "text-text hover:text-text flex items-center gap-[14px] py-[14px] no-underline",
+                      i < n.benefits.length - 1 && "border-line-soft border-b border-solid",
+                    )}
+                  >
+                    <span className="flex flex-1 flex-col gap-[2px]">
+                      <span className="text-[16px] font-bold">{b.title}</span>
+                      <span className="text-text-sub text-[14px]">{b.desc}</span>
+                    </span>
+                    <VerdictBadge verdict={b.verdict} />
+                    <ChevronRight size={18} className="text-text-tertiary" aria-hidden />
+                  </Link>
+                ))}
+              </section>
+            </div>
+
+            <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 360px" }}>
+              <section
+                aria-label="내 자격"
+                className="rounded-card-lg bg-surface flex flex-col px-[26px] pt-[26px] pb-[18px]"
+              >
+                <div className="mb-[6px] flex items-center justify-between">
+                  <h2 className="tracking-title m-0 text-[20px] font-extrabold">내 자격</h2>
+                  <button
+                    type="button"
+                    onClick={() => openOriginal(doc.pages.eligibility ?? 1, "신청 자격")}
+                    className="text-brand-strong inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[14px] font-bold"
+                  >
+                    <FileText size={16} aria-hidden />
+                    근거 원문
+                  </button>
+                </div>
+                {n.eligibility.map((e, i) => (
+                  <div
+                    key={e.label}
+                    className={cn(
+                      "flex items-center justify-between gap-[10px] py-[12px]",
+                      i < n.eligibility.length - 1 && "border-line-soft border-b border-solid",
+                    )}
+                  >
+                    <span className="text-[15px]">{e.label}</span>
+                    {e.status === "met" ? (
+                      <span className="text-brand-strong inline-flex items-center gap-[5px] text-[15px] font-bold">
+                        <CircleCheck size={19} aria-hidden />
+                        충족
                       </span>
                     ) : (
-                      <span className="text-text-sub text-[13px]">{s.label}</span>
+                      <Link
+                        href={routes.profile}
+                        className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center gap-[5px] rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
+                      >
+                        <CircleAlert size={17} aria-hidden />
+                        입력하고 확인
+                      </Link>
                     )}
-                    <span className="text-[16px] font-bold">{s.date}</span>
-                  </li>
+                  </div>
                 ))}
-              </ol>
-            </section>
+              </section>
 
-            <section
-              aria-label="주택형별 임대 조건"
-              className="rounded-card-lg bg-surface flex flex-col gap-[16px] px-[30px] py-[28px]"
-            >
-              <div className="flex items-baseline justify-between">
-                <h2 className={sectionTitle}>주택형별 임대 조건</h2>
-                <span className="text-text-tertiary text-[13px]">{n.rentBasis}</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] border-collapse text-[15px]">
-                  <thead>
-                    <tr className="text-text-sub text-left text-[13px]">
-                      {["주택형", "전용면적", "임대보증금", "월 임대료", "공급"].map((h, i) => (
-                        <th
-                          key={h}
-                          className={cn(
-                            "border-line border-b border-solid px-[12px] py-[10px] font-semibold",
-                            i >= 2 && "text-right",
-                          )}
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {n.rentTable.map((r, i) => {
-                      const line =
-                        !r.mine && i < n.rentTable.length - 1 && !n.rentTable[i + 1]?.mine
-                          ? "border-line-soft border-b border-solid"
-                          : "";
-                      const td = cn("px-[12px] py-[14px]", line);
-                      return (
-                        <tr key={r.type} className={cn(r.mine && "bg-brand-soft")}>
-                          <td className={cn(td, "font-bold", r.mine && "rounded-l-[12px]")}>
-                            {r.type}
-                          </td>
-                          <td className={td}>{r.area}</td>
-                          <td className={cn(td, "text-right", r.mine && "font-bold")}>
-                            {r.deposit}
-                          </td>
-                          <td className={cn(td, "text-right", r.mine && "font-bold")}>{r.rent}</td>
-                          <td className={cn(td, "text-right", r.mine && "rounded-r-[12px]")}>
-                            {r.supply}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <span className="text-text-sub text-[13px]">
-                초록색 줄은 내 조건으로 신청할 수 있는 주택형이에요
-              </span>
-            </section>
+              {n.ranking && <WebRankCard ranking={n.ranking} />}
 
-            {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
-
-            <section
-              aria-label="생활권"
-              className="rounded-card-lg bg-surface flex flex-col gap-[18px] px-[30px] py-[28px]"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className={sectionTitle}>
-                  생활권 <span className="text-brand">{n.life.score}점</span>
-                </h2>
-                <Link
-                  href={routes.life}
-                  className="text-brand-strong inline-flex min-h-[44px] items-center gap-[2px] text-[15px] font-bold no-underline"
-                >
-                  자세히
-                  <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
-                </Link>
-              </div>
-              <div
-                className="grid gap-[16px]"
-                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}
+              <section
+                aria-label="내가 준비할 돈"
+                className="rounded-card-lg bg-surface flex flex-col gap-[10px] p-[26px]"
               >
-                {n.life.items.map((it) => {
-                  const Icon = lifeIcon[it.kind];
-                  return (
-                    <div key={it.kind} className="flex flex-col gap-[8px]">
-                      <span className="flex justify-between text-[15px]">
-                        <span className="inline-flex items-center gap-[6px]">
-                          <Icon size={18} className="text-text-sub" aria-hidden />
-                          {it.label}
-                        </span>
-                        <strong>{it.value}</strong>
-                      </span>
-                      <span className="bg-fill h-[8px] overflow-hidden rounded-[4px]">
-                        <span
-                          className="bg-brand block h-full rounded-[4px]"
-                          style={{ width: `${it.pct}%` }}
-                        />
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section
-              aria-label="이 지역 정책"
-              className="rounded-card-lg bg-surface flex flex-col px-[30px] pt-[24px] pb-[14px]"
-            >
-              <div className="mb-[8px] flex items-baseline justify-between">
-                <h2 className={sectionTitle}>입주하면 받을 수 있는 혜택</h2>
-                <span className="text-text-tertiary text-[13px]">
-                  {n.benefitArea} · 내 조건 판정
-                </span>
-              </div>
-              {n.benefits.map((b, i) => (
-                <Link
-                  key={b.id}
-                  href={routes.benefit(b.id)}
-                  className={cn(
-                    "text-text hover:text-text flex items-center gap-[14px] py-[14px] no-underline",
-                    i < n.benefits.length - 1 && "border-line-soft border-b border-solid",
-                  )}
-                >
-                  <span className="flex flex-1 flex-col gap-[2px]">
-                    <span className="text-[16px] font-bold">{b.title}</span>
-                    <span className="text-text-sub text-[14px]">{b.desc}</span>
-                  </span>
-                  <VerdictBadge verdict={b.verdict} />
-                  <ChevronRight size={18} className="text-text-tertiary" aria-hidden />
-                </Link>
-              ))}
-            </section>
-          </div>
-
-          <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 360px" }}>
-            <section
-              aria-label="내 자격"
-              className="rounded-card-lg bg-surface flex flex-col px-[26px] pt-[26px] pb-[18px]"
-            >
-              <div className="mb-[6px] flex items-center justify-between">
-                <h2 className="tracking-title m-0 text-[20px] font-extrabold">내 자격</h2>
-                <button
-                  type="button"
-                  className="text-brand-strong inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[14px] font-bold"
-                >
-                  <FileText size={16} aria-hidden />
-                  근거 원문
-                </button>
-              </div>
-              {n.eligibility.map((e, i) => (
-                <div
-                  key={e.label}
-                  className={cn(
-                    "flex items-center justify-between gap-[10px] py-[12px]",
-                    i < n.eligibility.length - 1 && "border-line-soft border-b border-solid",
-                  )}
-                >
-                  <span className="text-[15px]">{e.label}</span>
-                  {e.status === "met" ? (
-                    <span className="text-brand-strong inline-flex items-center gap-[5px] text-[15px] font-bold">
-                      <CircleCheck size={19} aria-hidden />
-                      충족
-                    </span>
-                  ) : (
-                    <Link
-                      href={routes.profile}
-                      className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center gap-[5px] rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-                    >
-                      <CircleAlert size={17} aria-hidden />
-                      입력하고 확인
-                    </Link>
-                  )}
+                <h2 className="tracking-title mx-0 mt-0 mb-[4px] text-[20px] font-extrabold">
+                  내가 준비할 돈 · {n.money.type}
+                </h2>
+                <div className="text-text-sub flex justify-between text-[15px]">
+                  <span>임대보증금</span>
+                  <span>{n.money.deposit}</span>
                 </div>
-              ))}
-            </section>
+                <div className="text-text-sub flex justify-between text-[15px]">
+                  <span>{n.money.loanName}</span>
+                  <span>− {n.money.loan}</span>
+                </div>
+                <div className="border-line mt-[4px] flex items-baseline justify-between border-t border-solid pt-[14px]">
+                  <span className="text-[16px] font-bold">준비할 돈</span>
+                  <span className="tracking-h1 text-[30px] font-extrabold">{n.money.prep}</span>
+                </div>
+                <span className="text-text-sub text-[14px]">{n.money.note}</span>
+              </section>
 
-            <WebRankCard ranking={n.ranking} />
-
-            <section
-              aria-label="내가 준비할 돈"
-              className="rounded-card-lg bg-surface flex flex-col gap-[10px] p-[26px]"
-            >
-              <h2 className="tracking-title mx-0 mt-0 mb-[4px] text-[20px] font-extrabold">
-                내가 준비할 돈 · {n.money.type}
-              </h2>
-              <div className="text-text-sub flex justify-between text-[15px]">
-                <span>임대보증금</span>
-                <span>{n.money.deposit}</span>
-              </div>
-              <div className="text-text-sub flex justify-between text-[15px]">
-                <span>{n.money.loanName}</span>
-                <span>− {n.money.loan}</span>
-              </div>
-              <div className="border-line mt-[4px] flex items-baseline justify-between border-t border-solid pt-[14px]">
-                <span className="text-[16px] font-bold">준비할 돈</span>
-                <span className="tracking-h1 text-[30px] font-extrabold">{n.money.prep}</span>
-              </div>
-              <span className="text-text-sub text-[14px]">{n.money.note}</span>
-            </section>
-
-            <button
-              type="button"
-              className="bg-brand rounded-tile flex min-h-[60px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[18px] font-extrabold text-white"
-            >
-              <Heart size={20} strokeWidth={2.2} aria-hidden />
-              관심 등록하고 마감 알림 받기
-            </button>
-            <button
-              type="button"
-              className="rounded-tile bg-surface text-text flex min-h-[56px] cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold"
-            >
-              <FileText size={18} aria-hidden />
-              {n.agency} 공고 원문 보기
-            </button>
-            <div className="flex flex-col items-center gap-[2px] pt-[4px]">
-              <span className="text-text-sub text-[13px]">
-                판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
-              </span>
               <button
                 type="button"
-                className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[13px] font-bold"
+                className="bg-brand rounded-tile flex min-h-[60px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[18px] font-extrabold text-white"
               >
-                <MessageSquareWarning size={15} aria-hidden />
-                정보가 틀렸어요 · 제보하기
+                <Heart size={20} strokeWidth={2.2} aria-hidden />
+                관심 등록하고 마감 알림 받기
               </button>
-            </div>
-          </aside>
-        </div>
-      </WebMain>
+              <button
+                type="button"
+                aria-pressed={pdfUrl ? pdf.open : undefined}
+                onClick={() => (pdf.open ? pdf.close() : openOriginal())}
+                className="rounded-tile bg-surface text-text flex min-h-[56px] cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold"
+              >
+                <FileText size={18} aria-hidden />
+                {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
+              </button>
+              <div className="flex flex-col items-center gap-[2px] pt-[4px]">
+                <span className="text-text-sub text-[13px]">
+                  판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
+                </span>
+                <button
+                  type="button"
+                  className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[13px] font-bold"
+                >
+                  <MessageSquareWarning size={15} aria-hidden />
+                  정보가 틀렸어요 · 제보하기
+                </button>
+              </div>
+            </aside>
+          </div>
+        </WebMain>
+      </div>
+      {pdfUrl && (
+        <PdfViewer
+          open={pdf.open}
+          onClose={pdf.close}
+          src={pdfUrl}
+          fileName={doc.source.fileName}
+          detailUrl={doc.source.detailUrl}
+          target={pdf.target}
+          sections={pdfSections(doc)}
+          onJump={pdf.show}
+          variant="web"
+        />
+      )}
     </WebPage>
   );
 }
