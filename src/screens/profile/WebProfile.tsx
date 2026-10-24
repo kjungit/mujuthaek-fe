@@ -16,6 +16,7 @@ import {
   pLabel,
   pSelect,
 } from "@/components/profile/parts";
+import { BirthField } from "@/components/profile/BirthField";
 import { SearchRegionsField, ResidenceField } from "@/components/profile/RegionFields";
 import {
   headOptions,
@@ -39,16 +40,11 @@ const headerLink =
 function Step1({ form }: { form: ProfileForm }) {
   return (
     <div className="flex flex-col gap-[20px]">
-      <label className={pLabel}>
-        생년월일
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="예: 1997.03.15"
-          className={pInput}
-          {...form.field("birth")}
-        />
-      </label>
+      <BirthField
+        value={form.field("birth").value}
+        onChange={(birth) => form.field("birth").onChange({ target: { value: birth } })}
+        selectClassName={pSelect}
+      />
       <SearchRegionsField form={form} selectClassName={pSelect} />
       <ResidenceField form={form} selectClassName={pSelect} />
       <div className="flex flex-col gap-[8px]">
