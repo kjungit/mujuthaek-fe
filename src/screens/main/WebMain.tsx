@@ -210,7 +210,7 @@ export function WebMain() {
               로그인
             </Link>
             <Link
-              href={routes.signup}
+              href={routes.profile}
               className="bg-brand inline-flex min-h-[44px] items-center rounded-sm px-[18px] text-[15px] font-bold text-white no-underline hover:text-white"
             >
               시작하기

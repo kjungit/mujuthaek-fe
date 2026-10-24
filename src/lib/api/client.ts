@@ -1,6 +1,6 @@
 import { endpoints } from "./endpoints";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
 /** 백엔드 오류 응답 (Problem Details + 화면이 문구를 고를 code) */
 export type Problem = {
