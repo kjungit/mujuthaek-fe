@@ -19,17 +19,19 @@ import {
 } from "@/features/homes/filters";
 import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomes } from "@/features/homes/queries";
-import { listingRegionLabel, useRegionFilter } from "@/features/homes/region";
+import { useRegionFilter } from "@/features/homes/region";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { HomeListing } from "@/mocks/homes";
 
 function ListingCard({
   item,
+  regionLabel,
   liked,
   onToggleLike,
 }: {
   item: HomeListing;
+  regionLabel: string;
   liked: boolean;
   onToggleLike: () => void;
 }) {
@@ -71,7 +73,7 @@ function ListingCard({
         className="text-text hover:text-text flex flex-col gap-[8px] px-[20px] pt-[18px] pb-[20px] no-underline"
       >
         <span className="text-text-tertiary text-[13px]">
-          {item.org} · {listingRegionLabel(item)}
+          {item.org} · {regionLabel}
         </span>
         <span className="tracking-title text-[18px] font-extrabold">{item.title}</span>
         <span className="text-[15px] font-semibold">{item.price}</span>
@@ -259,6 +261,7 @@ export function WebHomes() {
                 <ListingCard
                   key={item.id}
                   item={item}
+                  regionLabel={region.regionLabelOf(item)}
                   liked={liked.has(item.id)}
                   onToggleLike={() => toggleLike(item.id)}
                 />

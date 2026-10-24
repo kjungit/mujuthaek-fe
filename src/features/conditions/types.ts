@@ -1,15 +1,12 @@
 import type { Head, Marry } from "@/features/profile/useProfileForm";
 
-/** 시·도 + 시·군·구. sigungu가 ""면 그 시·도 전체 */
-export type Place = { sido: string; sigungu: string };
-
 /** 이 기기(localStorage)에 30일 동안 저장하는 조건. 소득·자산은 넣지 않아요 */
 export type DeviceConditions = {
   birth: string;
-  sido: string;
-  sigungu: string;
-  /** 찾아볼 지역 (최대 3곳). 공고를 고를 때 써요. 비어 있으면 사는 곳으로 */
-  searchRegions: Place[];
+  /** 지금 사는 곳 (지역 코드, 시·군·구 5자리). 거주 요건·순위 판정에만 써요. 모르면 "" */
+  regionCode: string;
+  /** 찾아볼 지역 코드 (최대 3곳, 시·도 2자리 또는 시·군·구 5자리). 비어 있으면 사는 곳으로 */
+  searchRegionCodes: string[];
   head: Head;
   statuses: string[];
   marry: Marry;

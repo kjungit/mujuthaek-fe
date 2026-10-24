@@ -10,7 +10,7 @@ import { RankChip, VerdictBadge } from "@/components/ui/Badge";
 import { activeFilterGroupCount, defaultMode, defaultSort } from "@/features/homes/filters";
 import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomes } from "@/features/homes/queries";
-import { listingRegionLabel, useRegionFilter } from "@/features/homes/region";
+import { useRegionFilter } from "@/features/homes/region";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { HomeMapPin } from "@/mocks/homes";
@@ -154,7 +154,7 @@ export function MHomes() {
               </span>
               <span className="text-[16px] font-extrabold tracking-[-0.02em]">{h.title}</span>
               <span className="text-text-tertiary text-[12px]">
-                {h.org} · {listingRegionLabel(h)}
+                {h.org} · {region.regionLabelOf(h)}
               </span>
               <span className="text-[14px] font-semibold">{h.price}</span>
               <span className="text-text-sub text-[13px]">

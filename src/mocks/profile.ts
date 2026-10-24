@@ -3,8 +3,6 @@
 export type ProfilePreview = { homes: number; benefits: number; needCheck: number };
 
 export type ProfileOptions = {
-  sido: string[];
-  sigungu: string[];
   householdSize: string[];
   homelessPeriod: string[];
   bankbookPeriod: string[];
@@ -32,8 +30,6 @@ export type ProfileFormData = {
 
 export const profileFormData: ProfileFormData = {
   options: {
-    sido: ["서울특별시", "경기도", "인천광역시"],
-    sigungu: ["마포구", "서대문구", "은평구"],
     householdSize: ["1명", "2명", "3명", "4명 이상"],
     homelessPeriod: [
       "3년 이상 5년 미만",
