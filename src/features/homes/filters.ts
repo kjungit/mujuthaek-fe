@@ -1,15 +1,23 @@
-// 내 집 목록 필터 · 정렬 (값은 API 파라미터로 넘길 예정)
+// 내 집 목록 필터 · 정렬 (지역 · 입주 방식 · 정렬 · 지원 불가 보기는 맞춤 목록 API로 보내요)
 
 export const moveInModes = ["빌려서 들어가기", "사서 들어가기"] as const;
 export type MoveInMode = (typeof moveInModes)[number];
 
-export const sortOptions = [
-  "마감 임박순",
-  "내 순위 높은순",
-  "준비할 돈 적은순",
-  "생활권 점수순",
-] as const;
+export const sortOptions = ["추천순", "마감 임박순", "준비할 돈 적은순", "생활권 점수순"] as const;
 export type SortOption = (typeof sortOptions)[number];
+
+/** 정렬 → 맞춤 목록 API의 sort. 추천순 = 지원 가능 → 확인 필요 → 마감 임박 → 생활권 */
+export const sortParam = {
+  추천순: "RECOMMENDED",
+  "마감 임박순": "DEADLINE",
+  "준비할 돈 적은순": "PREPARE_COST",
+  "생활권 점수순": "AREA_SCORE",
+} as const satisfies Record<SortOption, string>;
+
+export const tenureParam = {
+  "빌려서 들어가기": "RENT",
+  "사서 들어가기": "BUY",
+} as const;
 
 export const filterGroups = [
   {
@@ -56,7 +64,7 @@ export const defaultChecked: Record<FilterKey, boolean> = {
 };
 
 export const defaultMode: MoveInMode = "빌려서 들어가기";
-export const defaultSort: SortOption = "마감 임박순";
+export const defaultSort: SortOption = "추천순";
 
 /** 모바일 '필터 N': 기본값에서 켜 둔 필터 묶음 수 */
 export const activeFilterGroupCount = filterGroups.length;

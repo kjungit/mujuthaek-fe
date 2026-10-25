@@ -18,7 +18,8 @@ export function matchesAnyRegion(item: HomeListing, codes: string[], regions: Re
 }
 
 export function listingRegionLabel(item: HomeListing, regions: Regions) {
-  return item.region === NATIONWIDE ? "전국" : regions.label(item.region);
+  if (item.region === NATIONWIDE) return "전국";
+  return item.regionName ?? regions.label(item.region);
 }
 
 /**
@@ -50,6 +51,8 @@ export function useRegionFilter() {
     pickMine: () => setPicked("mine"),
     isMine,
     isAll: codes.length === 0,
+    /** 지금 보는 지역 코드들 (맞춤 목록 API의 filters.regionCodes) */
+    codes,
     /** "부산 해운대구 · 부산 수영구" / "전체 지역" */
     label: codes.length ? codes.map(regions.label).join(" · ") : "전체 지역",
     matches: (item: HomeListing) => matchesAnyRegion(item, codes, regions),

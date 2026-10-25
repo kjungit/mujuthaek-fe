@@ -38,7 +38,7 @@ export const profileFormData: ProfileFormData = {
       "5년 이상",
       "집이 있어요",
     ],
-    bankbookPeriod: ["2년 이상", "없어요", "1년 미만", "1~2년"],
+    bankbookPeriod: ["2년 이상", "1~2년", "6개월~1년", "6개월 미만", "없어요"],
     priorities: ["직장", "대중교통", "학군", "공원", "편의시설", "병원"],
   },
   previewByStep: [
