@@ -9,6 +9,7 @@ import { mockQuery } from "@/features/mock-query";
 import { api } from "@/lib/api/client";
 import { USE_MOCKS } from "@/lib/api/config";
 import { endpoints } from "@/lib/api/endpoints";
+import { providerName } from "@/features/notice/labels";
 import { routes } from "@/lib/routes";
 import { homeSummary, type HomeNewsItem, type HomeSummary } from "@/mocks/home";
 
@@ -48,8 +49,7 @@ type ApiSummary = {
   deadlines: ApiNotice[];
 };
 
-const providerLabel: Record<string, string> = { APPLYHOME: "청약홈", MYHOME: "마이홈" };
-const org = (n: ApiNotice) => (n.provider ? (providerLabel[n.provider] ?? n.provider) : "공고");
+const org = (n: ApiNotice) => providerName(n.provider) ?? "공고";
 
 /** 공고일까지 며칠 전인지 ("오늘" · "어제" · "3일 전") */
 function agoLabel(postedOn: string, today: Date) {

@@ -26,15 +26,16 @@ export type EligibilityCategory =
 export type NoticeHousingType = {
   /** 주택형 (예: 55, 26A) */
   code: string;
-  areaSqm: number;
+  /** 원문에 없으면 null (화면은 "원문 확인") */
+  areaSqm: number | null;
   /** 이번에 모집하는 호수 */
-  offered: number;
-  depositWon: number;
+  offered: number | null;
+  depositWon: number | null;
   /** 보증금 중 계약할 때 내는 돈 */
   contractWon?: number;
   /** 보증금 중 입주 전에 내는 돈 */
   balanceWon?: number;
-  monthlyRentWon: number;
+  monthlyRentWon: number | null;
   /** 내 조건으로 신청할 수 있는 주택형 */
   mine?: boolean;
 };
@@ -52,7 +53,8 @@ export type NoticeScheduleItem = {
   state: "done" | "now" | "todo";
 };
 
-export type NoticeDocumentGroup = "COMMON" | "CONDITIONAL" | "PROXY_SPOUSE" | "PROXY_OTHER";
+export type NoticeDocumentGroup =
+  "COMMON" | "CONDITIONAL" | "DIRECT" | "PROXY_SPOUSE" | "PROXY_OTHER";
 
 export type NoticeDocumentItem = {
   id: string;
@@ -95,7 +97,8 @@ export type NoticeDoc = {
   schedule: NoticeScheduleItem[];
   apply: {
     method: string;
-    channel: "ONLINE" | "ONSITE" | "EMAIL" | "MAIL";
+    /** 원문에 신청 방법이 없으면 null */
+    channel: "ONLINE" | "ONSITE" | "EMAIL" | "MAIL" | "FAX" | null;
     /** 온라인 신청 주소 */
     url?: string;
     place?: { name: string; address: string };

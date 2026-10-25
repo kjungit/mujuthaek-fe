@@ -75,6 +75,11 @@ const manWon = (v: string) => {
   return digits ? Number(digits) * 10_000 : null;
 };
 
+/** 쓸 수 있는 돈 (원). 준비할 돈과 비교하는 데만 쓰고 서버로 보내지 않아요 */
+export function availableCashWon(session: SessionConditions | null) {
+  return session ? manWon(session.available) : null;
+}
+
 /** "1997.03.15" → "1997-03". 해·달을 다 모르면 없음 */
 export function birthMonthOf(birth: string) {
   const [y = "", m = ""] = birth.split(".");

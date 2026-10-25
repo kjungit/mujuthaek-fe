@@ -8,6 +8,12 @@ import { useCriteria } from "@/features/eligibility/criteria";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import type { ListingVerdict } from "@/components/ui/Badge";
+import {
+  noticeTypeLabel,
+  prepareNoteLabel,
+  providerName,
+  tagLabel,
+} from "@/features/notice/labels";
 import type { HomeListing } from "@/mocks/homes";
 
 /** POST /api/v1/notices/search 응답 (백엔드 NoticeSearchResponse) */
@@ -55,39 +61,6 @@ const verdictOf: Record<SearchItem["overall"], ListingVerdict> = {
   INELIGIBLE: "no",
 };
 
-const providerLabel: Record<string, string> = { APPLYHOME: "청약홈", MYHOME: "마이홈" };
-
-const noticeTypeLabel: Record<string, string> = {
-  YOUTH_SAFE_HOUSING: "청년안심주택",
-  PUBLIC_SUPPORT_PRIVATE_RENTAL: "공공지원민간임대",
-  INTEGRATED_PUBLIC_RENTAL: "통합공공임대",
-  HAPPY_HOUSING: "행복주택",
-  NATIONAL_RENTAL: "국민임대",
-  PERMANENT_RENTAL: "영구임대",
-  PURCHASE_RENTAL: "매입임대",
-  JEONSE_RENTAL: "전세임대",
-  LONG_TERM_JEONSE: "장기전세",
-  PUBLIC_SALE: "공공분양",
-  PRIVATE_SALE: "민영분양",
-};
-
-const tagLabel: Record<string, string> = {
-  STATION: "역세권",
-  SCHOOL: "학세권",
-  ELEMENTARY_NEAR: "초품아",
-  PARK: "숲세권",
-  CONVENIENCE: "편세권",
-  CLINIC: "병세권",
-};
-
-const prepNote: Record<string, string> = {
-  ASSET_UNKNOWN: "자산 조건 확인 필요",
-  INCOME_UNKNOWN: "소득 조건 확인 필요",
-  SCORE_UNKNOWN: "청약 가점 확인 필요",
-  PRICE_NOT_ANNOUNCED: "공고에 금액이 아직 없어요",
-  NO_ELIGIBLE_TYPE: "신청할 수 있는 주택형이 없어요",
-};
-
 /** 1,234,567원 → "124만 원" (만 원 아래 올림) */
 export function manWonLabel(won: number) {
   const man = Math.ceil(won / 10_000);
@@ -104,7 +77,7 @@ function dueOf(item: SearchItem) {
 /** 응답 한 줄 → 목록 카드 */
 export function toListing(item: SearchItem): HomeListing {
   const org = [
-    item.provider ? (providerLabel[item.provider] ?? item.provider) : null,
+    providerName(item.provider),
     item.noticeType ? noticeTypeLabel[item.noticeType] : null,
   ]
     .filter(Boolean)
@@ -120,7 +93,7 @@ export function toListing(item: SearchItem): HomeListing {
     prepAmount: item.prepareCostWon !== null ? manWonLabel(item.prepareCostWon) : undefined,
     prepNote:
       item.prepareCostWon === null
-        ? (prepNote[item.prepareCostNote ?? ""] ?? "준비할 돈 확인 필요")
+        ? (prepareNoteLabel[item.prepareCostNote ?? ""] ?? "준비할 돈 확인 필요")
         : undefined,
     due: dueOf(item),
     findYourOwn: item.noticeType === "JEONSE_RENTAL",

@@ -7,6 +7,7 @@ import {
   documentGroupLabel,
   formatPeriod,
   formatWon,
+  formatWonOr,
   sectionTitles,
   selectionLabel,
   visibleSections,
@@ -155,11 +156,13 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                           <td className={cn(td, "font-bold", t.mine && "rounded-l-[12px]")}>
                             {t.code}
                           </td>
-                          <td className={td}>{t.areaSqm}㎡</td>
-                          <td className={cn(td, "text-right")}>{t.offered}호</td>
-                          <td className={cn(td, "text-right")}>{formatWon(t.depositWon)}</td>
+                          <td className={td}>{t.areaSqm === null ? "–" : `${t.areaSqm}㎡`}</td>
+                          <td className={cn(td, "text-right")}>
+                            {t.offered === null ? "–" : `${t.offered}호`}
+                          </td>
+                          <td className={cn(td, "text-right")}>{formatWonOr(t.depositWon)}</td>
                           <td className={cn(td, "text-right", t.mine && "rounded-r-[12px]")}>
-                            {formatWon(t.monthlyRentWon)}
+                            {formatWonOr(t.monthlyRentWon)}
                           </td>
                         </tr>
                       );
@@ -178,17 +181,20 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                 >
                   <span className="flex flex-col gap-[2px]">
                     <span className="text-[16px] font-extrabold">
-                      {t.code} · {t.areaSqm}㎡
+                      {t.code}
+                      {t.areaSqm !== null && ` · ${t.areaSqm}㎡`}
                     </span>
                     <span
                       className={cn("text-[13px]", t.mine ? "text-brand-strong" : "text-text-sub")}
                     >
-                      {t.offered}호{t.mine && " · 신청 가능"}
+                      {[t.offered !== null && `${t.offered}호`, t.mine && "신청 가능"]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   </span>
                   <span className="text-right text-[14px] font-bold">
-                    {formatWon(t.depositWon)}
-                    <br />월 {formatWon(t.monthlyRentWon)}
+                    {formatWonOr(t.depositWon)}
+                    <br />월 {formatWonOr(t.monthlyRentWon)}
                   </span>
                 </div>
               ))
@@ -264,21 +270,23 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
     apply: () => {
       const { apply } = doc;
       const rows = [
-        { label: "방법", value: channelLabel[apply.channel] },
+        apply.channel && { label: "방법", value: channelLabel[apply.channel] },
         apply.place && { label: "장소", value: `${apply.place.name} · ${apply.place.address}` },
         apply.hours && { label: "시간", value: apply.hours },
       ].filter(Boolean) as { label: string; value: string }[];
       return (
         <div className="flex flex-col gap-[14px]">
-          <p className={cn(sub, "m-0 leading-[1.6]")}>{apply.method}</p>
-          <dl className="bg-bg rounded-tile m-0 flex flex-col gap-[8px] px-[16px] py-[14px]">
-            {rows.map((r) => (
-              <div key={r.label} className="flex gap-[12px] text-[14px]">
-                <dt className="text-text-sub w-[32px] flex-none">{r.label}</dt>
-                <dd className="m-0 font-semibold">{r.value}</dd>
-              </div>
-            ))}
-          </dl>
+          {apply.method && <p className={cn(sub, "m-0 leading-[1.6]")}>{apply.method}</p>}
+          {rows.length > 0 && (
+            <dl className="bg-bg rounded-tile m-0 flex flex-col gap-[8px] px-[16px] py-[14px]">
+              {rows.map((r) => (
+                <div key={r.label} className="flex gap-[12px] text-[14px]">
+                  <dt className="text-text-sub w-[32px] flex-none">{r.label}</dt>
+                  <dd className="m-0 font-semibold">{r.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
           {apply.url && (
             <a
               href={apply.url}

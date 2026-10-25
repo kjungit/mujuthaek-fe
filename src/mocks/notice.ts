@@ -57,14 +57,18 @@ export type NoticeUnit = MapPoint & {
 
 type NoticeBase = {
   id: string;
+  /** 목업 판정 (실제 판정은 POST /eligibility/notices/{id}/evaluate) */
   verdict: Verdict;
   dday: number;
+  /** 마감 표시를 바꿀 때 (상시 · 접수 예정 · 마감). 없으면 "마감 D-n" */
+  dueLabel?: string;
   tags: string[];
   title: string;
   meta: string;
   /** 공고 원문을 낸 기관(버튼 문구에 써요) */
   agency: string;
   facts: NoticeFact[];
+  /** 목업 판정 */
   eligibility: NoticeEligibility[];
   /** 순위로 뽑는 공고만 (선착순 · 추첨만 하는 공고는 없어요) */
   ranking?: NoticeRanking;
@@ -87,23 +91,29 @@ export type NoticeBenefit = {
   verdict: Verdict;
 };
 
+export type NoticeMoney = {
+  type: string;
+  deposit: string;
+  /** 받을 수 있는 대출이 없으면 대출 줄을 숨겨요 */
+  loanName?: string;
+  loanShortName?: string;
+  loan?: string;
+  prep: string;
+  note: string;
+};
+
 /** 일반 공고: 주택형별 임대 조건(doc.housing) + (있으면) 블록별 공급 주택 */
 export type StandardNotice = NoticeBase & {
   kind: "standard";
   /** 단지 안 블록별 공급 주택. 없으면 목록·지도 칸을 숨겨요 */
   units?: NoticeUnit[];
-  money: {
-    type: string;
-    deposit: string;
-    loanName: string;
-    loanShortName: string;
-    loan: string;
-    prep: string;
-    note: string;
-  };
-  life: { score: number; items: NoticeLifeItem[] };
-  benefitArea: string;
-  benefits: NoticeBenefit[];
+  /** 목업 준비할 돈 (실제는 판정 응답의 주택형별 준비할 돈) */
+  money?: NoticeMoney;
+  /** 생활권 점수가 아직 없으면 칸을 숨겨요 */
+  life?: { score: number; items: NoticeLifeItem[] };
+  benefitArea?: string;
+  /** 혜택 판정이 아직 없으면 칸을 숨겨요 */
+  benefits?: NoticeBenefit[];
 };
 
 /** 주택목록(엑셀)이 붙은 공고 */
