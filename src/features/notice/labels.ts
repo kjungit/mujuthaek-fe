@@ -9,6 +9,7 @@ export const noticeTypeLabel: Record<string, string> = {
   YOUTH_SAFE_HOUSING: "청년안심주택",
   PUBLIC_SUPPORT_PRIVATE_RENTAL: "공공지원민간임대",
   INTEGRATED_PUBLIC_RENTAL: "통합공공임대",
+  PUBLIC_RENTAL: "공공임대",
   HAPPY_HOUSING: "행복주택",
   NATIONAL_RENTAL: "국민임대",
   PERMANENT_RENTAL: "영구임대",

@@ -12,6 +12,8 @@ import type {
   NoticeDoc,
   NoticeDocumentGroup,
   NoticeScheduleItem,
+  NoticeSelectionKind,
+  NoticeTextItem,
 } from "@/mocks/notice-doc";
 
 type Evidence = { quote: string; page: number | null };
@@ -90,6 +92,24 @@ export type ApiNoticeDetail = {
     description: string | null;
     evidence: Evidence[];
   }[];
+  /** 선정 방식 (백엔드 #103부터, 그 전 응답엔 없어요) */
+  selectionRules?: {
+    id: string;
+    kind: string | null;
+    description: string | null;
+    originalText: string | null;
+    priorityRank: number | null;
+    points: number | null;
+  }[];
+  /** 안내: 신청 방법 · 주의 · 입주 · 거주 · 문의처 (백엔드 #103부터) */
+  guidance?: {
+    id: string;
+    kind: string | null;
+    title: string | null;
+    description: string | null;
+    phone: string | null;
+    url: string | null;
+  }[];
   files: { name: string; url: string }[];
   areaSummaries: { siteId: string; kind: "LIVING" | "COMMERCIAL"; score: number }[];
   hasUnits: boolean;
@@ -132,6 +152,14 @@ const groupOf: Record<string, NoticeDocumentGroup> = {
   DIRECT: "DIRECT",
   PROXY_SPOUSE: "PROXY_SPOUSE",
   PROXY_OTHER: "PROXY_OTHER",
+};
+
+const selectionKindOf: Record<string, NoticeSelectionKind> = {
+  PRIORITY: "PRIORITY",
+  SCORING: "SCORE",
+  TIE_BREAK: "TIE_BREAK",
+  LOTTERY: "LOTTERY",
+  FIRST_COME: "FIRST_COME",
 };
 
 const dayText: Record<string, string> = {
@@ -213,6 +241,17 @@ function factsOf(d: ApiNoticeDetail): NoticeFact[] {
 
 function docOf(d: ApiNoticeDetail, today: string): NoticeDoc {
   const { header: h } = d;
+  const guidance = d.guidance ?? [];
+  const textItems = (kinds: string[]): NoticeTextItem[] =>
+    guidance
+      .filter((g) => kinds.includes(g.kind ?? "OTHER"))
+      .map((g) => ({ id: g.id, title: g.title ?? "", text: g.description ?? "" }));
+  const method = guidance
+    .filter((g) => g.kind === "APPLICATION_METHOD")
+    .map((g) => g.description)
+    .filter(Boolean)
+    .join(" ");
+  const applyUrl = guidance.find((g) => g.kind === "APPLICATION_METHOD" && g.url)?.url;
   const application = d.schedules.find((s) => s.kinds.includes("APPLICATION"));
   const place = application?.places[0];
   const documents = new Map<NoticeDocumentGroup, NoticeDoc["apply"]["documents"][number]>();
@@ -275,10 +314,10 @@ function docOf(d: ApiNoticeDetail, today: string): NoticeDoc {
       .map((s) => scheduleItem(s, today))
       .sort((a, b) => (a.start ?? "9999").localeCompare(b.start ?? "9999")),
     apply: {
-      // 일정 설명은 일정 칸에 있어서 여기엔 다시 쓰지 않아요
-      method: "",
+      // 안내의 신청 방법 문장 (일정 설명은 일정 칸에 있어서 다시 쓰지 않아요)
+      method,
       channel: channelOf[application?.channels[0] ?? ""] ?? null,
-      url: application?.applicationUrl ?? undefined,
+      url: application?.applicationUrl ?? applyUrl ?? undefined,
       place:
         place && (place.name || place.address)
           ? { name: place.name ?? "", address: place.address ?? "" }
@@ -286,11 +325,21 @@ function docOf(d: ApiNoticeDetail, today: string): NoticeDoc {
       hours: application && hoursText(application),
       documents: [...documents.values()],
     },
-    // 아래 목차는 추출 결과에 아직 없어요
-    selection: [],
-    cautions: [],
-    living: [],
-    contacts: [],
+    selection: (d.selectionRules ?? []).map((r) => ({
+      id: r.id,
+      kind: selectionKindOf[r.kind ?? ""] ?? "OTHER",
+      text: (r.description ?? r.originalText ?? "") + (r.points !== null ? ` (${r.points}점)` : ""),
+    })),
+    cautions: textItems(["CAUTION"]),
+    living: textItems(["MOVE_IN", "LIVING_NOTICE", "OTHER"]),
+    contacts: guidance
+      .filter((g) => g.kind === "CONTACT")
+      .map((g) => ({
+        id: g.id,
+        name: g.title ?? "문의처",
+        phone: g.phone ?? "",
+        desc: g.description ?? "",
+      })),
   };
 }
 
