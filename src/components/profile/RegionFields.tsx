@@ -144,7 +144,7 @@ export function SearchRegionsField({
         </div>
       )}
       <span className="text-text-sub text-[13px]">
-        내 집에서 이 지역 공고를 먼저 보여드려요. 비워 두면 지금 사는 곳 공고를 보여드려요
+        내 집에서 이 지역 공고를 먼저 보여드려요. 비워 두면 전체 지역 공고를 보여드려요
       </span>
     </div>
   );
