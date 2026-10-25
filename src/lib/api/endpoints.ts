@@ -13,6 +13,8 @@ export const endpoints = {
   homeSummary: "/api/v1/home/summary",
   /** 공고 상세 (공개 정보) */
   noticeDetail: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}`,
+  /** 공고 주택목록 (호별, 커서) */
+  noticeUnits: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}/units`,
   /** 공고 하나의 판정 (조건별 결과) */
   noticeEvaluate: (id: string) => `/api/v1/eligibility/notices/${encodeURIComponent(id)}/evaluate`,
   // 백엔드 알림 API 전 (설계: POST /api/v1/me/push-subscriptions)

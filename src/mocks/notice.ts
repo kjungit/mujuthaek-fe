@@ -51,6 +51,8 @@ export type NoticeUnit = MapPoint & {
   mobilePos?: MapPoint;
   /** true: 내 조건으로 신청 가능 · false: 다른 대상 */
   ok: boolean;
+  /** 단지·건물 (sites[].id). 실제 API에서만 */
+  siteId?: string;
   otherTarget: string;
   prep: string;
 };
@@ -114,7 +116,13 @@ export type StandardNotice = NoticeBase & {
   benefitArea?: string;
   /** 혜택 판정이 아직 없으면 칸을 숨겨요 */
   benefits?: NoticeBenefit[];
+  /** 단지·건물 위치 (실제 API). 좌표를 모르면 lat·lng가 null */
+  sites?: NoticeSite[];
+  /** 호별 주택목록이 있는지 (실제 API: GET /notices/{id}/units로 받아요) */
+  hasUnits?: boolean;
 };
+
+export type NoticeSite = { id: string; name: string; lat: number | null; lng: number | null };
 
 /** 주택목록(엑셀)이 붙은 공고 */
 export type UnitListNotice = NoticeBase & {

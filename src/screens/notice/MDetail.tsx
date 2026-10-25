@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
@@ -12,7 +12,9 @@ import { PdfViewer } from "@/components/notice/PdfViewer";
 import { MRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { dueText, formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
-import { useNoticeJudgment, withMine } from "@/features/notice/judgment";
+import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/notice/judgment";
+import { toUnit, useNoticeUnits } from "@/features/notice/units";
+import type { StandardNotice } from "@/mocks/notice";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { cn } from "@/lib/cn";
@@ -21,6 +23,95 @@ import { routes } from "@/lib/routes";
 const MOBILE_BENEFIT_COUNT = 2;
 
 const card = "rounded-card bg-surface mx-[16px] flex flex-col";
+
+/** 처음에 보여주는 집 수 */
+const MOBILE_UNIT_COUNT = 5;
+
+/** 실제 API 주택목록 (모바일은 목록만) */
+function MApiUnits({
+  notice,
+  judgment,
+}: {
+  notice: StandardNotice;
+  judgment: NoticeJudgment | null;
+}) {
+  const q = useNoticeUnits(notice.id, true);
+  const [onlyOk, setOnlyOk] = useState(false);
+  const [all, setAll] = useState(false);
+  const sites = useMemo(() => notice.sites ?? [], [notice.sites]);
+  const units = useMemo(
+    () => (q.data?.pages ?? []).flatMap((p) => p.items.map((u) => toUnit(u, sites, judgment))),
+    [q.data, sites, judgment],
+  );
+  if (q.isPending || units.length === 0) return null;
+  const okCount = units.filter((u) => u.ok).length;
+  const filtered = onlyOk ? units.filter((u) => u.ok) : units;
+  const shown = all ? filtered : filtered.slice(0, MOBILE_UNIT_COUNT);
+  const chip = (on: boolean) =>
+    cn(
+      "rounded-pill min-h-[36px] cursor-pointer border-0 px-[12px] text-[13px] font-bold",
+      on ? "bg-text text-white" : "bg-fill text-text-sub",
+    );
+
+  return (
+    <section aria-labelledby="units-h" className={cn(card, "gap-[10px] px-[20px] py-[16px]")}>
+      <h3 id="units-h" className="m-0 text-[17px] font-extrabold">
+        공급 주택 목록 <span className="text-brand">{units.length}곳</span>
+      </h3>
+      <div role="group" aria-label="목록 필터" className="flex gap-[6px]">
+        <button
+          type="button"
+          aria-pressed={!onlyOk}
+          onClick={() => setOnlyOk(false)}
+          className={chip(!onlyOk)}
+        >
+          전체 {units.length}
+        </button>
+        <button
+          type="button"
+          aria-pressed={onlyOk}
+          onClick={() => setOnlyOk(true)}
+          className={chip(onlyOk)}
+        >
+          신청 가능만 {okCount}
+        </button>
+      </div>
+      <ul className="m-0 flex list-none flex-col gap-[8px] p-0">
+        {shown.map((u) => (
+          <li key={u.id} className="bg-bg rounded-tile flex flex-col gap-[3px] px-[14px] py-[12px]">
+            <span className="flex items-center justify-between gap-[8px]">
+              <span className="text-[15px] font-bold">{u.name}</span>
+              <span
+                className={cn(
+                  "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
+                  u.ok ? "bg-ok-bg text-ok-text" : "bg-surface text-text-sub",
+                )}
+              >
+                {u.ok ? "신청 가능" : u.otherTarget}
+              </span>
+            </span>
+            <span className="text-text-sub text-[13px]">
+              {u.type} · {u.area} · {u.floor}
+            </span>
+            <span className="text-[14px] font-bold">
+              보증금 {u.deposit} · {u.rent}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {(filtered.length > shown.length || q.hasNextPage) && (
+        <button
+          type="button"
+          onClick={() => (filtered.length > shown.length ? setAll(true) : void q.fetchNextPage())}
+          disabled={q.isFetchingNextPage}
+          className="bg-fill text-text min-h-[44px] cursor-pointer rounded-sm border-0 text-[14px] font-bold disabled:opacity-60"
+        >
+          {q.isFetchingNextPage ? "불러오는 중" : "더 보기"}
+        </button>
+      )}
+    </section>
+  );
+}
 
 export function MDetail({ id }: { id: string }) {
   const { data, loading, error } = useNotice(id);
@@ -124,6 +215,8 @@ export function MDetail({ id }: { id: string }) {
           variant="mobile"
           onOpenOriginal={(page) => openOriginal(page ?? doc.pages.eligibility ?? 1, "신청 자격")}
         />
+
+        {n.hasUnits && <MApiUnits notice={n} judgment={j.judgment} />}
 
         {n.ranking && <MRankCard ranking={n.ranking} />}
 
