@@ -325,11 +325,12 @@ function docOf(d: ApiNoticeDetail, today: string): NoticeDoc {
       hours: application && hoursText(application),
       documents: [...documents.values()],
     },
-    selection: (d.selectionRules ?? []).map((r) => ({
-      id: r.id,
-      kind: selectionKindOf[r.kind ?? ""] ?? "OTHER",
-      text: (r.description ?? r.originalText ?? "") + (r.points !== null ? ` (${r.points}점)` : ""),
-    })),
+    selection: (d.selectionRules ?? []).map((r) => {
+      const text = r.description ?? r.originalText ?? "";
+      // 배점은 문장에 점수가 없을 때만 붙여요
+      const points = r.points !== null && !text.includes("점") ? ` (${r.points}점)` : "";
+      return { id: r.id, kind: selectionKindOf[r.kind ?? ""] ?? "OTHER", text: text + points };
+    }),
     cautions: textItems(["CAUTION"]),
     living: textItems(["MOVE_IN", "LIVING_NOTICE", "OTHER"]),
     contacts: guidance
