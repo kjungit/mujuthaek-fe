@@ -1,33 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Building, SlidersHorizontal } from "lucide-react";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
 import { RankChip, VerdictBadge } from "@/components/ui/Badge";
-import { activeFilterGroupCount, defaultMode, defaultSort } from "@/features/homes/filters";
+import {
+  activeFilterGroupCount,
+  defaultMode,
+  defaultSort,
+  tenureParam,
+} from "@/features/homes/filters";
 import { useHomeList } from "@/features/homes/list";
+import { HomesMap } from "@/components/homes/HomesMap";
 import { RegionSelect } from "@/components/homes/RegionSelect";
-import { useHomes } from "@/features/homes/queries";
 import { useRegionFilter } from "@/features/homes/region";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { HomeMapPin } from "@/mocks/homes";
-
-const pinTone: Record<HomeMapPin["tone"], string> = {
-  brand: "bg-brand text-white",
-  plain: "bg-surface text-text",
-  check: "bg-surface text-check-text",
-};
 
 /** 지도 모드에서 목록에 남기는 개수 */
 const MAP_LIST_COUNT = 2;
 
 export function MHomes() {
-  // 지도 핀은 지도 API(GET /notices/map) 연결 전까지 목업이에요
-  const { data } = useHomes();
   const [view, setView] = useState<"list" | "map">("list");
   const [includeIneligible, setIncludeIneligible] = useState(false);
   const isMap = view === "map";
@@ -41,7 +37,8 @@ export function MHomes() {
     showCheck: true,
   });
   const visible = list.listings;
-  const visibleIds = new Set(visible.map((l) => l.id));
+  const verdicts = useMemo(() => new Map(visible.map((l) => [l.id, l.verdict])), [visible]);
+  const verdictOf = useCallback((id: string) => verdicts.get(id), [verdicts]);
   const items = isMap ? visible.slice(0, MAP_LIST_COUNT) : visible;
 
   const viewButton = (v: "list" | "map", label: string) => (
@@ -103,34 +100,12 @@ export function MHomes() {
         </div>
 
         {isMap && (
-          <div
-            aria-label="공고 위치 지도"
-            role="img"
-            className="rounded-card bg-placeholder-bg relative h-[340px] overflow-hidden"
-          >
-            <span
-              aria-hidden
-              className="bg-map-water absolute top-[150px] left-[-20px] h-[26px] w-[460px] rotate-[-8deg]"
-            />
-            <span
-              aria-hidden
-              className="bg-map-park-2 absolute top-[40px] left-[30px] h-[70px] w-[90px] rounded-[18px]"
-            />
-            {data.mapPins
-              .filter((p) => visibleIds.has(p.id))
-              .map((p) => (
-                <span
-                  key={p.id}
-                  className={cn(
-                    "rounded-pill absolute px-[10px] py-[6px] text-[13px] font-extrabold shadow-[0_4px_10px_rgba(25,31,40,0.2)]",
-                    pinTone[p.tone],
-                  )}
-                  style={{ left: p.left, top: p.top }}
-                >
-                  {p.label}
-                </span>
-              ))}
-          </div>
+          <HomesMap
+            regionCodes={region.codes}
+            tenure={tenureParam[defaultMode]}
+            verdictOf={verdictOf}
+            className="h-[340px]"
+          />
         )}
 
         {list.loading && (

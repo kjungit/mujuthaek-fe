@@ -7,6 +7,8 @@ export const endpoints = {
   eligibilityCriteria: "/api/v1/eligibility/criteria",
   /** 맞춤 목록: 필터 + 판정 입력(구간 값)을 보내면 판정 결과가 붙은 공고 목록 */
   noticesSearch: "/api/v1/notices/search",
+  /** 지도: 범위 안 공고 핀 (많으면 지역 묶음). 공개 정보라 판정은 없어요 */
+  noticesMap: "/api/v1/notices/map",
   /** 홈 요약: 내 조건으로 판정한 공고 개수 · 새 공고 · 마감 임박 · 생활권 */
   homeSummary: "/api/v1/home/summary",
   /** 공고 상세 (공개 정보) */
