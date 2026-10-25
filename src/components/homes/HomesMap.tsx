@@ -37,14 +37,33 @@ const pinClass: Record<PinTone, string> = {
 const pinBase =
   "rounded-pill cursor-pointer border-0 px-[10px] py-[6px] text-[13px] font-extrabold whitespace-nowrap shadow-[0_4px_10px_rgba(25,31,40,0.2)]";
 
+/** 공고 핀: 제목 + 종류·마감 두 줄 */
+const noticePin =
+  "flex max-w-[200px] cursor-pointer flex-col items-start gap-[1px] rounded-[12px] border-0 px-[10px] py-[6px] text-left shadow-[0_4px_10px_rgba(25,31,40,0.2)]";
+
 const panel = "rounded-card bg-placeholder-bg relative overflow-hidden";
 
-/** 지도 위 버튼 하나 (카카오 CustomOverlay 내용) */
-function overlayButton(text: string, className: string, label: string, onClick: () => void) {
+/** 지도 위 버튼 하나 (카카오 CustomOverlay 내용). 둘째 줄이 있으면 작게 */
+function overlayButton(
+  lines: [string, string?],
+  className: string,
+  label: string,
+  onClick: () => void,
+) {
   const el = document.createElement("button");
   el.type = "button";
   el.className = className;
-  el.textContent = text;
+  const [main, sub] = lines;
+  if (sub === undefined) el.textContent = main;
+  else {
+    const title = document.createElement("span");
+    title.className = "block max-w-full truncate text-[13px] font-extrabold";
+    title.textContent = main;
+    const meta = document.createElement("span");
+    meta.className = "block text-[11px] font-bold whitespace-nowrap opacity-80";
+    meta.textContent = sub;
+    el.append(title, meta);
+  }
   el.setAttribute("aria-label", label);
   el.addEventListener("click", onClick);
   return el;
@@ -106,8 +125,11 @@ function KakaoHomesMap({ regionCodes, tenure, verdictOf, className }: Props) {
         const tone: PinTone = verdictOf(p.id) ?? "unknown";
         return new maps.CustomOverlay({
           position: new maps.LatLng(p.lat, p.lng),
-          content: overlayButton(pinLabel(p), cn(pinBase, pinClass[tone]), p.title, () =>
-            router.push(routes.notice(p.id)),
+          content: overlayButton(
+            [p.title, pinLabel(p)],
+            cn(noticePin, pinClass[tone]),
+            `${p.title}, ${pinLabel(p)}`,
+            () => router.push(routes.notice(p.id)),
           ),
           yAnchor: 1,
           clickable: true,
@@ -120,7 +142,7 @@ function KakaoHomesMap({ regionCodes, tenure, verdictOf, className }: Props) {
         return new maps.CustomOverlay({
           position: at,
           content: overlayButton(
-            `${name} ${c.count}`,
+            [`${name} ${c.count}`],
             cn(pinBase, "bg-text text-white"),
             `${name} 공고 ${c.count}곳, 눌러서 가까이 보기`,
             () => map.setLevel(Math.max(1, map.getLevel() - 3), { anchor: at, animate: true }),

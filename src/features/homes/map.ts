@@ -76,12 +76,12 @@ function ddayOf(applyEnd: string, now: Date) {
   return Math.round((Date.parse(applyEnd) - Date.parse(today)) / 86_400_000);
 }
 
-/** 핀 글자: "행복주택 D-12" */
+/** 핀 둘째 줄: "행복주택 · D-12" */
 export function pinLabel(pin: MapPinItem, now = new Date()) {
   const type = (pin.noticeType && noticeTypeLabel[pin.noticeType]) || "공고";
   if (!pin.applyEnd) return type;
   const d = ddayOf(pin.applyEnd, now);
-  return d < 0 ? type : d === 0 ? `${type} 오늘 마감` : `${type} D-${d}`;
+  return d < 0 ? type : d === 0 ? `${type} · 오늘 마감` : `${type} · D-${d}`;
 }
 
 /** 시·도 대표 좌표 (지도를 처음 열 때 찾아볼 지역 쪽으로) */
