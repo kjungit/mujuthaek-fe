@@ -237,7 +237,7 @@ function ScorePanel() {
           청약 가점표 · 만점 {data.score.max}점
         </h2>
         <span className="text-text-sub text-[14px]">
-          주택공급에 관한 규칙 · 청약 가점 계산 화면이 이 표를 써요
+          주택공급에 관한 규칙 별표 1 · 청약 가점 계산은 판정 코드가 이 기준으로 해요
         </span>
       </div>
       <div
@@ -253,7 +253,8 @@ function ScorePanel() {
         ))}
       </div>
       <span className="text-text-sub text-[14px]">
-        마지막 확인 {data.score.lastChecked} · 법령 개정 알림을 켜 두면 바뀔 때 알려드려요
+        기준 {data.score.lastChecked} · 여기서는 볼 수만 있어요. 법령이 바뀌면 판정 코드를 고쳐
+        반영해요
       </span>
     </section>
   );
