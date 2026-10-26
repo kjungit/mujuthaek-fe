@@ -8,6 +8,7 @@ import {
   Database,
   ExternalLink,
   Flag,
+  History,
   MessageSquareWarning,
   Users,
   LayoutDashboard,
@@ -57,6 +58,7 @@ const menu: MenuItem[] = [
     count: { key: "chatReports", tone: "wait" },
   },
   { href: routes.adminUsers, label: "회원", icon: Users },
+  { href: routes.adminActivity, label: "처리 기록", icon: History },
 ];
 
 /** 관리자 화면 틀: 왼쪽 232px 어두운 사이드바 + 본문 */

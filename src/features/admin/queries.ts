@@ -19,6 +19,7 @@ import {
   liveReviewQueue,
   liveSources,
   liveBotTraffic,
+  liveActivity,
   liveRealtime,
   liveRoleChanges,
   liveUsers,
@@ -32,6 +33,7 @@ import { USE_MOCKS } from "@/lib/api/config";
 import { botTrafficMock, noticeTitlesMock, realtimeMock, trafficMock } from "@/mocks/admin-traffic";
 import { chatReportTitlesMock, chatReportsMock, type ChatReviewStatus } from "@/mocks/admin-chat";
 import { adminUsersMock, roleChangesMock, type AdminUserRole } from "@/mocks/admin-users";
+import { activityMock } from "@/mocks/admin-activity";
 
 export const adminKeys = {
   counts: ["admin", "counts"] as const,
@@ -271,6 +273,15 @@ export function useRoleChanges(days: number) {
   return useQuery({
     queryKey: ["admin", LIVE ? "live" : "mock", "role-changes", days],
     queryFn: () => (LIVE ? liveRoleChanges(days) : Promise.resolve(roleChangesMock)),
+    staleTime: 0,
+  });
+}
+
+/** 처리 기록 (검수·제보·기준값·권한) */
+export function useAdminActivity(days: number) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "activity", days],
+    queryFn: () => (LIVE ? liveActivity(days) : Promise.resolve(activityMock)),
     staleTime: 0,
   });
 }

@@ -7,6 +7,7 @@ import { api } from "@/lib/api/client";
 import { routes } from "@/lib/routes";
 import type { BotTrafficData, RealtimeData, TrafficData } from "@/mocks/admin-traffic";
 import type { AdminUser, AdminUserRole, AdminUsersPage, RoleChange } from "@/mocks/admin-users";
+import type { ActivityData, ActivityItem } from "@/mocks/admin-activity";
 import type {
   ChatReport,
   ChatReportGroup,
@@ -1208,4 +1209,71 @@ export const changeUserRole = (id: string, role: AdminUserRole) =>
 
 export function liveRoleChanges(days: number) {
   return api.get<RoleChange[]>(`/api/admin/users/role-changes?days=${days}`);
+}
+
+// ---------- 처리 기록 ----------
+type CriteriaChanges = {
+  kind: string;
+  changes: {
+    year: number;
+    validFrom: string;
+    source: string | null;
+    replacedAt: string;
+    replacedBy: string | null;
+  }[];
+};
+
+const CRITERIA_KINDS: Record<string, string> = {
+  MEDIAN_INCOME: "기준중위소득",
+  URBAN_WORKER_INCOME: "도시근로자 월평균소득",
+  RANK_CRITERIA: "순위 요건",
+};
+
+/** 검수·제보 처리(notice) + 기준값 바꾼 기록(eligibility) + 권한 변경(user)을 최근 순으로 합쳐요. 하나가 실패해도 나머지는 보여요 */
+export async function liveActivity(days: number): Promise<ActivityData> {
+  const since = Date.now() - days * 86_400_000;
+  const [main, criteria, roles] = await Promise.all([
+    api
+      .get<{ items: (ActivityItem & { targetId: string | null })[]; reviewsError: string | null }>(
+        `/api/admin/activity?days=${days}`,
+      )
+      .catch(() => null),
+    Promise.all(
+      Object.keys(CRITERIA_KINDS).map((k) =>
+        api.get<CriteriaChanges>(`/api/admin/criteria/${k}/history`).catch(() => null),
+      ),
+    ),
+    liveRoleChanges(days).catch(() => null),
+  ]);
+  const items: ActivityItem[] = [...(main?.items ?? [])];
+  for (const h of criteria) {
+    for (const c of h?.changes ?? []) {
+      if (Date.parse(c.replacedAt) < since) continue;
+      items.push({
+        at: c.replacedAt,
+        kind: "CRITERIA",
+        action: "REPLACED",
+        title: `${CRITERIA_KINDS[h!.kind] ?? h!.kind} ${c.year}년`,
+        detail: c.source,
+        by: c.replacedBy,
+      });
+    }
+  }
+  for (const r of roles ?? []) {
+    items.push({
+      at: r.changedAt,
+      kind: "ROLE",
+      action: r.toRole === "ADMIN" ? "TO_ADMIN" : "TO_USER",
+      title: r.nickname ?? "탈퇴한 회원",
+      detail: null,
+      by: r.changedBy,
+    });
+  }
+  items.sort((a, b) => b.at.localeCompare(a.at));
+  const failed = [main ? null : "검수·제보", roles ? null : "권한"].filter(Boolean);
+  return {
+    items,
+    reviewsError:
+      main?.reviewsError ?? (failed.length ? `${failed.join("·")} 기록을 불러오지 못했어요` : null),
+  };
 }
