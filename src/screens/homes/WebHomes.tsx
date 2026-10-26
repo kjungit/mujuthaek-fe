@@ -20,6 +20,7 @@ import {
 import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomes } from "@/features/homes/queries";
 import { useRegionFilter } from "@/features/homes/region";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { HomeListing } from "@/mocks/homes";
@@ -110,13 +111,18 @@ export function WebHomes() {
     () => new Set(data.listings.filter((l) => l.liked).map((l) => l.id)),
   );
 
-  const toggleLike = (id: string) =>
+  const toggleLike = (id: string) => {
+    if (!liked.has(id)) {
+      const org = data.listings.find((l) => l.id === id)?.org;
+      track("notice_bookmark", { notice_kind: "standard", agency: org || "-", via: "list" });
+    }
     setLiked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  };
 
   const resetFilters = () => {
     setMode(defaultMode);
