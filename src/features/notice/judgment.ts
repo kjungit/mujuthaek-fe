@@ -89,6 +89,8 @@ export type NoticeJudgment = {
   money?: NoticeMoney;
   /** 내 조건으로 신청할 수 있는 주택형 */
   mineTypes: string[];
+  /** 주택형별 준비할 돈 ("960만 원" · 모르면 이유) */
+  prepByType: Record<string, string>;
 };
 
 const verdictOf: Record<ApiOverall, ListingVerdict> = {
@@ -177,6 +179,14 @@ export function toJudgment(
     targets,
     money: moneyOf(e, (k) => rents.get(k) ?? null, cashWon),
     mineTypes: e.unitTypes.filter((u) => u.eligible).map((u) => u.houseType),
+    prepByType: Object.fromEntries(
+      e.unitTypes.map((u) => [
+        u.houseType,
+        u.prepareCost.prepareWon !== null
+          ? formatWon(u.prepareCost.prepareWon)
+          : (prepareNoteLabel[u.prepareCost.note ?? ""] ?? "확인 필요"),
+      ]),
+    ),
   };
 }
 
@@ -203,6 +213,7 @@ export function mockJudgment(n: StandardNotice): NoticeJudgment {
     ],
     money: n.money,
     mineTypes: n.doc.housing.flatMap((h) => h.types.filter((t) => t.mine).map((t) => t.code)),
+    prepByType: {},
   };
 }
 

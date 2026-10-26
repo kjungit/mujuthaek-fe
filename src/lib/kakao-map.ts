@@ -11,12 +11,16 @@ export type KakaoMap = {
   getLevel(): number;
   setLevel(level: number, options?: { anchor?: KakaoLatLng; animate?: boolean }): void;
   setCenter(latLng: KakaoLatLng): void;
+  panTo(latLng: KakaoLatLng): void;
+  setBounds(bounds: KakaoLatLngBounds): void;
   relayout(): void;
 };
+export type KakaoLatLngBounds = { extend(latLng: KakaoLatLng): void };
 export type KakaoOverlay = { setMap(map: KakaoMap | null): void };
 export type KakaoMaps = {
   load(callback: () => void): void;
   LatLng: new (lat: number, lng: number) => KakaoLatLng;
+  LatLngBounds: new () => KakaoLatLngBounds;
   Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap;
   CustomOverlay: new (options: {
     position: KakaoLatLng;

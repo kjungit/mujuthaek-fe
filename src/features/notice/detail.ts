@@ -57,7 +57,14 @@ export type ApiNoticeDetail = {
     applicationChannels: string[];
   };
   schedules: ApiSchedule[];
-  sites: { id: string; name: string | null; address: string | null; tags: string[] }[];
+  sites: {
+    id: string;
+    name: string | null;
+    address: string | null;
+    lat: number | null;
+    lng: number | null;
+    tags: string[];
+  }[];
   unitTypes: {
     houseType: string;
     exclusiveM2: number | null;
@@ -85,6 +92,7 @@ export type ApiNoticeDetail = {
   }[];
   files: { name: string; url: string }[];
   areaSummaries: { siteId: string; kind: "LIVING" | "COMMERCIAL"; score: number }[];
+  hasUnits: boolean;
 };
 
 const categoryOf: Record<string, EligibilityCategory> = {
@@ -262,7 +270,10 @@ function docOf(d: ApiNoticeDetail, today: string): NoticeDoc {
           },
         ]
       : [],
-    schedule: d.schedules.map((s) => scheduleItem(s, today)),
+    // 날짜순 (날짜 없는 일정은 뒤로)
+    schedule: d.schedules
+      .map((s) => scheduleItem(s, today))
+      .sort((a, b) => (a.start ?? "9999").localeCompare(b.start ?? "9999")),
     apply: {
       // 일정 설명은 일정 칸에 있어서 여기엔 다시 쓰지 않아요
       method: "",
@@ -312,6 +323,13 @@ export function toNotice(d: ApiNoticeDetail, now = new Date()): StandardNotice {
     eligibility: [],
     doc: docOf(d, todayYmd(now)),
     life: living.length ? { score: Math.round(Math.max(...living)), items: [] } : undefined,
+    sites: d.sites.map((s) => ({
+      id: s.id,
+      name: s.name ?? s.address ?? "단지",
+      lat: s.lat,
+      lng: s.lng,
+    })),
+    hasUnits: d.hasUnits,
   };
   notice.dueLabel = dueLabelOf(h) ?? dueText(notice);
   return notice;
