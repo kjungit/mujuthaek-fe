@@ -13,7 +13,7 @@ export type ActivityKind =
 export type ActivityItem = {
   at: string;
   kind: ActivityKind;
-  /** 검수 APPROVED·EDITED_APPROVED·REJECTED·REOPENED, 제보 FIXED·KEPT, 기준값 REPLACED, 권한 TO_ADMIN·TO_USER */
+  /** 검수 APPROVED·EDITED_APPROVED·REJECTED·REOPENED, 제보 FIXED·KEPT, 기준값 REPLACED, 관리자 APPOINT·DISMISS·GRANT·REVOKE·SUSPEND·UNSUSPEND·TRANSFER·FREEZE·UNFREEZE */
   action: string;
   title: string | null;
   detail: string | null;
@@ -53,7 +53,7 @@ export const activityMock: ActivityData = {
     {
       at: "2026-10-25T05:00:00Z",
       kind: "ROLE",
-      action: "TO_USER",
+      action: "DISMISS",
       title: "최운영",
       detail: null,
       by: "김○○",

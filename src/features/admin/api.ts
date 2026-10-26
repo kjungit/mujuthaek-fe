@@ -6,7 +6,14 @@
 import { api } from "@/lib/api/client";
 import { routes } from "@/lib/routes";
 import type { BotTrafficData, RealtimeData, TrafficData } from "@/mocks/admin-traffic";
-import type { AdminUser, AdminUserRole, AdminUsersPage, RoleChange } from "@/mocks/admin-users";
+import { PERMISSION_INFO, type AdminPermission } from "@/features/admin/permissions";
+import type {
+  AdminChange,
+  AdminUser,
+  AdminUserFilter,
+  AdminUserName,
+  AdminUsersPage,
+} from "@/mocks/admin-users";
 import type { ActivityData, ActivityItem } from "@/mocks/admin-activity";
 import type {
   ChatReport,
@@ -1192,23 +1199,43 @@ export const reviewChatMessage = (messageId: string, action: ChatReviewAction) =
   api.patch(`/api/admin/chat/messages/${messageId}`, { action });
 
 // ---------- 회원 관리 (백엔드 user 모듈) ----------
-export function liveUsers(query: string, role: AdminUserRole | "", page: number) {
+export function liveUsers(query: string, filter: AdminUserFilter, page: number) {
   const q = new URLSearchParams({ page: String(page) });
   if (query.trim()) q.set("query", query.trim());
-  if (role) q.set("role", role);
+  if (filter) q.set("filter", filter);
   return api.get<AdminUsersPage>(`/api/admin/users?${q}`);
 }
 
-/** 여러 회원 (처리 기록의 관리자 이름). 최대 100명 */
-export function liveUsersByIds(ids: string[]) {
-  return api.get<AdminUser[]>(`/api/admin/users?ids=${ids.slice(0, 100).join(",")}`);
+/** 이름만 (처리 기록의 관리자 이름). 최대 100명, 관리자 누구나 */
+export function liveUserNames(ids: string[]) {
+  return api.get<AdminUserName[]>(`/api/admin/users/names?ids=${ids.slice(0, 100).join(",")}`);
 }
 
-export const changeUserRole = (id: string, role: AdminUserRole) =>
+/** 관리자 지정(ADMIN)·해제(USER) — 「관리자 지정」 */
+export const changeUserRole = (id: string, role: "USER" | "ADMIN") =>
   api.patch<AdminUser>(`/api/admin/users/${id}/role`, { role });
 
-export function liveRoleChanges(days: number) {
-  return api.get<RoleChange[]>(`/api/admin/users/role-changes?days=${days}`);
+/** 일반 관리자의 권한을 이 목록으로 맞춰요 — 「권한 부여」, 내가 가진 권한만 */
+export const setUserPermissions = (id: string, permissions: AdminPermission[]) =>
+  api.put<AdminUser>(`/api/admin/users/${id}/permissions`, { permissions });
+
+/** 이용 정지 (until 비우면 해제할 때까지) — 「이용 정지」 */
+export const suspendUser = (id: string, reason: string, until: string | null) =>
+  api.put<AdminUser>(`/api/admin/users/${id}/suspension`, { reason, until });
+
+export const unsuspendUser = (id: string) =>
+  api.delete<AdminUser>(`/api/admin/users/${id}/suspension`);
+
+/** 최상위 관리자 넘기기 — 최상위만, 로그인한 지 10분 안에 */
+export const transferSuperAdmin = (userId: string) =>
+  api.post<AdminUser>("/api/admin/super/transfer", { userId });
+
+/** 관리자 긴급 정지·풀기 — 최상위만 */
+export const freezeAdmins = (reason: string) => api.put("/api/admin/super/freeze", { reason });
+export const unfreezeAdmins = () => api.delete("/api/admin/super/freeze");
+
+export function liveAdminChanges(days: number) {
+  return api.get<AdminChange[]>(`/api/admin/users/changes?days=${days}`);
 }
 
 // ---------- 처리 기록 ----------
@@ -1243,7 +1270,7 @@ export async function liveActivity(days: number): Promise<ActivityData> {
         api.get<CriteriaChanges>(`/api/admin/criteria/${k}/history`).catch(() => null),
       ),
     ),
-    liveRoleChanges(days).catch(() => null),
+    liveAdminChanges(days).catch(() => null),
   ]);
   const items: ActivityItem[] = [...(main?.items ?? [])];
   for (const h of criteria) {
@@ -1263,14 +1290,17 @@ export async function liveActivity(days: number): Promise<ActivityData> {
     items.push({
       at: r.changedAt,
       kind: "ROLE",
-      action: r.toRole === "ADMIN" ? "TO_ADMIN" : "TO_USER",
-      title: r.nickname ?? "탈퇴한 회원",
-      detail: null,
+      action: r.kind,
+      title:
+        r.kind === "FREEZE" || r.kind === "UNFREEZE"
+          ? "모든 관리자"
+          : (r.nickname ?? "탈퇴한 회원"),
+      detail: r.permission ? PERMISSION_INFO[r.permission].label : r.note,
       by: r.changedBy,
     });
   }
   items.sort((a, b) => b.at.localeCompare(a.at));
-  const failed = [main ? null : "검수·제보", roles ? null : "권한"].filter(Boolean);
+  const failed = [main ? null : "검수·제보", roles ? null : "관리자 변경"].filter(Boolean);
   return {
     items,
     reviewsError:

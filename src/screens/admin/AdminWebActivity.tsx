@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
-import { useAdminActivity, useAdminUsersByIds } from "@/features/admin/queries";
+import { useAdminActivity, useAdminUserNames } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import type { ActivityItem, ActivityKind } from "@/mocks/admin-activity";
 
@@ -13,7 +13,7 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: "review", label: "검수" },
   { key: "report", label: "제보" },
   { key: "criteria", label: "기준값" },
-  { key: "role", label: "권한" },
+  { key: "role", label: "관리자·정지" },
 ];
 
 const GROUP_OF: Record<ActivityKind, Group> = {
@@ -35,7 +35,7 @@ const KIND_LABEL: Record<ActivityKind, string> = {
   PROGRAM_REPORT: "창업 사업 제보",
   AREA_REPORT: "생활권 제보",
   CRITERIA: "기준값",
-  ROLE: "권한",
+  ROLE: "관리자",
 };
 
 const ACTION: Record<string, { label: string; cls: string }> = {
@@ -46,8 +46,15 @@ const ACTION: Record<string, { label: string; cls: string }> = {
   FIXED: { label: "고침", cls: "bg-ok-bg text-ok-text" },
   KEPT: { label: "그대로 둠", cls: "bg-fill text-text" },
   REPLACED: { label: "값 바꿈", cls: "bg-check-bg text-check-text" },
-  TO_ADMIN: { label: "관리자 지정", cls: "bg-brand-soft text-brand-strong" },
-  TO_USER: { label: "관리자 해제", cls: "bg-fill text-text" },
+  APPOINT: { label: "관리자 지정", cls: "bg-brand-soft text-brand-strong" },
+  DISMISS: { label: "관리자 해제", cls: "bg-fill text-text" },
+  GRANT: { label: "권한 주기", cls: "bg-brand-soft text-brand-strong" },
+  REVOKE: { label: "권한 빼기", cls: "bg-fill text-text" },
+  SUSPEND: { label: "이용 정지", cls: "bg-danger-bg text-danger-text" },
+  UNSUSPEND: { label: "정지 해제", cls: "bg-ok-bg text-ok-text" },
+  TRANSFER: { label: "최상위 넘기기", cls: "bg-check-bg text-check-text" },
+  FREEZE: { label: "긴급 정지", cls: "bg-danger-bg text-danger-text" },
+  UNFREEZE: { label: "긴급 정지 풀기", cls: "bg-ok-bg text-ok-text" },
 };
 
 const PERIODS = [7, 30, 90];
@@ -69,7 +76,7 @@ export function AdminWebActivity() {
   const items = data?.items ?? [];
   // 처리한 관리자는 회원 ID로 남아 있어서 이름을 찾아요
   const ids = [...new Set(items.map((i) => i.by).filter((b): b is string => !!b && UUID.test(b)))];
-  const { data: users } = useAdminUsersByIds(ids);
+  const { data: users } = useAdminUserNames(ids);
   const nameOf = (by: string | null) => {
     if (!by) return "알 수 없음";
     const u = users?.find((x) => x.id === by);
@@ -85,7 +92,7 @@ export function AdminWebActivity() {
       <AdminTitleRow>
         <AdminTitle
           title="처리 기록"
-          desc="관리자가 처리한 검수·제보·기준값·권한 변경을 최근 순으로 보여 줘요 · 채팅 신고 처리는 누가 했는지 남지 않아요"
+          desc="관리자가 처리한 검수·제보·기준값과 관리자 지정·권한·이용 정지를 최근 순으로 보여 줘요 · 채팅 신고 처리는 누가 했는지 남지 않아요"
         />
         <div role="group" aria-label="기간" className="flex flex-wrap gap-[6px]">
           {PERIODS.map((p) => (
