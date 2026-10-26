@@ -3,8 +3,13 @@ import type { Verdict } from "@/components/ui/Badge";
 
 export type BenefitCategory = "주거" | "자산형성" | "교통";
 
-/** 내 자격 한 줄: 충족(ok) / 확인 필요(check) */
-export type BenefitEligibility = { label: string; result: "ok" | "check" };
+/** 내 자격 한 줄: 충족(ok) / 확인 필요(check) / 해당 안 됨(no) */
+export type BenefitEligibility = {
+  label: string;
+  result: "ok" | "check" | "no";
+  /** 충족이 아닐 때 이유 (기준만, 내 값은 없어요) */
+  reason?: string;
+};
 
 export type Benefit = {
   id: string;
@@ -28,6 +33,8 @@ export type Benefit = {
   sourceUrl: string;
   policyUrl: string;
   applyUrl: string;
+  /** 판정을 확인 필요로 둔 이유 (정책 내용 확인 중 등) */
+  reason?: string;
 };
 
 export type BenefitsSummary = {

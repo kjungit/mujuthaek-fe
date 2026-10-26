@@ -75,34 +75,20 @@ export function MHome() {
               </span>
             </Link>
 
-            <div className="grid grid-cols-2 gap-[10px]">
-              <Link
-                href={routes.benefits}
-                className="bg-surface text-text hover:text-text flex flex-col gap-[6px] rounded-[22px] p-[18px] no-underline"
-              >
-                <span className="text-text-sub text-[13px] font-semibold">받을 수 있는 혜택</span>
-                <span className="tracking-title text-[22px] font-extrabold">
-                  {data.benefits ? `연 ${data.benefits.yearlyAmount}` : "준비 중"}
-                </span>
-                <span className="text-text-sub text-[13px]">
-                  {data.benefits
-                    ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
-                    : "혜택 판정은 준비 중이에요"}
-                </span>
-              </Link>
-              <Link
-                href={data.life?.href ?? routes.life}
-                className="bg-surface text-text hover:text-text flex flex-col gap-[6px] rounded-[22px] p-[18px] no-underline"
-              >
-                <span className="text-text-sub text-[13px] font-semibold">내 생활권 점수</span>
-                <span className="tracking-title text-[22px] font-extrabold">
-                  {data.life ? `${data.life.score}점` : loading ? "…" : "–"}
-                </span>
-                <span className="text-text-sub text-[13px]">
-                  {data.life?.note ?? "점수가 있는 공고가 아직 없어요"}
-                </span>
-              </Link>
-            </div>
+            <Link
+              href={routes.benefits}
+              className="bg-surface text-text hover:text-text flex flex-col gap-[6px] rounded-[22px] p-[18px] no-underline"
+            >
+              <span className="text-text-sub text-[13px] font-semibold">받을 수 있는 혜택</span>
+              <span className="tracking-title text-[22px] font-extrabold">
+                {data.benefits ? `연 ${data.benefits.yearlyAmount}` : loading ? "…" : "–"}
+              </span>
+              <span className="text-text-sub text-[13px]">
+                {data.benefits
+                  ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
+                  : "받을 수 있는 혜택을 판정하고 있어요"}
+              </span>
+            </Link>
 
             <section
               aria-labelledby="due-h"

@@ -10,7 +10,7 @@ import { api } from "@/lib/api/client";
 import { USE_MOCKS } from "@/lib/api/config";
 import { endpoints } from "@/lib/api/endpoints";
 import { providerName } from "@/features/notice/labels";
-import { routes } from "@/lib/routes";
+import { formatWon } from "@/features/notice/format";
 import { homeSummary, type HomeNewsItem, type HomeSummary } from "@/mocks/home";
 
 export const homeKeys = {
@@ -39,12 +39,8 @@ type ApiSummary = {
     newThisWeek: number;
     closingSoon: number;
   };
-  bestArea: {
-    noticeId: string;
-    title: string;
-    regionName: string | null;
-    areaScore: number;
-  } | null;
+  benefits: { eligible: number; needsInput: number; annualAmountWon: number };
+  suggestedBenefit: { id: string; title: string; amountText: string | null } | null;
   news: ApiNotice[];
   deadlines: ApiNotice[];
 };
@@ -78,7 +74,7 @@ const dueOf = (n: ApiNotice) =>
           ? "오늘 마감"
           : `D-${n.dday}`;
 
-/** 응답 → 홈 카드. 혜택은 백엔드에 아직 없어서 비워 둬요 */
+/** 응답 → 홈 카드 */
 export function toHomeSummary(s: ApiSummary, today: Date): HomeSummary {
   return {
     homes: {
@@ -86,14 +82,11 @@ export function toHomeSummary(s: ApiSummary, today: Date): HomeSummary {
       newThisWeek: s.homes.newThisWeek,
       closingSoon: s.homes.closingSoon,
     },
-    benefits: null,
-    life: s.bestArea
-      ? {
-          score: s.bestArea.areaScore,
-          note: `${s.bestArea.regionName ?? s.bestArea.title} · 지원할 수 있는 공고 중 가장 좋아요`,
-          href: routes.notice(s.bestArea.noticeId),
-        }
-      : null,
+    benefits: {
+      yearlyAmount: formatWon(s.benefits.annualAmountWon),
+      count: s.benefits.eligible,
+      needCheck: s.benefits.needsInput,
+    },
     news: s.news.map((n): HomeNewsItem => ({
       id: n.id,
       kind: "notice",
@@ -112,7 +105,9 @@ export function toHomeSummary(s: ApiSummary, today: Date): HomeSummary {
         .join(" · "),
       dday: Math.max(0, n.dday ?? 0),
     })),
-    suggestedBenefit: null,
+    suggestedBenefit: s.suggestedBenefit
+      ? { id: s.suggestedBenefit.id, title: s.suggestedBenefit.title }
+      : null,
   };
 }
 
@@ -152,7 +147,6 @@ const useSummaryQuery = USE_MOCKS ? useMockHomeSummary : useApiHomeSummary;
 const emptySummary: HomeSummary = {
   homes: { count: 0, newThisWeek: 0, closingSoon: 0 },
   benefits: null,
-  life: null,
   news: [],
   deadlines: [],
   suggestedBenefit: null,

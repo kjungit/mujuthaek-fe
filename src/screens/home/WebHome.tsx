@@ -8,7 +8,6 @@ import {
   FileText,
   House,
   Landmark,
-  MapPin,
   Sparkles,
   Wallet,
   type LucideIcon,
@@ -143,19 +142,20 @@ export function WebHome() {
                 href={routes.benefits}
                 icon={Wallet}
                 label="받을 수 있는 혜택"
-                value={data.benefits ? `연 ${data.benefits.yearlyAmount}` : "준비 중"}
+                value={
+                  error
+                    ? "–"
+                    : data.benefits
+                      ? `연 ${data.benefits.yearlyAmount}`
+                      : loading
+                        ? "…"
+                        : "–"
+                }
                 note={
                   data.benefits
                     ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
-                    : "혜택 판정은 준비 중이에요"
+                    : "받을 수 있는 혜택을 판정하고 있어요"
                 }
-              />
-              <SummaryCard
-                href={data.life?.href ?? routes.life}
-                icon={MapPin}
-                label="내 생활권 점수"
-                value={data.life ? `${data.life.score}점` : loading ? "…" : "–"}
-                note={data.life?.note ?? "생활권 점수가 있는 공고가 아직 없어요"}
               />
             </section>
 
