@@ -6,7 +6,7 @@ import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
 import { VerdictBadge } from "@/components/ui/Badge";
-import { useBizProfile, useBusinessSummary } from "@/features/business/queries";
+import { useBizProfileChips, useBusinessSummary } from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -14,10 +14,8 @@ import { TypeFilters, spaceFilters, spaceLink, spaceThumb } from "./parts";
 
 export function MBusiness() {
   const { data, loading } = useBusinessSummary();
-  const { data: profile } = useBizProfile();
+  const profileChips = useBizProfileChips();
   const { filter, setFilter, count, visible } = useTypeFilter(data.list);
-
-  const profileChips = [profile.stageLabel, profile.industry, `희망 ${profile.region}`];
 
   return (
     <MPage>
@@ -44,7 +42,7 @@ export function MBusiness() {
             href={routes.bizOnboarding}
             className="rounded-pill bg-brand-soft text-brand-strong hover:text-brand-strong flex-none px-[12px] py-[6px] text-[13px] font-bold no-underline"
           >
-            수정
+            {profileChips.length ? "수정" : "사업 정보 입력하기"}
           </Link>
         </div>
 

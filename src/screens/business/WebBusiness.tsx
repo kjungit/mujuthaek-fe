@@ -6,7 +6,11 @@ import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { InfoTag } from "@/components/ui/Chip";
-import { useBizProfile, useBusinessSummary, useSupportList } from "@/features/business/queries";
+import {
+  useBizProfileChips,
+  useBusinessSummary,
+  useSupportList,
+} from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -16,17 +20,10 @@ const ASIDE_SUPPORT_COUNT = 3;
 
 export function WebBusiness() {
   const { data, loading } = useBusinessSummary();
-  const { data: profile } = useBizProfile();
+  const profileChips = useBizProfileChips();
   const { data: support } = useSupportList();
   const { filter, setFilter, count, visible } = useTypeFilter(data.list);
   const asideItems = support.items.slice(0, ASIDE_SUPPORT_COUNT);
-
-  const profileChips = [
-    profile.stageLabel,
-    profile.industry,
-    profile.staff,
-    `희망 지역 ${profile.region}`,
-  ];
 
   return (
     <WebPage>
@@ -47,6 +44,11 @@ export function WebBusiness() {
           <span className="mr-[6px] inline-flex items-center gap-[8px] text-[15px] font-extrabold">
             <Briefcase size={20} className="text-brand" aria-hidden />내 사업 정보
           </span>
+          {profileChips.length === 0 && (
+            <span className="text-text-sub text-[14px]">
+              사업 정보를 넣으면 공간 · 지원을 내 조건으로 판정해요
+            </span>
+          )}
           {profileChips.map((c) => (
             <span
               key={c}
@@ -60,7 +62,7 @@ export function WebBusiness() {
             href={routes.bizOnboarding}
             className="text-brand-strong hover:text-brand-strong inline-flex min-h-[44px] items-center px-[8px] text-[14px] font-bold no-underline"
           >
-            수정
+            {profileChips.length ? "수정" : "입력하기"}
           </Link>
         </section>
 

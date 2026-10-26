@@ -3,9 +3,15 @@
 // 사업공간 실제 API: POST /api/v1/spaces/search (맞춤 목록) · POST /api/v1/spaces/{id}/evaluate (공간 하나의 판정)
 // 사업 지원: POST /api/v1/supports/search · POST /api/v1/supports/{id}/evaluate (창업지원 사업, 상세 API 없이 판정 응답으로)
 // 공간 상세: 공고면 공고 상세(GET /notices/{id}) + 판정, 모집 정책(K-Startup·기업마당)은 판정 응답(기간·지역·자격 조건)만으로
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { ListingVerdict } from "@/components/ui/Badge";
+import {
+  toBusinessApplicant,
+  useBizProfileInput,
+  type BizProfileInput,
+  type BusinessApplicant,
+} from "@/features/business/profile";
 import { useConditions } from "@/features/conditions/store";
 import { formatPeriod } from "@/features/notice/format";
 import { providerName, tagLabel } from "@/features/notice/labels";
@@ -121,8 +127,8 @@ type ApiSupportSearch = {
 /** POST /api/v1/supports/{id}/evaluate (백엔드 SupportEvaluationResponse). 판정 응답 모양은 사업공간과 같아요 */
 type ApiSupportEvaluation = Omit<ApiSpaceEvaluation, "policy"> & { subField: ApiSubField };
 
-/** 판정 입력 (판정 엔진 모양). 사업 입력은 아직 저장하지 않아서 사는 곳만 보내요 */
-type SpaceApplicant = { residenceRegionCode?: string };
+/** 판정 입력 (판정 엔진 모양): 사는 곳 + 사업 정보. 나이는 엔진이 생년월일을 받아서 아직 보내지 않아요 (구간만 보내는 원칙) */
+type SpaceApplicant = { residenceRegionCode?: string; business?: BusinessApplicant };
 
 const typeOf: Record<ApiSpaceType, SpaceType> = {
   STARTUP_SPACE: "startup",
@@ -201,18 +207,64 @@ export function toSpaceItem(it: ApiSpaceItem): SpaceItem {
   };
 }
 
+function applicantOf(
+  residence: string | undefined,
+  profile: BizProfileInput | null,
+  revenue: string,
+): SpaceApplicant {
+  return {
+    residenceRegionCode: residence || undefined,
+    business: profile ? toBusinessApplicant(profile, revenue) : undefined,
+  };
+}
+
 function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
   const stored = useConditions();
+  const biz = useBizProfileInput();
   return useMemo(
     () =>
-      stored.status === "ready"
+      stored.status === "ready" && biz.status === "ready"
         ? {
             ready: true,
-            applicant: { residenceRegionCode: stored.device?.regionCode || undefined },
+            applicant: applicantOf(stored.device?.regionCode, biz.profile, biz.revenue),
           }
         : { ready: false, applicant: {} },
-    [stored],
+    [stored, biz],
   );
+}
+
+/** 사업 정보 입력 화면의 "지금 조건으로": 고치는 중인 값으로 공간 · 지원 개수를 바로 세요 */
+export function useApiBusinessPreview(draft: BizProfileInput, revenue: string) {
+  const stored = useConditions();
+  const applicant = useMemo(
+    () =>
+      applicantOf(
+        stored.status === "ready" ? stored.device?.regionCode : undefined,
+        draft,
+        revenue,
+      ),
+    [stored, draft, revenue],
+  );
+  const body = { applicant, size: 1 };
+  const spaces = useQuery({
+    queryKey: ["spaces", "preview", applicant] as const,
+    queryFn: () => api.post<ApiSpaceSearch>(endpoints.spacesSearch, body),
+    enabled: stored.status === "ready",
+    staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
+  });
+  const supports = useQuery({
+    queryKey: ["supports", "preview", applicant] as const,
+    queryFn: () => api.post<ApiSupportSearch>(endpoints.supportsSearch, body),
+    enabled: stored.status === "ready",
+    staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
+  });
+  return {
+    spaces: spaces.data?.counts.eligible ?? 0,
+    support: supports.data?.counts.eligible ?? 0,
+    check: (spaces.data?.counts.needsInput ?? 0) + (supports.data?.counts.needsInput ?? 0),
+  };
 }
 
 /**

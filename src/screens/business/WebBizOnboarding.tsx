@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Briefcase, Info, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge } from "@/components/ui/Badge";
+import { industries, needOptions } from "@/features/business/profile";
 import { useBizOnboardingForm } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import { stageOptions, type StageOption } from "./onboarding";
+import { applicantTypes, stageOptions, type StageOption } from "./onboarding";
 
 const control =
   "rounded-control border-line bg-surface text-text min-h-[56px] border border-solid text-[17px]";
@@ -21,12 +23,16 @@ function UnitField({
   placeholder,
   disabled,
   padRight,
+  value,
+  onChange,
 }: {
   label: string;
   unit: string;
   placeholder: string;
   disabled: boolean;
   padRight: string;
+  value: string;
+  onChange: (v: string) => void;
 }) {
   return (
     <label className="flex flex-col gap-[8px] text-[15px] font-bold">
@@ -37,6 +43,8 @@ function UnitField({
           inputMode="numeric"
           placeholder={placeholder}
           disabled={disabled}
+          value={disabled ? "" : value}
+          onChange={(e) => onChange(e.target.value.replace(/[^\d,]/g, ""))}
           className={cn(control, "box-content min-w-0 flex-1 pl-[16px] font-medium", padRight)}
         />
         <span className="text-text-sub pointer-events-none absolute top-1/2 right-[16px] -translate-y-1/2 text-[16px] font-semibold">
@@ -48,8 +56,14 @@ function UnitField({
 }
 
 export function WebBizOnboarding() {
-  const { data, stage, setStage, pre, needs, toggleNeed, preview } = useBizOnboardingForm();
+  const f = useBizOnboardingForm();
+  const { draft, stage, setStage, pre, needs, toggleNeed, preview } = f;
+  const router = useRouter();
   const stages: StageOption[] = stageOptions.web;
+  const done = () => {
+    f.save();
+    router.push(routes.business);
+  };
 
   return (
     <WebPage>
@@ -97,7 +111,7 @@ export function WebBizOnboarding() {
                   공통 정보 · 주거와 함께 써요
                 </span>
                 <span className="text-[16px] font-bold">
-                  만 {data.common.age}세 · {data.common.residence} 거주
+                  {f.common ?? "나이 · 사는 곳을 아직 입력하지 않았어요"}
                 </span>
               </span>
               <Link
@@ -131,15 +145,46 @@ export function WebBizOnboarding() {
 
             <label className="flex flex-col gap-[8px] text-[15px] font-bold">
               업종
-              <select className={cn(control, "px-[14px] font-medium")}>
-                {data.industries.map((o) => (
-                  <option key={o}>{o}</option>
+              <select
+                value={draft.industry}
+                onChange={(e) => f.set({ industry: e.target.value })}
+                className={cn(control, "px-[14px] font-medium")}
+              >
+                <option value="">업종 선택</option>
+                {industries.map((o) => (
+                  <option key={o.key} value={o.key}>
+                    {o.label}
+                  </option>
                 ))}
               </select>
               <span className="text-text-sub text-[13px] font-medium">
                 업종에 따라 들어갈 수 있는 공간이 달라져요
               </span>
             </label>
+
+            {!pre && (
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[15px] font-bold">사업자 형태</span>
+                <div role="group" aria-label="사업자 형태" className="grid grid-cols-2 gap-[8px]">
+                  {applicantTypes.map((o) => (
+                    <button
+                      key={o.key}
+                      type="button"
+                      aria-pressed={draft.applicantType === o.key}
+                      onClick={() =>
+                        f.set({ applicantType: draft.applicantType === o.key ? "" : o.key })
+                      }
+                      className={cn(
+                        "rounded-tile min-h-[52px] cursor-pointer border-2 border-solid px-[18px] text-[16px] font-extrabold",
+                        pickTone(draft.applicantType === o.key),
+                      )}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className={cn("flex flex-col gap-[10px]", pre && "opacity-45")}>
               <div
@@ -152,6 +197,8 @@ export function WebBizOnboarding() {
                   placeholder="18"
                   disabled={pre}
                   padRight="pr-[60px]"
+                  value={draft.months}
+                  onChange={(v) => f.set({ months: v })}
                 />
                 <UnitField
                   label="직원 수 (나 포함)"
@@ -159,6 +206,8 @@ export function WebBizOnboarding() {
                   placeholder="3"
                   disabled={pre}
                   padRight="pr-[44px]"
+                  value={draft.employees}
+                  onChange={(v) => f.set({ employees: v })}
                 />
                 <UnitField
                   label="연 매출"
@@ -166,6 +215,8 @@ export function WebBizOnboarding() {
                   placeholder="8,000"
                   disabled={pre}
                   padRight="pr-[60px]"
+                  value={f.revenue}
+                  onChange={f.setRevenue}
                 />
               </div>
             </div>
@@ -173,7 +224,7 @@ export function WebBizOnboarding() {
               <Info size={16} aria-hidden />
               {pre
                 ? "예비 창업이면 업력 · 직원 수 · 매출은 입력하지 않아요"
-                : "업력은 사업자등록일부터 세요"}
+                : "업력은 사업자등록일부터 세요 · 매출은 이번 탭에서만 쓰고 저장하지 않아요"}
             </span>
 
             <div className="flex flex-col gap-[8px]">
@@ -182,15 +233,31 @@ export function WebBizOnboarding() {
                 className="grid gap-[10px]"
                 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
               >
-                <select aria-label="시·도" className={cn(control, "px-[14px]")}>
-                  {data.provinces.map((o) => (
-                    <option key={o}>{o}</option>
+                <select
+                  aria-label="시·도"
+                  value={f.sidoCode}
+                  onChange={(e) => f.set({ regionCode: e.target.value })}
+                  className={cn(control, "px-[14px]")}
+                >
+                  <option value="">시·도 선택</option>
+                  {f.sidos.map((o) => (
+                    <option key={o.code} value={o.code}>
+                      {o.name}
+                    </option>
                   ))}
                 </select>
-                <select aria-label="시·군·구" className={cn(control, "px-[14px]")}>
-                  <option>시·군·구 선택</option>
-                  {data.districts.map((o) => (
-                    <option key={o}>{o}</option>
+                <select
+                  aria-label="시·군·구"
+                  value={draft.regionCode.length === 5 ? draft.regionCode : ""}
+                  onChange={(e) => f.set({ regionCode: e.target.value || f.sidoCode })}
+                  disabled={!f.sidoCode}
+                  className={cn(control, "px-[14px] disabled:opacity-50")}
+                >
+                  <option value="">{f.sidoCode ? "전체" : "시·군·구 선택"}</option>
+                  {f.sigungus.map((o) => (
+                    <option key={o.code} value={o.code}>
+                      {o.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -205,18 +272,18 @@ export function WebBizOnboarding() {
                 <span className="text-text-sub font-medium">· 여러 개 고를 수 있어요</span>
               </span>
               <div role="group" aria-label="필요한 공간" className="flex flex-wrap gap-[8px]">
-                {data.needs.map((n) => (
+                {needOptions.map((n) => (
                   <button
-                    key={n}
+                    key={n.key}
                     type="button"
-                    aria-pressed={needs.includes(n)}
-                    onClick={() => toggleNeed(n)}
+                    aria-pressed={needs.includes(n.key)}
+                    onClick={() => toggleNeed(n.key)}
                     className={cn(
                       "rounded-pill min-h-[44px] cursor-pointer border-2 border-solid px-[18px] text-[15px] font-bold",
-                      pickTone(needs.includes(n)),
+                      pickTone(needs.includes(n.key)),
                     )}
                   >
-                    {n}
+                    {n.label}
                   </button>
                 ))}
               </div>
@@ -229,13 +296,14 @@ export function WebBizOnboarding() {
               >
                 나중에 입력할게요
               </Link>
-              <Link
-                href={routes.business}
-                className="rounded-control bg-brand inline-flex min-h-[56px] items-center gap-[8px] px-[26px] text-[17px] font-extrabold text-white no-underline hover:text-white"
+              <button
+                type="button"
+                onClick={done}
+                className="rounded-control bg-brand inline-flex min-h-[56px] cursor-pointer items-center gap-[8px] border-0 px-[26px] text-[17px] font-extrabold text-white"
               >
-                결과 보기
+                저장하고 결과 보기
                 <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
-              </Link>
+              </button>
             </div>
           </section>
 
