@@ -90,7 +90,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon size={20} aria-hidden />
                 <span className="flex-1">{label}</span>
-                {count && (
+                {count && counts[count.key] != null && (
                   <span
                     className={cn(
                       "rounded-pill px-[8px] py-[2px] text-[12px] font-extrabold",

@@ -2,7 +2,12 @@
 import { routes } from "@/lib/routes";
 
 /* 사이드바 숫자 */
-export type AdminCounts = { reviewPending: number; sourceIssues: number; newReports: number };
+/** 사이드바 숫자. null이면 그 숫자를 받지 못한 것(숫자 표시를 숨겨요) */
+export type AdminCounts = {
+  reviewPending: number | null;
+  sourceIssues: number | null;
+  newReports: number | null;
+};
 
 export const adminCounts: AdminCounts = { reviewPending: 12, sourceIssues: 2, newReports: 5 };
 

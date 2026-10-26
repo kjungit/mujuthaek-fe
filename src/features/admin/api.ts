@@ -730,19 +730,19 @@ export async function reopenFromReport(id: string) {
 
 // ---------- 사이드바 숫자·개요 ----------
 export async function liveCounts(): Promise<AdminCounts> {
-  const [n, b, r, c] = await Promise.all([
-    api.get<{ reviewPending: number }>("/api/admin/reviews/counts"),
-    api.get<BenefitReviewList>("/api/admin/benefit-reviews"),
-    api.get<{ newCount: number }>("/api/admin/reports/counts"),
-    collectedSummary(),
+  // 숫자마다 따로 받아요. 추출·수집 서비스가 꺼져 있어도 다른 숫자는 보이고, 못 받은 숫자는 0 대신 비워요(null)
+  const settle = <T>(p: Promise<T>) => p.catch(() => null);
+  const [n, b, r, area, src] = await Promise.all([
+    settle(api.get<{ reviewPending: number }>("/api/admin/reviews/counts")),
+    settle(api.get<BenefitReviewList>("/api/admin/benefit-reviews")),
+    settle(api.get<{ newCount: number }>("/api/admin/reports/counts")),
+    settle(api.get<{ newCount: number }>("/api/admin/area-reports/counts")),
+    settle(api.get<CollectorStatus>("/api/admin/sources")),
   ]);
-  const area = await api
-    .get<{ newCount: number }>("/api/admin/area-reports/counts")
-    .catch(() => ({ newCount: 0 }));
   return {
-    reviewPending: n.reviewPending + b.items.length,
-    sourceIssues: c.fail + c.late,
-    newReports: r.newCount + area.newCount,
+    reviewPending: n && b ? n.reviewPending + b.items.length : null,
+    sourceIssues: src ? src.summary.fail + src.summary.late + src.summary.paused : null,
+    newReports: r ? r.newCount + (area?.newCount ?? 0) : null,
   };
 }
 
