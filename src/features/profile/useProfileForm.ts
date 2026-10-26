@@ -57,7 +57,6 @@ function defaultDevice(data: ProfileFormData): DeviceConditions {
     homelessPeriod: options.homelessPeriod[0],
     bankbookPeriod: options.bankbookPeriod[0],
     paymentCount: "",
-    workplace: "",
     priorities: data.defaultPriorities,
   };
 }
@@ -70,8 +69,7 @@ const emptySession: SessionConditions = {
   rankChecks: [],
 };
 
-type TextKey =
-  "birth" | "householdSize" | "homelessPeriod" | "bankbookPeriod" | "paymentCount" | "workplace";
+type TextKey = "birth" | "householdSize" | "homelessPeriod" | "bankbookPeriod" | "paymentCount";
 type SessionTextKey = "income" | "asset" | "available";
 
 /** 조건 입력 3단계 상태 (PC/모바일 공통). 처음 값은 이 기기에 저장한 조건에서 가져와요 */

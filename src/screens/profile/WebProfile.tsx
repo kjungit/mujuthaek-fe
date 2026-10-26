@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Check, Search, X } from "lucide-react";
+import { ArrowRight, Check, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import {
   ChipGroup,
@@ -12,7 +12,6 @@ import {
   UnitInput,
   DeviceSaveCard,
   SelectOptions,
-  pInput,
   pLabel,
   pSelect,
 } from "@/components/profile/parts";
@@ -30,7 +29,7 @@ import { routes } from "@/lib/routes";
 const steps = [
   { n: 1, title: "기본 정보", sub: "나이 · 찾아볼 지역 · 사는 곳" },
   { n: 2, title: "가족 · 소득 · 자산", sub: "결혼 · 소득 · 자산" },
-  { n: 3, title: "주택 · 생활권", sub: "무주택 · 청약 · 직장" },
+  { n: 3, title: "주택 · 생활권", sub: "무주택 · 청약 · 중요한 것" },
 ];
 
 const help = "text-text-sub text-[13px] font-medium";
@@ -148,22 +147,6 @@ function Step3({ form }: { form: ProfileForm }) {
         지금 쓸 수 있는 돈
         <UnitInput unit="만 원" placeholder="1,500" {...form.sessionField("available")} />
         <span className={help}>공고마다 &apos;내가 준비할 돈&apos;과 비교해 드려요</span>
-      </label>
-      <label className={pLabel}>
-        직장 · 학교 위치
-        <span className="relative flex">
-          <Search
-            size={20}
-            className="text-text-tertiary absolute top-1/2 left-[16px] -translate-y-1/2"
-            aria-hidden
-          />
-          <input
-            type="search"
-            placeholder="회사 주소나 역 이름"
-            className={cn(pInput, "flex-1 pl-[46px]")}
-            {...form.field("workplace")}
-          />
-        </span>
       </label>
       <div className="flex flex-col gap-[8px]">
         <span className="text-[15px] font-bold">

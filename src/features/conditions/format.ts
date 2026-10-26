@@ -108,7 +108,6 @@ export function conditionRows(c: DeviceConditions, regions: Regions): ConditionR
       k: "청약통장",
       v: c.paymentCount ? `${c.bankbookPeriod} · ${c.paymentCount}회` : c.bankbookPeriod,
     },
-    { k: "직장 위치", v: c.workplace || MISSING, muted: !c.workplace },
     {
       k: "중요한 것",
       v: c.priorities.length ? c.priorities.join(" · ") : MISSING,
