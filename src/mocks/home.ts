@@ -16,10 +16,8 @@ export type HomeDeadline = { id: string; title: string; meta: string; dday: numb
 
 export type HomeSummary = {
   homes: { count: number; newThisWeek: number; closingSoon: number };
-  /** 혜택 판정이 아직 없으면 null (혜택 API 준비 중) */
+  /** 혜택 요약. 받기 전이면 null */
   benefits: { yearlyAmount: string; count: number; needCheck: number } | null;
-  /** 생활권 점수. 점수가 있는 공고가 없으면 null */
-  life: { score: number; note: string; href: string } | null;
   news: HomeNewsItem[];
   deadlines: HomeDeadline[];
   suggestedBenefit: { id: string; title: string } | null;
@@ -28,7 +26,6 @@ export type HomeSummary = {
 export const homeSummary: HomeSummary = {
   homes: { count: 7, newThisWeek: 2, closingSoon: 1 },
   benefits: { yearlyAmount: "480만 원", count: 5, needCheck: 1 },
-  life: { score: 82, note: "마포구 · 직장까지 평균 28분", href: "/life" },
   news: [
     {
       id: "n1",
