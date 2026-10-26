@@ -116,15 +116,18 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
             >
               <span
                 className={cn(
-                  "rounded-tag bg-fill text-text-sub flex-none self-start px-[8px] py-[3px] text-center text-[12px] font-bold",
+                  "rounded-tag bg-fill text-text-sub mt-[9px] flex-none self-start px-[8px] py-[3px] text-center text-[12px] font-bold",
                   web ? "min-w-[56px]" : "min-w-[48px]",
                 )}
               >
                 {categoryLabel[g.category]}
               </span>
-              <ul className="m-0 flex min-w-0 list-none flex-col gap-[8px] p-0">
+              <ul className="m-0 flex min-w-0 flex-1 list-none flex-col gap-[6px] p-0">
                 {g.items.map((e) => (
-                  <li key={e.id} className="flex flex-col gap-[4px]">
+                  <li
+                    key={e.id}
+                    className="bg-bg rounded-tile flex flex-col gap-[4px] px-[14px] py-[10px]"
+                  >
                     <span className={cn(sub, "leading-[1.5]")}>{e.text}</span>
                     {e.detail && (
                       <span className="text-text-sub text-[13px] leading-[1.5]">
