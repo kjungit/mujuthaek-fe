@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, CircleAlert, CircleCheck, CircleX, FileText } from "lucide-react";
-import { VerdictBadge } from "@/components/ui/Badge";
-import type { JudgedItem, NoticeJudgment } from "@/features/notice/judgment";
+import { VerdictBadge, verdictLabel } from "@/components/ui/Badge";
+import type { JudgedItem, JudgedTarget, NoticeJudgment } from "@/features/notice/judgment";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
@@ -119,6 +119,62 @@ function Items({ items, web }: { items: JudgedItem[]; web: boolean }) {
   );
 }
 
+/** 대상이 이보다 많으면 칩 대신 셀렉트 (40개 넘는 공고도 있어요) */
+const MAX_CHIPS = 6;
+
+/** 「일반공급 1순위 가목」처럼 앞 낱말이 같은 대상이 둘 이상이면 그 낱말로 묶어요 */
+function targetGroups(targets: JudgedTarget[]) {
+  const head = (name: string) => name.split(" ")[0];
+  const counts = new Map<string, number>();
+  for (const t of targets) counts.set(head(t.name), (counts.get(head(t.name)) ?? 0) + 1);
+  const groups = new Map<string, JudgedTarget[]>();
+  for (const t of targets) {
+    const key = (counts.get(head(t.name)) ?? 0) > 1 ? head(t.name) : "그 밖의 대상";
+    groups.set(key, [...(groups.get(key) ?? []), t]);
+  }
+  return [...groups.entries()];
+}
+
+function TargetSelect({
+  targets,
+  value,
+  onChange,
+}: {
+  targets: JudgedTarget[];
+  value: string | undefined;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-[6px] pt-[4px] pb-[8px]">
+      <span className="text-text-sub text-[13px]">
+        공급 대상 {targets.length}개 · 유리한 대상부터
+      </span>
+      <span className="relative flex">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="bg-fill text-text min-h-[44px] w-full cursor-pointer appearance-none truncate rounded-[12px] border-0 pr-[40px] pl-[14px] text-[15px] font-bold"
+        >
+          {targetGroups(targets).map(([group, items]) => (
+            <optgroup key={group} label={group}>
+              {items.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} · {verdictLabel[t.verdict]}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <ChevronDown
+          size={18}
+          aria-hidden
+          className="text-text-sub pointer-events-none absolute top-1/2 right-[14px] -translate-y-1/2"
+        />
+      </span>
+    </label>
+  );
+}
+
 /** 공고 상세 › 내 자격: 공급 대상별 조건 체크 (✓ 충족 · ? 확인 필요 · ✗ 해당 안 됨) */
 export function EligibilityCard({ judgment, loading, error, variant, onOpenOriginal }: Props) {
   const web = variant === "web";
@@ -170,33 +226,37 @@ export function EligibilityCard({ judgment, loading, error, variant, onOpenOrigi
         <p className="text-text-sub m-0 py-[12px] text-[15px] leading-[1.5]">{judgment.reason}</p>
       )}
 
-      {targets.length > 1 && (
-        <div
-          role="group"
-          aria-label="공급 대상"
-          className={cn(
-            "flex gap-[6px] pt-[4px] pb-[8px]",
-            web ? "flex-wrap" : "-mx-[4px] overflow-x-auto px-[4px]",
-          )}
-        >
-          {targets.map((t) => {
-            const on = t.id === target?.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setPicked(t.id)}
-                className={cn(
-                  "rounded-pill inline-flex min-h-[36px] flex-none cursor-pointer items-center border-0 px-[14px] text-[13px] whitespace-nowrap",
-                  on ? "bg-text font-bold text-white" : "bg-fill text-text-sub font-semibold",
-                )}
-              >
-                {t.name}
-              </button>
-            );
-          })}
-        </div>
+      {targets.length > MAX_CHIPS ? (
+        <TargetSelect targets={targets} value={target?.id} onChange={setPicked} />
+      ) : (
+        targets.length > 1 && (
+          <div
+            role="group"
+            aria-label="공급 대상"
+            className={cn(
+              "flex gap-[6px] pt-[4px] pb-[8px]",
+              web ? "flex-wrap" : "-mx-[4px] overflow-x-auto px-[4px]",
+            )}
+          >
+            {targets.map((t) => {
+              const on = t.id === target?.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setPicked(t.id)}
+                  className={cn(
+                    "rounded-pill inline-flex min-h-[36px] flex-none cursor-pointer items-center border-0 px-[14px] text-[13px] whitespace-nowrap",
+                    on ? "bg-text font-bold text-white" : "bg-fill text-text-sub font-semibold",
+                  )}
+                >
+                  {t.name}
+                </button>
+              );
+            })}
+          </div>
+        )
       )}
 
       {target && (targets.length > 1 || target.counts.notMet + target.counts.unknown > 0) && (
