@@ -6,16 +6,22 @@ import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
 import { VerdictBadge } from "@/components/ui/Badge";
-import { useBizProfileChips, useBusinessSummary } from "@/features/business/queries";
+import {
+  useBizProfileChips,
+  useBusinessSummary,
+  useInitialSpaceType,
+  useRegionScope,
+} from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import { TypeFilters, spaceFilters, spaceLink, spaceThumb } from "./parts";
+import { RegionScopeChips, TypeFilters, spaceFilters, spaceLink, spaceThumb } from "./parts";
 
 export function MBusiness() {
-  const { data, loading } = useBusinessSummary();
+  const scope = useRegionScope();
+  const { data, loading } = useBusinessSummary(scope);
   const profileChips = useBizProfileChips();
-  const { filter, setFilter, count, visible } = useTypeFilter(data.list);
+  const { filter, setFilter, count, visible } = useTypeFilter(data.list, useInitialSpaceType());
 
   return (
     <MPage>
@@ -70,6 +76,8 @@ export function MBusiness() {
             </span>
           </Link>
         </div>
+
+        <RegionScopeChips scope={scope} className="px-[4px]" />
 
         <TypeFilters
           label="공간 종류"

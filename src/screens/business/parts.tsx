@@ -101,3 +101,54 @@ export function TypeFilters<K extends string>({
     </div>
   );
 }
+
+/** 목록 지역: 사업 정보의 지역 기준 / 전국. 사업 정보에 지역이 없으면 안 보여요 */
+export function RegionScopeChips({
+  scope,
+  className,
+}: {
+  scope: { label: string | null; nationwide: boolean; setNationwide: (v: boolean) => void };
+  className?: string;
+}) {
+  if (!scope.label) return null;
+  return (
+    <div role="group" aria-label="지역" className={cn("flex flex-wrap gap-[6px]", className)}>
+      <FilterChip selected={!scope.nationwide} onClick={() => scope.setNationwide(false)}>
+        {scope.label} 기준
+      </FilterChip>
+      <FilterChip selected={scope.nationwide} onClick={() => scope.setNationwide(true)}>
+        전국
+      </FilterChip>
+    </div>
+  );
+}
+
+/** 질문형 조건 답하기: 예 · 아니요 (다시 누르면 답을 지워요) */
+export function AnswerButtons({
+  questionId,
+  answer,
+  onAnswer,
+}: {
+  questionId: string;
+  answer?: "YES" | "NO";
+  onAnswer: (questionId: string, value: "YES" | "NO") => void;
+}) {
+  return (
+    <span role="group" aria-label="답하기" className="flex flex-none gap-[6px]">
+      {(["YES", "NO"] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          aria-pressed={answer === v}
+          onClick={() => onAnswer(questionId, v)}
+          className={cn(
+            "min-h-[40px] cursor-pointer rounded-[10px] border-0 px-[14px] text-[14px] font-bold",
+            answer === v ? "bg-text text-white" : "bg-fill text-text-sub",
+          )}
+        >
+          {v === "YES" ? "예" : "아니요"}
+        </button>
+      ))}
+    </span>
+  );
+}

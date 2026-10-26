@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MBackHeader } from "@/components/layout/MBackHeader";
-import { industries, needOptions } from "@/features/business/profile";
+import { industryGroups, needOptions } from "@/features/business/profile";
 import { useBizOnboardingForm } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -107,10 +107,14 @@ export function MBizOnboarding() {
             className={cn(control, "bg-surface px-[12px] font-medium")}
           >
             <option value="">업종 선택</option>
-            {industries.map((o) => (
-              <option key={o.key} value={o.key}>
-                {o.label}
-              </option>
+            {industryGroups.map((g) => (
+              <optgroup key={g.group} label={g.group}>
+                {g.items.map((o) => (
+                  <option key={o.key} value={o.key}>
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
@@ -167,7 +171,7 @@ export function MBizOnboarding() {
         <span className="text-text-sub -mt-[12px] text-[13px]">
           {pre
             ? "예비 창업이면 업력 · 직원 수 · 매출은 입력하지 않아요"
-            : "업력은 사업자등록일부터 세요 · 매출은 저장하지 않아요"}
+            : "업력은 사업자등록일부터 세요 · 매출은 저장하지 않아요 · 직원 수는 참고용"}
         </span>
 
         <div className="flex flex-col gap-[8px]">

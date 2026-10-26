@@ -26,21 +26,53 @@ export type BizProfileSnapshot =
   { status: "loading" } | { status: "ready"; profile: BizProfileInput | null; revenue: string };
 
 /**
- * 업종 선택지 → 한국표준산업분류(11차) 대표 코드. 판정 엔진은 공고의 업종 코드가 이 코드의 앞부분이면 해당한다고 봐요.
- * 범위가 넓어 코드 하나로 정할 수 없는 업종(소매 · 콘텐츠 · 제조 · 기타)은 보내지 않고 업종 조건을 확인 필요로 둬요
+ * 업종 선택지 → 한국표준산업분류(11차) 세세분류 대표 코드. 판정 엔진은 공고의 업종 코드(2~5자리)가 이 코드의 앞부분이면 해당한다고 봐요.
+ * 묶음(group)으로 나눠 보여주고, 코드 하나로 정할 수 없는 "그 밖의 제조" · "기타"만 코드를 보내지 않아 업종 조건을 확인 필요로 둬요.
+ * key는 저장값이라 바꾸지 않아요 (예전 선택지 SOFTWARE · CONTENT 등도 그대로 읽혀요)
  */
 export const industries = [
-  { key: "SOFTWARE", label: "소프트웨어 개발", code: "58222" },
-  { key: "IT_SERVICE", label: "IT 서비스 · 플랫폼", code: "62010" },
-  { key: "FOOD", label: "음식점", code: "56111" },
-  { key: "CAFE", label: "카페", code: "56221" },
-  { key: "ONLINE_SALES", label: "온라인 판매", code: "47912" },
-  { key: "RETAIL", label: "소매 (매장)", code: null },
-  { key: "DESIGN", label: "디자인", code: "73203" },
-  { key: "CONTENT", label: "콘텐츠 · 미디어", code: null },
-  { key: "MANUFACTURING", label: "제조", code: null },
-  { key: "OTHER", label: "기타", code: null },
+  { group: "IT · 소프트웨어", key: "SOFTWARE", label: "소프트웨어 개발", code: "58222" },
+  { group: "IT · 소프트웨어", key: "GAME", label: "게임 개발", code: "58211" },
+  { group: "IT · 소프트웨어", key: "IT_SERVICE", label: "IT 서비스 · 외주 개발", code: "62010" },
+  { group: "IT · 소프트웨어", key: "PLATFORM", label: "플랫폼 · 앱 서비스", code: "63120" },
+  { group: "IT · 소프트웨어", key: "DATA_AI", label: "데이터 · AI", code: "62090" },
+  { group: "음식점 · 카페", key: "FOOD", label: "음식점", code: "56111" },
+  { group: "음식점 · 카페", key: "CAFE", label: "카페", code: "56221" },
+  { group: "음식점 · 카페", key: "BAKERY", label: "제과점 · 베이커리", code: "56191" },
+  {
+    group: "판매 · 유통",
+    key: "ONLINE_SALES",
+    label: "온라인 판매 (쇼핑몰 · 스마트스토어)",
+    code: "47912",
+  },
+  { group: "판매 · 유통", key: "RETAIL", label: "종합 소매 (매장)", code: "47190" },
+  { group: "판매 · 유통", key: "RETAIL_FOOD", label: "식품 소매", code: "47219" },
+  { group: "판매 · 유통", key: "RETAIL_CLOTH", label: "의류 소매", code: "47419" },
+  { group: "판매 · 유통", key: "RETAIL_COSMETIC", label: "화장품 소매", code: "47813" },
+  { group: "콘텐츠 · 디자인", key: "DESIGN", label: "디자인", code: "73203" },
+  { group: "콘텐츠 · 디자인", key: "CONTENT", label: "영상 · 콘텐츠 제작", code: "59111" },
+  { group: "콘텐츠 · 디자인", key: "PUBLISH", label: "출판 · 웹툰", code: "58119" },
+  { group: "콘텐츠 · 디자인", key: "MUSIC", label: "음악 · 오디오", code: "59201" },
+  { group: "콘텐츠 · 디자인", key: "AD", label: "광고 · 마케팅 대행", code: "71310" },
+  { group: "제조", key: "MFG_FOOD", label: "식품 제조", code: "10799" },
+  { group: "제조", key: "MFG_COSMETIC", label: "화장품 제조", code: "20423" },
+  { group: "제조", key: "MFG_CLOTH", label: "의류 제조", code: "14199" },
+  { group: "제조", key: "MFG_ELECTRONIC", label: "전자부품 제조", code: "26299" },
+  { group: "제조", key: "MFG_MACHINE", label: "기계 제조", code: "29199" },
+  { group: "제조", key: "MANUFACTURING", label: "그 밖의 제조", code: null },
+  { group: "서비스", key: "EDU", label: "교육 · 학원", code: "85669" },
+  { group: "서비스", key: "BEAUTY", label: "미용", code: "96112" },
+  { group: "서비스", key: "CONSULT", label: "경영 컨설팅", code: "71531" },
+  { group: "서비스", key: "LAUNDRY", label: "세탁", code: "96911" },
+  { group: "농림 · 기타", key: "AGRI", label: "농업", code: "01110" },
+  { group: "농림 · 기타", key: "OTHER", label: "기타", code: null },
 ] as const;
+
+/** 업종 선택지를 묶음별로 (select의 optgroup) */
+export const industryGroups = Array.from(new Set(industries.map((i) => i.group))).map((group) => ({
+  group,
+  items: industries.filter((i) => i.group === group),
+}));
 
 export const needOptions = [
   { key: "STARTUP_SPACE", label: "사무실 · 창업 공간" },

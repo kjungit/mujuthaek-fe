@@ -4,7 +4,7 @@
 // 사업 지원: POST /api/v1/supports/search · POST /api/v1/supports/{id}/evaluate (창업지원 사업, 상세 API 없이 판정 응답으로)
 // 공간 상세: 공고면 공고 상세(GET /notices/{id}) + 판정, 모집 정책(K-Startup·기업마당)은 판정 응답(기간·지역·자격 조건)만으로
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ListingVerdict } from "@/components/ui/Badge";
 import {
   toBusinessApplicant,
@@ -12,7 +12,9 @@ import {
   type BizProfileInput,
   type BusinessApplicant,
 } from "@/features/business/profile";
+import { birthMonthOf } from "@/features/conditions/applicant";
 import { useConditions } from "@/features/conditions/store";
+import type { DeviceConditions } from "@/features/conditions/types";
 import { formatPeriod } from "@/features/notice/format";
 import { providerName, tagLabel } from "@/features/notice/labels";
 import { useNotice } from "@/features/notice/queries";
@@ -66,6 +68,13 @@ type ApiSpaceSearch = {
 
 type PolicySource = "KSTARTUP" | "BIZINFO";
 type Verdict3 = "MET" | "NOT_MET" | "UNKNOWN";
+type ApiQuestion = {
+  id: string;
+  text: string;
+  answer: "YES" | "NO" | null;
+  /** ELIGIBILITY 자격 · PREFERENCE 우대 */
+  purpose: string;
+};
 type ApiCriterion = {
   id: string;
   kind: string;
@@ -92,6 +101,7 @@ type ApiSpaceEvaluation = {
     result: Overall;
     common: ApiCriterion[];
     groups: { id: string; name: string; result: Overall; criteria: ApiCriterion[] }[];
+    questions: ApiQuestion[];
   } | null;
 };
 
@@ -127,8 +137,15 @@ type ApiSupportSearch = {
 /** POST /api/v1/supports/{id}/evaluate (백엔드 SupportEvaluationResponse). 판정 응답 모양은 사업공간과 같아요 */
 type ApiSupportEvaluation = Omit<ApiSpaceEvaluation, "policy"> & { subField: ApiSubField };
 
-/** 판정 입력 (판정 엔진 모양): 사는 곳 + 사업 정보. 나이는 엔진이 생년월일을 받아서 아직 보내지 않아요 (구간만 보내는 원칙) */
-type SpaceApplicant = { residenceRegionCode?: string; business?: BusinessApplicant };
+/** 판정 입력 (판정 엔진 모양): 출생 연월 · 사는 곳 + 사업 정보. 생년월일 대신 연월만 보내요 (구간만 보내는 원칙) */
+type SpaceApplicant = {
+  birthMonth?: string;
+  residenceRegionCode?: string;
+  business?: BusinessApplicant;
+};
+
+/** 질문 id → 예 · 아니요 */
+type Answers = Record<string, "YES" | "NO">;
 
 const typeOf: Record<ApiSpaceType, SpaceType> = {
   STARTUP_SPACE: "startup",
@@ -208,15 +225,34 @@ export function toSpaceItem(it: ApiSpaceItem): SpaceItem {
 }
 
 function applicantOf(
-  residence: string | undefined,
+  device: DeviceConditions | null,
   profile: BizProfileInput | null,
   revenue: string,
 ): SpaceApplicant {
   return {
-    residenceRegionCode: residence || undefined,
+    birthMonth: device ? birthMonthOf(device.birth) : undefined,
+    residenceRegionCode: device?.regionCode || undefined,
     business: profile ? toBusinessApplicant(profile, revenue) : undefined,
   };
 }
+
+/**
+ * 목록 지역: 사업 정보의 희망 지역(예비 창업) · 사업장 소재지(사업 중). nationwide면 전국.
+ * 전국 공고 · 지역을 모르는 공고는 서버가 늘 넣어줘요
+ */
+export function useRegionScope() {
+  const biz = useBizProfileInput();
+  const [nationwide, setNationwide] = useState(false);
+  const code = biz.status === "ready" ? (biz.profile?.regionCode ?? "") : "";
+  return {
+    label: code ? snapshotRegions.label(code) : null,
+    nationwide: !code || nationwide,
+    setNationwide,
+    regionCodes: code && !nationwide ? [code] : undefined,
+  };
+}
+
+export type RegionScope = ReturnType<typeof useRegionScope>;
 
 function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
   const stored = useConditions();
@@ -226,7 +262,7 @@ function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
       stored.status === "ready" && biz.status === "ready"
         ? {
             ready: true,
-            applicant: applicantOf(stored.device?.regionCode, biz.profile, biz.revenue),
+            applicant: applicantOf(stored.device, biz.profile, biz.revenue),
           }
         : { ready: false, applicant: {} },
     [stored, biz],
@@ -237,24 +273,20 @@ function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
 export function useApiBusinessPreview(draft: BizProfileInput, revenue: string) {
   const stored = useConditions();
   const applicant = useMemo(
-    () =>
-      applicantOf(
-        stored.status === "ready" ? stored.device?.regionCode : undefined,
-        draft,
-        revenue,
-      ),
+    () => applicantOf(stored.status === "ready" ? stored.device : null, draft, revenue),
     [stored, draft, revenue],
   );
-  const body = { applicant, size: 1 };
+  const regionCodes = draft.regionCode ? [draft.regionCode] : undefined;
+  const body = { filters: { regionCodes }, applicant, size: 1 };
   const spaces = useQuery({
-    queryKey: ["spaces", "preview", applicant] as const,
+    queryKey: ["spaces", "preview", applicant, regionCodes] as const,
     queryFn: () => api.post<ApiSpaceSearch>(endpoints.spacesSearch, body),
     enabled: stored.status === "ready",
     staleTime: 60 * 1000,
     placeholderData: keepPreviousData,
   });
   const supports = useQuery({
-    queryKey: ["supports", "preview", applicant] as const,
+    queryKey: ["supports", "preview", applicant, regionCodes] as const,
     queryFn: () => api.post<ApiSupportSearch>(endpoints.supportsSearch, body),
     enabled: stored.status === "ready",
     staleTime: 60 * 1000,
@@ -271,12 +303,18 @@ export function useApiBusinessPreview(draft: BizProfileInput, revenue: string) {
  * 사업공간 홈: 공간 맞춤 목록으로 공간 카드와 개수를, 사업 지원 맞춤 목록으로 지원 개수를 채워요.
  * 불러오는 동안은 빈 목록이에요
  */
-export function useApiBusinessSummary() {
+export function useApiBusinessSummary(scope?: RegionScope) {
   const { ready, applicant } = useSpaceApplicant();
-  const supports = useApiSupportSearch();
+  const supports = useApiSupportSearch(scope);
+  const regionCodes = scope?.regionCodes;
   const q = useQuery({
-    queryKey: ["spaces", "search", applicant] as const,
-    queryFn: () => api.post<ApiSpaceSearch>(endpoints.spacesSearch, { applicant, size: PAGE_SIZE }),
+    queryKey: ["spaces", "search", applicant, regionCodes] as const,
+    queryFn: () =>
+      api.post<ApiSpaceSearch>(endpoints.spacesSearch, {
+        filters: { regionCodes },
+        applicant,
+        size: PAGE_SIZE,
+      }),
     enabled: ready,
     staleTime: 60 * 1000,
   });
@@ -299,12 +337,17 @@ export function useApiBusinessSummary() {
   return { data, loading: q.isPending, error: q.isError };
 }
 
-function useApiSupportSearch() {
+function useApiSupportSearch(scope?: RegionScope) {
   const { ready, applicant } = useSpaceApplicant();
+  const regionCodes = scope?.regionCodes;
   return useQuery({
-    queryKey: ["supports", "search", applicant] as const,
+    queryKey: ["supports", "search", applicant, regionCodes] as const,
     queryFn: () =>
-      api.post<ApiSupportSearch>(endpoints.supportsSearch, { applicant, size: PAGE_SIZE }),
+      api.post<ApiSupportSearch>(endpoints.supportsSearch, {
+        filters: { regionCodes },
+        applicant,
+        size: PAGE_SIZE,
+      }),
     enabled: ready,
     staleTime: 60 * 1000,
   });
@@ -349,8 +392,8 @@ export function toSupportItem(it: ApiSupportItem): SupportItem {
 }
 
 /** 사업 지원 목록 (불러오는 동안은 빈 목록) */
-export function useApiSupportList() {
-  const q = useApiSupportSearch();
+export function useApiSupportList(scope?: RegionScope) {
+  const q = useApiSupportSearch(scope);
   const data: SupportList = useMemo(() => {
     const items = q.data?.items ?? [];
     return {
@@ -372,9 +415,12 @@ export function useApiSupportList() {
 /** 사업 지원 상세: 상세 API가 없어서 판정 응답(기간 · 지역 · 자격 조건)과 원문으로 */
 export function useApiSupportDetail(id: string) {
   const { ready, applicant } = useSpaceApplicant();
+  const [answers, answer] = useAnswers(id);
   const q = useQuery({
-    queryKey: ["supports", "evaluate", id, applicant] as const,
-    queryFn: () => api.post<ApiSupportEvaluation>(endpoints.supportEvaluate(id), { applicant }),
+    queryKey: ["supports", "evaluate", id, applicant, answers] as const,
+    queryFn: () =>
+      api.post<ApiSupportEvaluation>(endpoints.supportEvaluate(id), { applicant, answers }),
+    placeholderData: keepPreviousData,
     enabled: ready,
     staleTime: 60 * 1000,
     retry: false,
@@ -388,7 +434,7 @@ export function useApiSupportDetail(id: string) {
       }),
     [q.data],
   );
-  return { data, loading: !q.isError && q.isPending, error: q.isError };
+  return { data, loading: !q.isError && q.isPending, error: q.isError, answer };
 }
 
 const supportKindLabel: Record<ApiSubField, string> = {
@@ -401,17 +447,50 @@ const supportKindLabel: Record<ApiSubField, string> = {
 const withRegionNames = (text: string) =>
   text.replace(/\b\d{10}\b/g, (code) => regionLabelOf([code]) ?? code);
 
-/** 판정 조건 → 내 자격 줄. 근거 문장이 있으면 같이 */
+const answersKey = (id: string) => `mujuthaek:business:answers:${id}`;
+
+/**
+ * 공간 · 사업 하나의 질문 답. 체납 · 제재처럼 민감한 답이라 이 탭(sessionStorage)에만 두고 서버에 저장하지 않아요.
+ * 같은 질문을 다시 누르면 답을 지워요
+ */
+function useAnswers(id: string): [Answers, (questionId: string, value: "YES" | "NO") => void] {
+  const [answers, setAnswers] = useState<Answers>(() => {
+    try {
+      return JSON.parse(window.sessionStorage.getItem(answersKey(id)) ?? "{}") as Answers;
+    } catch {
+      return {};
+    }
+  });
+  const answer = (questionId: string, value: "YES" | "NO") =>
+    setAnswers((cur) => {
+      const next = { ...cur };
+      if (next[questionId] === value) delete next[questionId];
+      else next[questionId] = value;
+      try {
+        window.sessionStorage.setItem(answersKey(id), JSON.stringify(next));
+      } catch {
+        // 저장소를 못 쓰면 이번 화면에서만 써요
+      }
+      return next;
+    });
+  return [answers, answer];
+}
+
+/** 판정 조건 → 내 자격 줄. 근거 문장이 있으면 같이, 질문이면 내 답도 */
 function rulesOf(j: ApiSpaceEvaluation["judgment"]): SpaceDetail["rules"] {
   const criteria = j ? [...j.common, ...j.groups.flatMap((g) => g.criteria)] : [];
+  const answerOf = new Map((j?.questions ?? []).map((q) => [q.id, q.answer]));
   return criteria
     .filter((c) => c.kind !== "RULE" && (c.summary || c.quote))
     .map((c) => ({
+      questionId: c.kind === "ASK" ? c.id : undefined,
+      answer: c.kind === "ASK" ? (answerOf.get(c.id) ?? undefined) : undefined,
       label: criterionLabel[c.kind] ?? "조건",
       rule: withRegionNames(c.summary ?? c.quote ?? ""),
       mRule: withRegionNames(c.summary ?? c.quote ?? ""),
       quote: c.summary && c.quote ? c.quote : undefined,
       met: c.result === "MET",
+      notMet: c.result === "NOT_MET",
     }));
 }
 
@@ -454,9 +533,12 @@ function policyDetail(
 /** 공간 상세: 판정을 먼저 받고, 공고면 공고 상세를 더 받아요 (모집 정책은 공고 상세가 없어요) */
 export function useApiSpaceDetail(id: string) {
   const { ready, applicant } = useSpaceApplicant();
+  const [answers, answer] = useAnswers(id);
   const evaluation = useQuery({
-    queryKey: ["spaces", "evaluate", id, applicant] as const,
-    queryFn: () => api.post<ApiSpaceEvaluation>(endpoints.spaceEvaluate(id), { applicant }),
+    queryKey: ["spaces", "evaluate", id, applicant, answers] as const,
+    queryFn: () =>
+      api.post<ApiSpaceEvaluation>(endpoints.spaceEvaluate(id), { applicant, answers }),
+    placeholderData: keepPreviousData,
     enabled: ready,
     staleTime: 60 * 1000,
     retry: false,
@@ -502,5 +584,5 @@ export function useApiSpaceDetail(id: string) {
   }, [n, evaluation.data]);
   const loading =
     !evaluation.isError && (evaluation.isPending || (!evaluation.data?.policy && notice.loading));
-  return { data, loading, error: evaluation.isError || notice.error };
+  return { data, loading, error: evaluation.isError || notice.error, answer };
 }

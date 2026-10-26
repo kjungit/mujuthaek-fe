@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Building, Check, ChevronLeft, ChevronRight, ExternalLink, Flag } from "lucide-react";
+import {
+  Bell,
+  Building,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Flag,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
@@ -11,11 +20,14 @@ import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { SpaceDetail } from "@/mocks/business";
+import { AnswerButtons } from "./parts";
 
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
 
-function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
+type OnAnswer = (questionId: string, value: "YES" | "NO") => void;
+
+function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?: OnAnswer }) {
   return (
     <div className="flex flex-col">
       {rules.map((r, i) => {
@@ -31,6 +43,10 @@ function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
             {r.met ? (
               <span className="rounded-pill bg-brand flex size-[28px] flex-none items-center justify-center text-white">
                 <Check size={16} strokeWidth={3} aria-hidden />
+              </span>
+            ) : r.notMet ? (
+              <span className="rounded-pill bg-fill text-text-sub flex size-[28px] flex-none items-center justify-center">
+                <X size={16} strokeWidth={3} aria-hidden />
               </span>
             ) : (
               <span
@@ -49,8 +65,12 @@ function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
                 </span>
               )}
             </span>
-            {r.met ? (
+            {r.questionId && onAnswer ? (
+              <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />
+            ) : r.met ? (
               <span className="text-ok-text text-[14px] font-bold">충족</span>
+            ) : r.notMet ? (
+              <span className="text-text-sub text-[14px] font-bold">해당 안 돼요</span>
             ) : (
               <Link
                 href={routes.bizOnboarding}
@@ -92,11 +112,13 @@ function WebBizDetail({
   loading,
   error,
   back,
+  answer,
 }: {
   data: SpaceDetail | undefined;
   loading: boolean;
   error: boolean;
   back: Back;
+  answer?: OnAnswer;
 }) {
   if (!data) {
     return (
@@ -117,16 +139,25 @@ function WebBizDetail({
       </WebPage>
     );
   }
-  return <WebSpaceDetailView data={data} back={back} />;
+  return <WebSpaceDetailView data={data} back={back} onAnswer={answer} />;
 }
 
-function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
+function WebSpaceDetailView({
+  data,
+  back,
+  onAnswer,
+}: {
+  data: SpaceDetail;
+  back: Back;
+  onAnswer?: OnAnswer;
+}) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const [fav, setFav] = useState(false);
   // 모집 정책은 공간 정보 대신 자격 조건이 많아서 넓은 칸에 보여줘요
   const wideRules = data.rules.length > 0 && Boolean(data.summaryNote);
   const met = data.rules.filter((r) => r.met).length;
-  const unmet = data.rules.length - met;
+  const no = data.rules.filter((r) => r.notMet).length;
+  const unmet = data.rules.length - met - no;
 
   return (
     <WebPage>
@@ -195,7 +226,7 @@ function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
                   공고 원문에서 뽑은 조건이에요 · 확인 필요는 사업 정보를 넣거나 원문으로 확인해
                   주세요
                 </span>
-                <RuleList rules={data.rules} />
+                <RuleList rules={data.rules} onAnswer={onAnswer} />
               </section>
             )}
 
@@ -354,9 +385,9 @@ function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
               <div className="rounded-tile bg-ok-bg text-ok-text px-[16px] py-[14px] text-[15px] font-bold">
                 {data.notReady
                   ? "자격 조건을 정리하고 있어요 · 원문을 확인해 주세요"
-                  : `${data.rules.length}개 조건 중 ${met}개 충족 · ${unmet}개 확인 필요`}
+                  : `${data.rules.length}개 조건 중 ${met}개 충족 · ${unmet}개 확인 필요${no ? ` · ${no}개 해당 안 됨` : ""}`}
               </div>
-              {!wideRules && <RuleList rules={data.rules} />}
+              {!wideRules && <RuleList rules={data.rules} onAnswer={onAnswer} />}
             </section>
 
             <section aria-label="신청" className={cn(card, "gap-[10px] p-[22px]")}>

@@ -6,7 +6,7 @@ import { ArrowRight, Briefcase, Info, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge } from "@/components/ui/Badge";
-import { industries, needOptions } from "@/features/business/profile";
+import { industryGroups, needOptions } from "@/features/business/profile";
 import { useBizOnboardingForm } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -151,10 +151,14 @@ export function WebBizOnboarding() {
                 className={cn(control, "px-[14px] font-medium")}
               >
                 <option value="">업종 선택</option>
-                {industries.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
+                {industryGroups.map((g) => (
+                  <optgroup key={g.group} label={g.group}>
+                    {g.items.map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <span className="text-text-sub text-[13px] font-medium">
@@ -224,7 +228,7 @@ export function WebBizOnboarding() {
               <Info size={16} aria-hidden />
               {pre
                 ? "예비 창업이면 업력 · 직원 수 · 매출은 입력하지 않아요"
-                : "업력은 사업자등록일부터 세요 · 매출은 이번 탭에서만 쓰고 저장하지 않아요"}
+                : "업력은 사업자등록일부터 세요 · 매출은 이번 탭에서만 쓰고 저장하지 않아요 · 직원 수는 지금 공고 조건에 없어 참고용이에요"}
             </span>
 
             <div className="flex flex-col gap-[8px]">

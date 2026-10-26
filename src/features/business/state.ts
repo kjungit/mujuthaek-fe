@@ -14,8 +14,13 @@ import {
 import { useBusinessPreview } from "./queries";
 
 /** 종류 필터: 전체 + 종류별 개수 */
-export function useTypeFilter<K extends string, T extends { type: K }>(items: T[]) {
-  const [filter, setFilter] = useState<"all" | K>("all");
+export function useTypeFilter<K extends string, T extends { type: K }>(
+  items: T[],
+  initial: "all" | K = "all",
+) {
+  const [picked, setFilter] = useState<"all" | K | null>(null);
+  // 처음에는 initial(사업 정보의 필요한 공간), 직접 고르면 그걸로
+  const filter = picked ?? initial;
   const count = (key: "all" | K) =>
     key === "all" ? items.length : items.filter((i) => i.type === key).length;
   const visible = items.filter((i) => filter === "all" || i.type === filter);
