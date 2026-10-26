@@ -25,7 +25,9 @@ import { PdfViewer } from "@/components/notice/PdfViewer";
 import { WebRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
+import { noticeParams, useJudgmentViewed } from "@/features/notice/analytics";
 import { useNotice } from "@/features/notice/queries";
+import { track } from "@/lib/analytics";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { cn } from "@/lib/cn";
@@ -261,12 +263,16 @@ function BlockUnits({ units }: { units: NoticeUnit[] }) {
 export function WebDetail({ id }: { id: string }) {
   const { data: n } = useNotice(id);
   const pdf = usePdfViewer();
+  useJudgmentViewed(id, n);
   if (n.kind !== "standard") return null;
   const { doc } = n;
   const pdfUrl = doc.source.pdfUrl;
   /** 원문 PDF가 있으면 옆에 열고, 없으면 기관 사이트로 */
-  const openOriginal = (page = 1, label?: string) =>
-    pdfUrl ? pdf.show(page, label) : window.open(doc.source.detailUrl, "_blank", "noreferrer");
+  const openOriginal = (page = 1, label?: string) => {
+    track("notice_source_open", { ...noticeParams(n), via: pdfUrl ? "pdf" : "site" });
+    if (pdfUrl) pdf.show(page, label);
+    else window.open(doc.source.detailUrl, "_blank", "noreferrer");
+  };
 
   return (
     <WebPage>
@@ -488,6 +494,7 @@ export function WebDetail({ id }: { id: string }) {
 
               <button
                 type="button"
+                onClick={() => track("notice_bookmark", noticeParams(n))}
                 className="bg-brand rounded-tile flex min-h-[60px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[18px] font-extrabold text-white"
               >
                 <Heart size={20} strokeWidth={2.2} aria-hidden />

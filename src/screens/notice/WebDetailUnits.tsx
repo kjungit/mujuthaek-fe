@@ -10,7 +10,9 @@ import { PdfViewer } from "@/components/notice/PdfViewer";
 import { WebRankCard } from "@/components/notice/RankCard";
 import { WebUnitFilter } from "@/components/notice/UnitFilter";
 import { pdfSections } from "@/features/notice/format";
+import { noticeParams } from "@/features/notice/analytics";
 import { useNotice } from "@/features/notice/queries";
+import { track } from "@/lib/analytics";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { cn } from "@/lib/cn";
@@ -369,6 +371,7 @@ export function WebDetailUnits({ id }: { id: string }) {
               {n.ranking && <WebRankCard ranking={n.ranking} className="py-[22px]" />}
               <button
                 type="button"
+                onClick={() => track("notice_bookmark", noticeParams(n))}
                 className="bg-brand rounded-tile flex min-h-[58px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[17px] font-extrabold text-white"
               >
                 <Heart size={20} strokeWidth={2.2} aria-hidden />
