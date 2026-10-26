@@ -233,6 +233,8 @@ export type SpaceRule = {
   answer?: "YES" | "NO";
   /** 불충족으로 정해짐 (실제 API) */
   notMet?: boolean;
+  /** "다음 중 하나만 맞으면 돼요" 묶음의 길들 (실제 API) */
+  options?: { label: string; met: boolean; notMet: boolean; rules: SpaceRule[] }[];
 };
 
 export type SpaceDetail = {

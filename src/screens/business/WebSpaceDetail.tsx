@@ -19,13 +19,71 @@ import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { SpaceDetail } from "@/mocks/business";
+import type { SpaceDetail, SpaceRule } from "@/mocks/business";
 import { AnswerButtons } from "./parts";
 
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
 
 type OnAnswer = (questionId: string, value: "YES" | "NO") => void;
+
+/** 조건 상태 동그라미: 충족 ✓ · 해당 안 됨 ✕ · 확인 필요 ? */
+function RuleMark({ met, notMet, small }: { met: boolean; notMet?: boolean; small?: boolean }) {
+  const size = small ? "size-[22px]" : "size-[28px]";
+  if (met)
+    return (
+      <span
+        className={cn(
+          "rounded-pill bg-brand flex flex-none items-center justify-center text-white",
+          size,
+        )}
+      >
+        <Check size={small ? 13 : 16} strokeWidth={3} aria-hidden />
+      </span>
+    );
+  if (notMet)
+    return (
+      <span
+        className={cn(
+          "rounded-pill bg-fill text-text-sub flex flex-none items-center justify-center",
+          size,
+        )}
+      >
+        <X size={small ? 13 : 16} strokeWidth={3} aria-hidden />
+      </span>
+    );
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "rounded-pill bg-check-bg text-check-text flex flex-none items-center justify-center font-extrabold",
+        size,
+        small ? "text-[13px]" : "text-[16px]",
+      )}
+    >
+      ?
+    </span>
+  );
+}
+
+/** 오른쪽 칸: 질문이면 예 · 아니요, 아니면 결과 (확인 필요면 사업 정보 입력으로) */
+function RuleAction({ r, onAnswer }: { r: SpaceRule; onAnswer?: OnAnswer }) {
+  if (r.questionId && onAnswer)
+    return <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />;
+  if (r.met) return <span className="text-ok-text flex-none text-[14px] font-bold">충족</span>;
+  if (r.notMet)
+    return <span className="text-text-sub flex-none text-[14px] font-bold">해당 안 돼요</span>;
+  if (r.options)
+    return <span className="text-check-text flex-none text-[14px] font-bold">확인 필요</span>;
+  return (
+    <Link
+      href={routes.bizOnboarding}
+      className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
+    >
+      확인 필요 · 입력
+    </Link>
+  );
+}
 
 function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?: OnAnswer }) {
   return (
@@ -36,48 +94,43 @@ function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?:
           <div
             key={`${i}-${r.label}`}
             className={cn(
-              "flex items-center gap-[12px]",
-              last ? "flex-wrap pt-[12px]" : "border-line-soft border-b border-solid py-[12px]",
+              "flex flex-col gap-[10px]",
+              last ? "pt-[12px]" : "border-line-soft border-b border-solid py-[12px]",
             )}
           >
-            {r.met ? (
-              <span className="rounded-pill bg-brand flex size-[28px] flex-none items-center justify-center text-white">
-                <Check size={16} strokeWidth={3} aria-hidden />
+            <div className="flex items-center gap-[12px]">
+              <RuleMark met={r.met} notMet={r.notMet} />
+              <span className="flex flex-1 flex-col gap-[2px]">
+                <span className="text-[15px] font-bold">{r.label}</span>
+                {r.rule && <span className="text-text-sub text-[13px]">{r.rule}</span>}
+                {r.quote && (
+                  <span className="text-text-tertiary text-[12px] leading-[1.5]">
+                    원문 · {r.quote}
+                  </span>
+                )}
               </span>
-            ) : r.notMet ? (
-              <span className="rounded-pill bg-fill text-text-sub flex size-[28px] flex-none items-center justify-center">
-                <X size={16} strokeWidth={3} aria-hidden />
-              </span>
-            ) : (
-              <span
-                aria-hidden
-                className="rounded-pill bg-check-bg text-check-text flex size-[28px] flex-none items-center justify-center text-[16px] font-extrabold"
-              >
-                ?
-              </span>
-            )}
-            <span className="flex flex-1 flex-col gap-[2px]">
-              <span className="text-[15px] font-bold">{r.label}</span>
-              <span className="text-text-sub text-[13px]">{r.rule}</span>
-              {r.quote && (
-                <span className="text-text-tertiary text-[12px] leading-[1.5]">
-                  원문 · {r.quote}
-                </span>
-              )}
-            </span>
-            {r.questionId && onAnswer ? (
-              <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />
-            ) : r.met ? (
-              <span className="text-ok-text text-[14px] font-bold">충족</span>
-            ) : r.notMet ? (
-              <span className="text-text-sub text-[14px] font-bold">해당 안 돼요</span>
-            ) : (
-              <Link
-                href={routes.bizOnboarding}
-                className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-              >
-                확인 필요 · 입력
-              </Link>
+              <RuleAction r={r} onAnswer={onAnswer} />
+            </div>
+            {r.options && (
+              <ol className="m-0 ml-[40px] flex list-none flex-col gap-[8px] p-0">
+                {r.options.map((o, k) => (
+                  <li
+                    key={k}
+                    className="bg-bg rounded-tile flex flex-col gap-[8px] px-[14px] py-[12px]"
+                  >
+                    <span className="flex items-center gap-[8px]">
+                      <RuleMark met={o.met} notMet={o.notMet} small />
+                      <span className="text-text-sub text-[13px] font-bold">{k + 1}번째 길</span>
+                    </span>
+                    {o.rules.map((x, m) => (
+                      <div key={m} className="flex items-center gap-[10px]">
+                        <span className="flex-1 text-[14px]">{x.rule || o.label}</span>
+                        <RuleAction r={x} onAnswer={onAnswer} />
+                      </div>
+                    ))}
+                  </li>
+                ))}
+              </ol>
             )}
           </div>
         );

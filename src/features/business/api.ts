@@ -10,6 +10,7 @@ import {
   toBusinessApplicant,
   useBizProfileInput,
   type BizProfileInput,
+  type BizSession,
   type BusinessApplicant,
 } from "@/features/business/profile";
 import { birthMonthOf } from "@/features/conditions/applicant";
@@ -25,6 +26,7 @@ import {
   type BusinessSummary,
   type SpaceDetail,
   type SpaceItem,
+  type SpaceRule,
   type SpaceType,
   type SupportItem,
   type SupportList,
@@ -82,6 +84,8 @@ type ApiCriterion = {
   summary: string | null;
   /** 근거 원문 문장 */
   quote: string | null;
+  /** "다음 중 하나"(ANY_OF)일 때 길마다의 결과 */
+  options?: { label: string; result: Verdict3; criteria: ApiCriterion[] }[];
 };
 
 /** POST /api/v1/spaces/{id}/evaluate (백엔드 SpaceEvaluationResponse) */
@@ -142,6 +146,8 @@ type SpaceApplicant = {
   birthMonth?: string;
   residenceRegionCode?: string;
   business?: BusinessApplicant;
+  /** 신청 제한 사유 코드. 해당 없음이면 빈 목록, 안 골랐으면 보내지 않아요 */
+  restrictions?: string[];
 };
 
 /** 질문 id → 예 · 아니요 */
@@ -227,12 +233,13 @@ export function toSpaceItem(it: ApiSpaceItem): SpaceItem {
 function applicantOf(
   device: DeviceConditions | null,
   profile: BizProfileInput | null,
-  revenue: string,
+  session: BizSession,
 ): SpaceApplicant {
   return {
     birthMonth: device ? birthMonthOf(device.birth) : undefined,
     residenceRegionCode: device?.regionCode || undefined,
-    business: profile ? toBusinessApplicant(profile, revenue) : undefined,
+    business: profile ? toBusinessApplicant(profile, session.revenue) : undefined,
+    restrictions: session.restrictions ?? undefined,
   };
 }
 
@@ -262,7 +269,7 @@ function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
       stored.status === "ready" && biz.status === "ready"
         ? {
             ready: true,
-            applicant: applicantOf(stored.device, biz.profile, biz.revenue),
+            applicant: applicantOf(stored.device, biz.profile, biz.session),
           }
         : { ready: false, applicant: {} },
     [stored, biz],
@@ -270,11 +277,11 @@ function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
 }
 
 /** 사업 정보 입력 화면의 "지금 조건으로": 고치는 중인 값으로 공간 · 지원 개수를 바로 세요 */
-export function useApiBusinessPreview(draft: BizProfileInput, revenue: string) {
+export function useApiBusinessPreview(draft: BizProfileInput, session: BizSession) {
   const stored = useConditions();
   const applicant = useMemo(
-    () => applicantOf(stored.status === "ready" ? stored.device : null, draft, revenue),
-    [stored, draft, revenue],
+    () => applicantOf(stored.status === "ready" ? stored.device : null, draft, session),
+    [stored, draft, session],
   );
   const regionCodes = draft.regionCode ? [draft.regionCode] : undefined;
   const body = { filters: { regionCodes }, applicant, size: 1 };
@@ -480,18 +487,29 @@ function useAnswers(id: string): [Answers, (questionId: string, value: "YES" | "
 function rulesOf(j: ApiSpaceEvaluation["judgment"]): SpaceDetail["rules"] {
   const criteria = j ? [...j.common, ...j.groups.flatMap((g) => g.criteria)] : [];
   const answerOf = new Map((j?.questions ?? []).map((q) => [q.id, q.answer]));
-  return criteria
-    .filter((c) => c.kind !== "RULE" && (c.summary || c.quote))
-    .map((c) => ({
+  const toRule = (c: ApiCriterion): SpaceRule => {
+    const anyOf = c.kind === "ANY_OF" && c.options?.length;
+    return {
       questionId: c.kind === "ASK" ? c.id : undefined,
       answer: c.kind === "ASK" ? (answerOf.get(c.id) ?? undefined) : undefined,
-      label: criterionLabel[c.kind] ?? "조건",
-      rule: withRegionNames(c.summary ?? c.quote ?? ""),
-      mRule: withRegionNames(c.summary ?? c.quote ?? ""),
+      label: anyOf ? "다음 중 하나만 맞으면 돼요" : (criterionLabel[c.kind] ?? "조건"),
+      rule: anyOf ? "" : withRegionNames(c.summary ?? c.quote ?? ""),
+      mRule: anyOf ? "" : withRegionNames(c.summary ?? c.quote ?? ""),
       quote: c.summary && c.quote ? c.quote : undefined,
       met: c.result === "MET",
       notMet: c.result === "NOT_MET",
-    }));
+      // 길 안의 질문도 같은 질문 id로 답해요 (판정 엔진이 묶음 안 질문도 questions에 넣어줘요)
+      options: anyOf
+        ? c.options!.map((o, i) => ({
+            label: o.label.replace(/^\d+번째 길:\s*/, "") || `${i + 1}번째`,
+            met: o.result === "MET",
+            notMet: o.result === "NOT_MET",
+            rules: o.criteria.filter((x) => x.kind !== "RULE").map(toRule),
+          }))
+        : undefined,
+    };
+  };
+  return criteria.filter((c) => c.kind !== "RULE" && (c.summary || c.quote)).map(toRule);
 }
 
 /** 모집 정책·사업 지원 상세: 공고 상세가 없어서 판정 응답(기간 · 지역 · 자격 조건)과 원문으로 */

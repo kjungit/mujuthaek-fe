@@ -22,8 +22,33 @@ export type BizProfileInput = {
   needs: string[];
 };
 
+/** 이번 탭에서만 쓰는 사업 정보: 매출, 신청 제한 사유 (민감해서 기기에 저장하지 않아요) */
+export type BizSession = {
+  /** 연 매출 (만 원) */
+  revenue: string;
+  /** 고른 신청 제한 사유 코드. 해당 없음이면 빈 목록, 아직 안 골랐으면 null */
+  restrictions: string[] | null;
+};
+
+export const emptyBizSession: BizSession = { revenue: "", restrictions: null };
+
 export type BizProfileSnapshot =
-  { status: "loading" } | { status: "ready"; profile: BizProfileInput | null; revenue: string };
+  { status: "loading" } | { status: "ready"; profile: BizProfileInput | null; session: BizSession };
+
+/**
+ * 신청 제한 사유 (판정 엔진 Codes의 사업공간 · 창업지원 신청 제한 사유). 공고의 "해당하면 신청할 수 없어요" 조건에 써요
+ */
+export const restrictionOptions = [
+  { code: "TAX_ARREARS", label: "국세·지방세 체납 중" },
+  { code: "CREDIT_DELINQUENT", label: "금융기관 채무불이행·불량거래자" },
+  { code: "BUSINESS_SUSPENDED", label: "휴업 중인 사업자" },
+  { code: "PROGRAM_SANCTION", label: "창업지원사업 참여 제한 제재 중" },
+  { code: "CLAWBACK_UNPAID", label: "환수금 반환이 끝나지 않음" },
+  { code: "SUBSIDY_EXCLUDED", label: "보조사업 수행 배제 대상" },
+  { code: "WAGE_ARREARS", label: "체불사업주 명단 공개 대상" },
+  { code: "ADULT_WARD", label: "피성년후견인·피한정후견인" },
+  { code: "LH_EMPLOYEE_FAMILY", label: "LH 직원과 그 배우자·부모·자녀" },
+] as const;
 
 /**
  * 업종 선택지 → 한국표준산업분류(11차) 세세분류 대표 코드. 판정 엔진은 공고의 업종 코드(2~5자리)가 이 코드의 앞부분이면 해당한다고 봐요.
@@ -92,6 +117,7 @@ export const emptyBizProfile: BizProfileInput = {
 
 const DEVICE_KEY = "mujuthaek:business:v1";
 const REVENUE_KEY = "mujuthaek:business:revenue";
+const RESTRICTIONS_KEY = "mujuthaek:business:restrictions";
 /** 조건 입력의 "이 기기에 저장" 설정을 같이 따라요 */
 const SAVE_PREF_KEY = "mujuthaek:save-on-device";
 const SESSION_DEVICE_KEY = "mujuthaek:business:device-session";
@@ -127,7 +153,18 @@ function readSnapshot(): BizProfileSnapshot {
   } catch {
     profile = null;
   }
-  return { status: "ready", profile, revenue: read(session, REVENUE_KEY) ?? "" };
+  let restrictions: string[] | null = null;
+  try {
+    const raw = read(session, RESTRICTIONS_KEY);
+    restrictions = raw ? (JSON.parse(raw) as string[]) : null;
+  } catch {
+    restrictions = null;
+  }
+  return {
+    status: "ready",
+    profile,
+    session: { revenue: read(session, REVENUE_KEY) ?? "", restrictions },
+  };
 }
 
 let snapshot: BizProfileSnapshot | null = null;
@@ -159,7 +196,7 @@ export function useBizProfileInput(): BizProfileSnapshot {
   return useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
 }
 
-export function saveBizProfile(profile: BizProfileInput, revenue: string) {
+export function saveBizProfile(profile: BizProfileInput, { revenue, restrictions }: BizSession) {
   const onDevice = read(local, SAVE_PREF_KEY) !== "false";
   write(
     onDevice ? local : session,
@@ -167,6 +204,7 @@ export function saveBizProfile(profile: BizProfileInput, revenue: string) {
     JSON.stringify(profile),
   );
   write(session, REVENUE_KEY, revenue || null);
+  write(session, RESTRICTIONS_KEY, restrictions === null ? null : JSON.stringify(restrictions));
   emit();
 }
 

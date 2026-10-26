@@ -7,9 +7,11 @@ import { useRegions } from "@/features/regions/queries";
 import type { BizStage } from "@/mocks/business";
 import {
   emptyBizProfile,
+  emptyBizSession,
   saveBizProfile,
   useBizProfileInput,
   type BizProfileInput,
+  type BizSession,
 } from "./profile";
 import { useBusinessPreview } from "./queries";
 
@@ -35,16 +37,16 @@ export function useBizOnboardingForm() {
   const stored = useBizProfileInput();
   const conditions = useConditions();
   const regions = useRegions();
-  const [edit, setEdit] = useState<{ draft: BizProfileInput; revenue: string } | null>(null);
+  const [edit, setEdit] = useState<{ draft: BizProfileInput; session: BizSession } | null>(null);
   const saved =
     stored.status === "ready"
-      ? { draft: stored.profile ?? emptyBizProfile, revenue: stored.revenue }
-      : { draft: emptyBizProfile, revenue: "" };
-  const { draft, revenue } = edit ?? saved;
+      ? { draft: stored.profile ?? emptyBizProfile, session: stored.session }
+      : { draft: emptyBizProfile, session: emptyBizSession };
+  const { draft, session } = edit ?? saved;
   const set = (patch: Partial<BizProfileInput>) =>
-    setEdit({ draft: { ...draft, ...patch }, revenue });
+    setEdit({ draft: { ...draft, ...patch }, session });
   const pre = draft.stage === "pre";
-  const preview = useBusinessPreview(draft, revenue);
+  const preview = useBusinessPreview(draft, session);
   const device = conditions.status === "ready" ? conditions.device : null;
   const age = device ? ageOf(device.birth) : null;
   const sidoCode = draft.regionCode.slice(0, 2);
@@ -54,8 +56,25 @@ export function useBizOnboardingForm() {
     setStage: (stage: BizStage) => set({ stage }),
     pre,
     set,
-    revenue,
-    setRevenue: (v: string) => setEdit({ draft, revenue: v }),
+    revenue: session.revenue,
+    setRevenue: (revenue: string) => setEdit({ draft, session: { ...session, revenue } }),
+    restrictions: session.restrictions,
+    /** 신청 제한 사유 하나 켜고 끄기 (고르면 "해당 없음"은 풀려요) */
+    toggleRestriction: (code: string) => {
+      const cur = session.restrictions ?? [];
+      const next = cur.includes(code) ? cur.filter((c) => c !== code) : [...cur, code];
+      // 다 풀면 고르기 전으로 (빈 목록은 "해당 없음"이라 따로 눌러야 해요)
+      setEdit({ draft, session: { ...session, restrictions: next.length ? next : null } });
+    },
+    /** 해당 없음 (다시 누르면 고르기 전으로) */
+    toggleNoRestriction: () =>
+      setEdit({
+        draft,
+        session: {
+          ...session,
+          restrictions: session.restrictions?.length === 0 ? null : [],
+        },
+      }),
     needs: draft.needs,
     toggleNeed: (n: string) =>
       set({
@@ -74,7 +93,7 @@ export function useBizOnboardingForm() {
     sidos: regions.sidos,
     sidoCode,
     sigungus: sidoCode ? (regions.sido(sidoCode)?.sigungus ?? []) : [],
-    save: () => saveBizProfile(draft, pre ? "" : revenue),
+    save: () => saveBizProfile(draft, { ...session, revenue: pre ? "" : session.revenue }),
   };
 }
 

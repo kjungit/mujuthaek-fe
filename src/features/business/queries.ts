@@ -12,6 +12,7 @@ import {
   profileChips,
   useBizProfileInput,
   type BizProfileInput,
+  type BizSession,
 } from "@/features/business/profile";
 import { USE_MOCKS } from "@/lib/api/config";
 import {
@@ -99,7 +100,7 @@ function useMockBusinessPreview(draft: BizProfileInput) {
 
 export const useBusinessPreview: (
   draft: BizProfileInput,
-  revenue: string,
+  session: BizSession,
 ) => { spaces: number; support: number; check: number } = USE_MOCKS
   ? useMockBusinessPreview
   : useApiBusinessPreview;
