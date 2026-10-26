@@ -484,13 +484,6 @@ export function WebDetail({ id }: { id: string }) {
                 <ApiBlockUnits notice={n} judgment={j.judgment} onShowLife={showLife} />
               )}
 
-              <NoticeToc doc={doc} variant="web" />
-              <NoticeSections
-                doc={doc}
-                variant="web"
-                onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
-              />
-
               {n.life && (
                 <LifeCard
                   life={n.life}
@@ -499,6 +492,13 @@ export function WebDetail({ id }: { id: string }) {
                   onSiteChange={setLifeSite}
                 />
               )}
+
+              <NoticeToc doc={doc} variant="web" />
+              <NoticeSections
+                doc={doc}
+                variant="web"
+                onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
+              />
 
               {benefits.length > 0 && (
                 <section

@@ -235,6 +235,8 @@ export function MDetail({ id }: { id: string }) {
 
         {n.hasUnits && <MApiUnits notice={n} judgment={j.judgment} />}
 
+        {n.life && <LifeCard life={n.life} variant="mobile" />}
+
         {n.ranking && <MRankCard ranking={n.ranking} />}
 
         <NoticeToc doc={doc} variant="mobile" />
@@ -243,8 +245,6 @@ export function MDetail({ id }: { id: string }) {
           variant="mobile"
           onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
         />
-
-        {n.life && <LifeCard life={n.life} variant="mobile" />}
 
         {benefits.length > 0 && (
           <section aria-labelledby="bn-h" className={cn(card, "px-[20px] pt-[16px] pb-[6px]")}>
