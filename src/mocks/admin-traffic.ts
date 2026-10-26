@@ -45,7 +45,8 @@ export type BotAccess = {
   at: string;
   method: string;
   path: string;
-  status: number;
+  /** 화면 요청(프론트 서버가 넘긴 것)은 응답 코드를 몰라 null */
+  status: number | null;
   maskedIp: string | null;
   client: ClientKind;
 };

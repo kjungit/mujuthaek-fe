@@ -347,8 +347,9 @@ function Bots({ data }: { data: BotTrafficData }) {
   return (
     <>
       <span className="text-text-sub text-[13px]">
-        api 서버 요청만 세요(페이지만 긁는 봇은 프론트 서버 기록이 있어야 보여요). IP는 마지막
-        자리를 가려 보여 주고, 원본은 14일 뒤 지워요
+        api 요청과 화면 요청(주소를 직접 연 것, 프론트 서버가 넘겨요)을 세요. 화면 요청은 응답
+        코드를 몰라 오류 숫자에는 안 들어가요. IP는 마지막 자리를 가려 보여 주고, 원본은 14일 뒤
+        지워요
       </span>
       <Card title="보낸 쪽별 요청" desc={`${data.days}일`}>
         <div className="flex flex-wrap gap-[12px] text-[13px]">
@@ -607,8 +608,8 @@ function AccessList({ items }: { items: BotAccess[] }) {
           <span className="font-semibold">
             {a.method} {a.path}
           </span>
-          <span className={cn(a.status >= 400 ? "text-danger-text" : "text-text-sub")}>
-            {a.status}
+          <span className={cn((a.status ?? 0) >= 400 ? "text-danger-text" : "text-text-sub")}>
+            {a.status ?? "-"}
           </span>
           <span className="text-text-sub">{a.maskedIp ?? "IP 지움"}</span>
           <span className="text-text-sub">{CLIENT[a.client]?.label ?? a.client}</span>
