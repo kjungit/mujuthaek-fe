@@ -113,7 +113,8 @@ export function WebHomes() {
 
   const toggleLike = (id: string) => {
     if (!liked.has(id)) {
-      const org = data.listings.find((l) => l.id === id)?.org;
+      // 목록의 org는 「LH · 행복주택」처럼 유형이 붙어 있어요. 상세 화면과 같게 기관 이름만 보내요
+      const org = data.listings.find((l) => l.id === id)?.org.split(" · ")[0];
       track("notice_bookmark", { notice_kind: "standard", agency: org || "-", via: "list" });
     }
     setLiked((prev) => {
