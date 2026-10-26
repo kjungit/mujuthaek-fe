@@ -5,7 +5,7 @@
  */
 import { api } from "@/lib/api/client";
 import { routes } from "@/lib/routes";
-import type { BotTrafficData, TrafficData } from "@/mocks/admin-traffic";
+import type { BotTrafficData, RealtimeData, TrafficData } from "@/mocks/admin-traffic";
 import type {
   ChatReport,
   ChatReportGroup,
@@ -1110,6 +1110,10 @@ export function liveTraffic(days: number) {
   return api.get<TrafficData>(`/api/admin/traffic?days=${days}`);
 }
 
+export function liveRealtime() {
+  return api.get<RealtimeData>("/api/admin/traffic/realtime");
+}
+
 export function liveBotTraffic(days: number) {
   return api.get<BotTrafficData>(`/api/admin/traffic/bots?days=${days}`);
 }
@@ -1136,7 +1140,7 @@ async function allChatReports(status: ChatReviewStatus) {
 }
 
 /** 신고 응답에는 공고 ID만 있어요. 화면에 보일 공고 제목을 공고 상세에서 찾아요(못 찾으면 비움) */
-async function noticeTitles(ids: string[]) {
+export async function noticeTitles(ids: string[]) {
   const pairs = await Promise.all(
     ids.map((id) =>
       api

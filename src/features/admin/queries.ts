@@ -19,12 +19,14 @@ import {
   liveReviewQueue,
   liveSources,
   liveBotTraffic,
+  liveRealtime,
   liveTraffic,
+  noticeTitles,
   groupChatReports,
   liveChatReports,
 } from "./api";
 import { USE_MOCKS } from "@/lib/api/config";
-import { botTrafficMock, trafficMock } from "@/mocks/admin-traffic";
+import { botTrafficMock, noticeTitlesMock, realtimeMock, trafficMock } from "@/mocks/admin-traffic";
 import { chatReportTitlesMock, chatReportsMock, type ChatReviewStatus } from "@/mocks/admin-chat";
 
 export const adminKeys = {
@@ -207,5 +209,25 @@ export function useAdminChatReports(status: ChatReviewStatus) {
             ),
           ),
     staleTime: 0,
+  });
+}
+
+/** 지금 접속자. 화면을 열어 둔 동안 30초마다 다시 받아요(백엔드도 30초 다시 써요) */
+export function useAdminRealtime() {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "traffic-realtime"],
+    queryFn: () => (LIVE ? liveRealtime() : Promise.resolve(realtimeMock)),
+    refetchInterval: 30_000,
+    staleTime: 30_000,
+  });
+}
+
+/** 공고 ID → 제목 (많이 본 공고·채팅 신고 등). 못 찾은 공고는 빠져요 */
+export function useNoticeTitles(ids: string[]) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "notice-titles", ...ids],
+    queryFn: () => (LIVE ? noticeTitles(ids) : Promise.resolve(noticeTitlesMock)),
+    enabled: ids.length > 0,
+    staleTime: 10 * 60_000,
   });
 }
