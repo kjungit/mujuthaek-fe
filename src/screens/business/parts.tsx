@@ -82,22 +82,25 @@ export function TypeFilters<K extends string>({
 }) {
   return (
     <div id={id} role="group" aria-label={label} className={cn("flex gap-[6px]", className)}>
-      {options.map((o) => (
-        <FilterChip
-          key={o.key}
-          selected={value === o.key}
-          onClick={() => onChange(o.key)}
-          className={cn("font-bold", mobile && "flex-none px-[14px]")}
-        >
-          {mobile ? (
-            `${o.label} ${count(o.key)}`
-          ) : (
-            <span>
-              {o.label} <span className="font-semibold opacity-80">{count(o.key)}</span>
-            </span>
-          )}
-        </FilterChip>
-      ))}
+      {/* 0건인 종류는 숨겨요 (전체와 지금 고른 것은 늘 보여요) */}
+      {options
+        .filter((o) => o.key === "all" || o.key === value || count(o.key) > 0)
+        .map((o) => (
+          <FilterChip
+            key={o.key}
+            selected={value === o.key}
+            onClick={() => onChange(o.key)}
+            className={cn("font-bold", mobile && "flex-none px-[14px]")}
+          >
+            {mobile ? (
+              `${o.label} ${count(o.key)}`
+            ) : (
+              <span>
+                {o.label} <span className="font-semibold opacity-80">{count(o.key)}</span>
+              </span>
+            )}
+          </FilterChip>
+        ))}
     </div>
   );
 }
@@ -150,5 +153,63 @@ export function AnswerButtons({
         </button>
       ))}
     </span>
+  );
+}
+
+/** 공고 안내: 출처가 준 요약 · 기관 · 문의처 · 접수 방법 · 링크 (모집 정책 · 사업 지원) */
+export function AboutSection({
+  about,
+  web,
+}: {
+  about: { summary?: string; rows: { label: string; value: string; href?: string }[] };
+  web?: boolean;
+}) {
+  return (
+    <section
+      aria-labelledby="about-h"
+      className={cn(
+        "bg-surface flex flex-col",
+        web
+          ? "rounded-card-lg gap-[14px] px-[32px] py-[28px]"
+          : "rounded-card mx-[16px] gap-[10px] px-[20px] py-[16px]",
+      )}
+    >
+      <h2
+        id="about-h"
+        className={cn("m-0 font-extrabold", web ? "tracking-title text-[22px]" : "text-[17px]")}
+      >
+        공고 안내
+      </h2>
+      {about.summary && (
+        <p className="m-0 text-[15px] leading-[1.7] whitespace-pre-line">{about.summary}</p>
+      )}
+      {about.rows.length > 0 && (
+        <dl className="m-0 flex flex-col">
+          {about.rows.map((r, i) => (
+            <div
+              key={r.label}
+              className={cn(
+                "flex flex-wrap justify-between gap-x-[16px] gap-y-[4px] py-[10px] text-[15px]",
+                i < about.rows.length - 1 && "border-line-soft border-b border-solid",
+              )}
+            >
+              <dt className="text-text-sub">{r.label}</dt>
+              <dd className="m-0 font-bold whitespace-pre-line">
+                {r.href ? (
+                  <a href={r.href} target="_blank" rel="noreferrer">
+                    {r.value}
+                  </a>
+                ) : (
+                  r.value
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <span className="text-text-tertiary text-[12px]">
+        출처 사이트가 준 정보를 그대로 옮겼어요 · 정확한 내용은 공고 원문을 확인해 주세요
+      </span>
+    </section>
   );
 }

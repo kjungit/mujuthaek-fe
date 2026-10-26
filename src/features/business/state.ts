@@ -75,6 +75,15 @@ export function useBizOnboardingForm() {
           restrictions: session.restrictions?.length === 0 ? null : [],
         },
       }),
+    statuses: draft.statuses ?? null,
+    /** 해당 유형 하나 켜고 끄기 (다 풀면 고르기 전으로) */
+    toggleStatus: (code: string) => {
+      const cur = draft.statuses ?? [];
+      const next = cur.includes(code) ? cur.filter((c) => c !== code) : [...cur, code];
+      set({ statuses: next.length ? next : null });
+    },
+    /** 해당 없음 (다시 누르면 고르기 전으로) */
+    toggleNoStatus: () => set({ statuses: draft.statuses?.length === 0 ? null : [] }),
     needs: draft.needs,
     toggleNeed: (n: string) =>
       set({

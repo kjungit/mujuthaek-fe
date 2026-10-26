@@ -20,7 +20,7 @@ import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { SpaceDetail, SpaceRule } from "@/mocks/business";
-import { AnswerButtons } from "./parts";
+import { AboutSection, AnswerButtons } from "./parts";
 
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
@@ -266,6 +266,8 @@ function WebSpaceDetailView({
                 )}
               </div>
             </section>
+
+            {data.about && <AboutSection about={data.about} web />}
 
             {wideRules && (
               <section

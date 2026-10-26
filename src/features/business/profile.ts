@@ -20,6 +20,10 @@ export type BizProfileInput = {
   regionCode: string;
   /** 필요한 공간 (STARTUP_SPACE · SHOP_RENTAL · MEETING_ROOM) */
   needs: string[];
+  /** 업종 코드 직접 입력 (한국표준산업분류 11차 5자리). 있으면 업종 선택지의 대표 코드 대신 써요 */
+  industryCode?: string;
+  /** 해당 유형 코드 (소상공인 · 사회적기업 …). 해당 없음이면 빈 목록, 아직 안 골랐으면 null */
+  statuses?: string[] | null;
 };
 
 /** 이번 탭에서만 쓰는 사업 정보: 매출, 신청 제한 사유 (민감해서 기기에 저장하지 않아요) */
@@ -113,7 +117,31 @@ export const emptyBizProfile: BizProfileInput = {
   employees: "",
   regionCode: "",
   needs: [],
+  industryCode: "",
+  statuses: null,
 };
+
+/** 해당 유형 (판정 엔진 Codes의 사업공간 · 창업지원 유형). 공고의 「소상공인」「사회적기업」 같은 대상 조건에 써요 */
+export const statusOptions = [
+  { code: "SMALL_BUSINESS", label: "소상공인" },
+  { code: "SME", label: "중소기업" },
+  { code: "VENTURE_COMPANY", label: "벤처기업" },
+  { code: "ONE_PERSON_CREATIVE", label: "1인 창조기업" },
+  { code: "WOMAN", label: "여성 (대표자)" },
+  { code: "CAREER_BREAK_WOMAN", label: "경력단절여성" },
+  { code: "DISABLED", label: "장애인" },
+  { code: "STUDENT", label: "대학생 · 대학원생" },
+  { code: "NATIONAL_MERIT", label: "국가유공자 등 보훈대상자" },
+  { code: "SOCIAL_ENTERPRISE", label: "사회적기업" },
+  { code: "PRE_SOCIAL_ENTERPRISE", label: "예비사회적기업" },
+  { code: "SOCIAL_COOPERATIVE", label: "사회적협동조합" },
+  { code: "VILLAGE_ENTERPRISE", label: "마을기업" },
+  { code: "SELF_SUFFICIENCY_ENTERPRISE", label: "자활기업" },
+  { code: "SOCIAL_VENTURE", label: "소셜벤처" },
+] as const;
+
+/** 업종 코드 직접 입력이 올바른지 (5자리 숫자) */
+export const validIndustryCode = (v: string | undefined) => /^\d{5}$/.test(v ?? "");
 
 const DEVICE_KEY = "mujuthaek:business:v1";
 const REVENUE_KEY = "mujuthaek:business:revenue";
@@ -234,7 +262,9 @@ export function toBusinessApplicant(
   revenueManWon: string,
   today = new Date(),
 ): BusinessApplicant {
-  const code = industries.find((i) => i.key === p.industry)?.code ?? undefined;
+  const code = validIndustryCode(p.industryCode)
+    ? p.industryCode
+    : (industries.find((i) => i.key === p.industry)?.code ?? undefined);
   if (p.stage === "pre") {
     return { applicantType: "INDIVIDUAL", hasSite: false, history: [], industryCode: code };
   }
@@ -265,5 +295,6 @@ export function profileChips(p: BizProfileInput | null): string[] {
     p.stage === "run" && digits(p.months) !== null ? `업력 ${digits(p.months)}개월` : null,
     employees !== null ? `${employees}인` : null,
     region && (p.stage === "pre" ? `희망 지역 ${region}` : `사업장 ${region}`),
+    ...(p.statuses ?? []).map((c) => statusOptions.find((o) => o.code === c)?.label),
   ].filter((c): c is string => Boolean(c));
 }
