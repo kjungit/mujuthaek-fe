@@ -53,8 +53,9 @@ function ConsentBanner() {
     >
       <div className="rounded-card bg-surface text-text flex w-full max-w-[560px] flex-col gap-[12px] p-[18px] shadow-[0_8px_32px_rgba(0,0,0,0.16)]">
         <p className="m-0 text-[14px] leading-[1.6]">
-          서비스를 고치는 데 쓰려고 방문 통계(Google Analytics)를 모아도 될까요? 어떤 화면을
-          봤는지와 들어온 경로만 모으고, 입력한 소득·자산 같은 조건은 보내지 않아요.{" "}
+          서비스를 고치는 데 쓰려고 방문 통계(Google Analytics)를 모아도 될까요? 본 화면, 들어온
+          경로, 기기 종류, 원문 보기 같은 이용 행동을 모으고, 입력한 소득·자산 같은 조건 값은 보내지
+          않아요.{" "}
           <Link href={routes.privacy} className="text-text-sub underline">
             개인정보 처리방침
           </Link>
