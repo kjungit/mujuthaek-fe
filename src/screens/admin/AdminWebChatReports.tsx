@@ -248,7 +248,7 @@ export function AdminWebChatReports() {
                   </div>
                 )}
                 <span className="text-text-sub text-[14px] leading-[1.6]">
-                  가림 유지: 채팅방에서 「신고로 가려진 메시지」로 보여요 · 다시 보이기: 원래 글로
+                  계속 가리기: 채팅방에서 「신고로 가려진 메시지」로 보여요 · 다시 보이기: 원래 글로
                   돌아가고 검토 전 신고 수가 0이 돼요 (새 신고 3건이 쌓이면 다시 가려져요)
                 </span>
                 <div className="flex flex-wrap gap-[8px]">
@@ -258,7 +258,7 @@ export function AdminWebChatReports() {
                     onClick={() => review("KEEP_HIDDEN")}
                     className="rounded-control bg-brand min-h-[52px] cursor-pointer border-0 px-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
                   >
-                    가림 유지
+                    계속 가리기
                   </button>
                   <button
                     type="button"
