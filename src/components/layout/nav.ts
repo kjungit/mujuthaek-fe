@@ -1,4 +1,4 @@
-import { Bell, Building, House, MapPin, Store, User, Wallet, type LucideIcon } from "lucide-react";
+import { Bell, Building, House, Store, User, Wallet, type LucideIcon } from "lucide-react";
 import { routes, type Mode } from "@/lib/routes";
 
 export type NavItem = { label: string; href: string; icon: LucideIcon };
@@ -9,7 +9,6 @@ export const webMenu: Record<Mode, NavItem[]> = {
     { label: "홈", href: routes.home, icon: House },
     { label: "내 혜택", href: routes.benefits, icon: Wallet },
     { label: "내 집", href: routes.homes, icon: Building },
-    { label: "생활권", href: routes.life, icon: MapPin },
   ],
   business: [
     { label: "공간 찾기", href: routes.business, icon: Store },

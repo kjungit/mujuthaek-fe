@@ -298,23 +298,14 @@ function BlockUnits({ units, map, more, excel = true, onShowLife }: BlockUnitsPr
             )}
           </div>
           <div className="flex gap-[8px]">
-            {onShowLife && selected.siteId ? (
-              selected.lifeScore !== undefined && (
-                <button
-                  type="button"
-                  onClick={() => onShowLife(selected.siteId!)}
-                  className="text-text inline-flex min-h-[46px] cursor-pointer items-center gap-[6px] rounded-sm border-0 bg-white px-[14px] text-[14px] font-bold"
-                >
-                  <MapPin size={17} aria-hidden />이 집 생활권 {selected.lifeScore}점
-                </button>
-              )
-            ) : (
-              <Link
-                href={routes.life}
-                className="text-text hover:text-text inline-flex min-h-[46px] items-center gap-[6px] rounded-sm bg-white px-[14px] text-[14px] font-bold no-underline"
+            {onShowLife && selected.siteId && selected.lifeScore !== undefined && (
+              <button
+                type="button"
+                onClick={() => onShowLife(selected.siteId!)}
+                className="text-text inline-flex min-h-[46px] cursor-pointer items-center gap-[6px] rounded-sm border-0 bg-white px-[14px] text-[14px] font-bold"
               >
-                <MapPin size={17} aria-hidden />이 집 생활권
-              </Link>
+                <MapPin size={17} aria-hidden />이 집 생활권 {selected.lifeScore}점
+              </button>
             )}
             <button
               type="button"

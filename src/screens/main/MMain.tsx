@@ -21,11 +21,6 @@ const features = [
   },
   { href: routes.homes, title: "청약·공공임대 공고", desc: "지원할 수 있는 곳과 내가 준비할 돈" },
   {
-    href: routes.life,
-    title: "생활권",
-    desc: "직장까지 시간과 역세권·학세권을 내 우선순위로 점수화",
-  },
-  {
     href: routes.business,
     title: "사업공간 · 사업 지원",
     desc: "창업 공간, 공공 상가, 회의실과 창업 지원금·정책자금",
