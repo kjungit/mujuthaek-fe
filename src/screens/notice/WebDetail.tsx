@@ -5,8 +5,6 @@ import {
   ArrowRight,
   Building,
   ChevronRight,
-  CircleAlert,
-  CircleCheck,
   Clock4,
   FileText,
   Heart,
@@ -18,13 +16,15 @@ import {
 } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
+import { EligibilityCard } from "@/components/notice/EligibilityCard";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { WebUnitFilter } from "@/components/notice/UnitFilter";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { WebRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
-import { formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
+import { dueText, formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
+import { useNoticeJudgment, withMine } from "@/features/notice/judgment";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
@@ -259,10 +259,32 @@ function BlockUnits({ units }: { units: NoticeUnit[] }) {
 }
 
 export function WebDetail({ id }: { id: string }) {
-  const { data: n } = useNotice(id);
+  const { data, loading, error } = useNotice(id);
+  const n = data?.kind === "standard" ? data : undefined;
+  const j = useNoticeJudgment(n);
   const pdf = usePdfViewer();
-  if (n.kind !== "standard") return null;
-  const { doc } = n;
+  if (!n) {
+    return (
+      <WebPage>
+        <WebHeader mode="home" current={routes.homes} unread={3} />
+        <WebMain className="pt-[24px] pb-[80px]">
+          {(loading || error) && (
+            <div
+              role={error ? "alert" : undefined}
+              className="rounded-card-lg bg-surface text-text-sub px-[24px] py-[64px] text-center text-[15px]"
+            >
+              {error
+                ? "공고를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요"
+                : "공고를 불러오는 중이에요"}
+            </div>
+          )}
+        </WebMain>
+      </WebPage>
+    );
+  }
+  const doc = withMine(n.doc, j.judgment?.mineTypes ?? []);
+  const money = j.judgment?.money;
+  const benefits = n.benefits ?? [];
   const pdfUrl = doc.source.pdfUrl;
   /** 원문 PDF가 있으면 옆에 열고, 없으면 기관 사이트로 */
   const openOriginal = (page = 1, label?: string) =>
@@ -299,15 +321,15 @@ export function WebDetail({ id }: { id: string }) {
                 <div className="flex flex-col gap-[20px] px-[30px] pt-[28px] pb-[30px]">
                   <div className="flex flex-col gap-[10px]">
                     <NoticeTags
-                      verdict={n.verdict}
+                      verdict={j.judgment?.verdict ?? "check"}
                       rank={n.ranking?.myRank}
-                      dday={n.dday}
+                      due={dueText(n)}
                       tags={n.tags}
                       size="lg"
                     />
                     <h1 className="tracking-h1 m-0 text-[34px] font-extrabold">{n.title}</h1>
                     <span className="text-text-sub text-[16px]">{n.meta}</span>
-                    <p className="m-0 text-[16px] leading-[1.6]">{doc.summary}</p>
+                    {doc.summary && <p className="m-0 text-[16px] leading-[1.6]">{doc.summary}</p>}
                   </div>
                   <dl
                     className="m-0 grid gap-[10px]"
@@ -346,145 +368,123 @@ export function WebDetail({ id }: { id: string }) {
 
               {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
 
-              <section
-                aria-label="생활권"
-                className="rounded-card-lg bg-surface flex flex-col gap-[18px] px-[30px] py-[28px]"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className={sectionTitle}>
-                    생활권 <span className="text-brand">{n.life.score}점</span>
-                  </h2>
-                  <Link
-                    href={routes.life}
-                    className="text-brand-strong inline-flex min-h-[44px] items-center gap-[2px] text-[15px] font-bold no-underline"
-                  >
-                    자세히
-                    <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
-                  </Link>
-                </div>
-                <div
-                  className="grid gap-[16px]"
-                  style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}
+              {n.life && (
+                <section
+                  aria-label="생활권"
+                  className="rounded-card-lg bg-surface flex flex-col gap-[18px] px-[30px] py-[28px]"
                 >
-                  {n.life.items.map((it) => {
-                    const Icon = lifeIcon[it.kind];
-                    return (
-                      <div key={it.kind} className="flex flex-col gap-[8px]">
-                        <span className="flex justify-between text-[15px]">
-                          <span className="inline-flex items-center gap-[6px]">
-                            <Icon size={18} className="text-text-sub" aria-hidden />
-                            {it.label}
-                          </span>
-                          <strong>{it.value}</strong>
-                        </span>
-                        <span className="bg-fill h-[8px] overflow-hidden rounded-[4px]">
-                          <span
-                            className="bg-brand block h-full rounded-[4px]"
-                            style={{ width: `${it.pct}%` }}
-                          />
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
+                  <div className="flex items-center justify-between">
+                    <h2 className={sectionTitle}>
+                      생활권 <span className="text-brand">{n.life.score}점</span>
+                    </h2>
+                    <Link
+                      href={routes.life}
+                      className="text-brand-strong inline-flex min-h-[44px] items-center gap-[2px] text-[15px] font-bold no-underline"
+                    >
+                      자세히
+                      <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
+                    </Link>
+                  </div>
+                  {n.life.items.length > 0 && (
+                    <div
+                      className="grid gap-[16px]"
+                      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}
+                    >
+                      {n.life.items.map((it) => {
+                        const Icon = lifeIcon[it.kind];
+                        return (
+                          <div key={it.kind} className="flex flex-col gap-[8px]">
+                            <span className="flex justify-between text-[15px]">
+                              <span className="inline-flex items-center gap-[6px]">
+                                <Icon size={18} className="text-text-sub" aria-hidden />
+                                {it.label}
+                              </span>
+                              <strong>{it.value}</strong>
+                            </span>
+                            <span className="bg-fill h-[8px] overflow-hidden rounded-[4px]">
+                              <span
+                                className="bg-brand block h-full rounded-[4px]"
+                                style={{ width: `${it.pct}%` }}
+                              />
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              )}
 
-              <section
-                aria-label="이 지역 정책"
-                className="rounded-card-lg bg-surface flex flex-col px-[30px] pt-[24px] pb-[14px]"
-              >
-                <div className="mb-[8px] flex items-baseline justify-between">
-                  <h2 className={sectionTitle}>입주하면 받을 수 있는 혜택</h2>
-                  <span className="text-text-tertiary text-[13px]">
-                    {n.benefitArea} · 내 조건 판정
-                  </span>
-                </div>
-                {n.benefits.map((b, i) => (
-                  <Link
-                    key={b.id}
-                    href={routes.benefit(b.id)}
-                    className={cn(
-                      "text-text hover:text-text flex items-center gap-[14px] py-[14px] no-underline",
-                      i < n.benefits.length - 1 && "border-line-soft border-b border-solid",
-                    )}
-                  >
-                    <span className="flex flex-1 flex-col gap-[2px]">
-                      <span className="text-[16px] font-bold">{b.title}</span>
-                      <span className="text-text-sub text-[14px]">{b.desc}</span>
+              {benefits.length > 0 && (
+                <section
+                  aria-label="이 지역 정책"
+                  className="rounded-card-lg bg-surface flex flex-col px-[30px] pt-[24px] pb-[14px]"
+                >
+                  <div className="mb-[8px] flex items-baseline justify-between">
+                    <h2 className={sectionTitle}>입주하면 받을 수 있는 혜택</h2>
+                    <span className="text-text-tertiary text-[13px]">
+                      {n.benefitArea} · 내 조건 판정
                     </span>
-                    <VerdictBadge verdict={b.verdict} />
-                    <ChevronRight size={18} className="text-text-tertiary" aria-hidden />
-                  </Link>
-                ))}
-              </section>
+                  </div>
+                  {benefits.map((b, i) => (
+                    <Link
+                      key={b.id}
+                      href={routes.benefit(b.id)}
+                      className={cn(
+                        "text-text hover:text-text flex items-center gap-[14px] py-[14px] no-underline",
+                        i < benefits.length - 1 && "border-line-soft border-b border-solid",
+                      )}
+                    >
+                      <span className="flex flex-1 flex-col gap-[2px]">
+                        <span className="text-[16px] font-bold">{b.title}</span>
+                        <span className="text-text-sub text-[14px]">{b.desc}</span>
+                      </span>
+                      <VerdictBadge verdict={b.verdict} />
+                      <ChevronRight size={18} className="text-text-tertiary" aria-hidden />
+                    </Link>
+                  ))}
+                </section>
+              )}
             </div>
 
             <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 360px" }}>
-              <section
-                aria-label="내 자격"
-                className="rounded-card-lg bg-surface flex flex-col px-[26px] pt-[26px] pb-[18px]"
-              >
-                <div className="mb-[6px] flex items-center justify-between">
-                  <h2 className="tracking-title m-0 text-[20px] font-extrabold">내 자격</h2>
-                  <button
-                    type="button"
-                    onClick={() => openOriginal(doc.pages.eligibility ?? 1, "신청 자격")}
-                    className="text-brand-strong inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[14px] font-bold"
-                  >
-                    <FileText size={16} aria-hidden />
-                    근거 원문
-                  </button>
-                </div>
-                {n.eligibility.map((e, i) => (
-                  <div
-                    key={e.label}
-                    className={cn(
-                      "flex items-center justify-between gap-[10px] py-[12px]",
-                      i < n.eligibility.length - 1 && "border-line-soft border-b border-solid",
-                    )}
-                  >
-                    <span className="text-[15px]">{e.label}</span>
-                    {e.status === "met" ? (
-                      <span className="text-brand-strong inline-flex items-center gap-[5px] text-[15px] font-bold">
-                        <CircleCheck size={19} aria-hidden />
-                        충족
-                      </span>
-                    ) : (
-                      <Link
-                        href={routes.profile}
-                        className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center gap-[5px] rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-                      >
-                        <CircleAlert size={17} aria-hidden />
-                        입력하고 확인
-                      </Link>
-                    )}
-                  </div>
-                ))}
-              </section>
+              <EligibilityCard
+                judgment={j.judgment}
+                loading={j.loading}
+                error={j.error}
+                variant="web"
+                onOpenOriginal={(page) =>
+                  openOriginal(page ?? doc.pages.eligibility ?? 1, "신청 자격")
+                }
+              />
 
               {n.ranking && <WebRankCard ranking={n.ranking} />}
 
-              <section
-                aria-label="내가 준비할 돈"
-                className="rounded-card-lg bg-surface flex flex-col gap-[10px] p-[26px]"
-              >
-                <h2 className="tracking-title mx-0 mt-0 mb-[4px] text-[20px] font-extrabold">
-                  내가 준비할 돈 · {n.money.type}
-                </h2>
-                <div className="text-text-sub flex justify-between text-[15px]">
-                  <span>임대보증금</span>
-                  <span>{n.money.deposit}</span>
-                </div>
-                <div className="text-text-sub flex justify-between text-[15px]">
-                  <span>{n.money.loanName}</span>
-                  <span>− {n.money.loan}</span>
-                </div>
-                <div className="border-line mt-[4px] flex items-baseline justify-between border-t border-solid pt-[14px]">
-                  <span className="text-[16px] font-bold">준비할 돈</span>
-                  <span className="tracking-h1 text-[30px] font-extrabold">{n.money.prep}</span>
-                </div>
-                <span className="text-text-sub text-[14px]">{n.money.note}</span>
-              </section>
+              {money && (
+                <section
+                  aria-label="내가 준비할 돈"
+                  className="rounded-card-lg bg-surface flex flex-col gap-[10px] p-[26px]"
+                >
+                  <h2 className="tracking-title mx-0 mt-0 mb-[4px] text-[20px] font-extrabold">
+                    내가 준비할 돈 · {money.type}
+                  </h2>
+                  <div className="text-text-sub flex justify-between text-[15px]">
+                    <span>임대보증금</span>
+                    <span>{money.deposit}</span>
+                  </div>
+                  {money.loan && (
+                    <div className="text-text-sub flex justify-between text-[15px]">
+                      <span>{money.loanName}</span>
+                      <span>− {money.loan}</span>
+                    </div>
+                  )}
+                  <div className="border-line mt-[4px] flex items-baseline justify-between border-t border-solid pt-[14px]">
+                    <span className="text-[16px] font-bold">준비할 돈</span>
+                    <span className="tracking-h1 text-[30px] font-extrabold">{money.prep}</span>
+                  </div>
+                  {money.note && <span className="text-text-sub text-[14px]">{money.note}</span>}
+                </section>
+              )}
 
               <button
                 type="button"

@@ -9,6 +9,8 @@ export const endpoints = {
   noticesSearch: "/api/v1/notices/search",
   /** 홈 요약: 내 조건으로 판정한 공고 개수 · 새 공고 · 마감 임박 · 생활권 */
   homeSummary: "/api/v1/home/summary",
+  /** 공고 상세 (공개 정보) */
+  noticeDetail: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}`,
   /** 공고 하나의 판정 (조건별 결과) */
   noticeEvaluate: (id: string) => `/api/v1/eligibility/notices/${encodeURIComponent(id)}/evaluate`,
   // 백엔드 알림 API 전 (설계: POST /api/v1/me/push-subscriptions)

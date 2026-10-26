@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Responsive } from "@/components/layout/Responsive";
+import { USE_MOCKS } from "@/lib/api/config";
 import { notices } from "@/mocks/notice";
 import { MDetail } from "@/screens/notice/MDetail";
 import { MDetailUnits } from "@/screens/notice/MDetailUnits";
@@ -26,6 +27,10 @@ export default function NoticePage({ params }: { params: Params }) {
 
 async function NoticeDetail({ params }: { params: Params }) {
   const { id } = await params;
+  // 실제 API: 주택목록(엑셀) 화면은 아직 목업만 있어서 일반 상세로 보여줘요
+  if (!USE_MOCKS) {
+    return <Responsive web={<WebDetail id={id} />} mobile={<MDetail id={id} />} />;
+  }
   // 목업 단계: 없는 id는 첫 공고를 보여줘요
   const notice = notices.find((n) => n.id === id) ?? notices[0];
 
