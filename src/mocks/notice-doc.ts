@@ -31,11 +31,16 @@ export type NoticeHousingType = {
   /** 이번에 모집하는 호수 */
   offered: number | null;
   depositWon: number | null;
+  /** 호마다 다르면 가장 큰 값 (depositWon은 가장 작은 값) */
+  depositMaxWon?: number;
   /** 보증금 중 계약할 때 내는 돈 */
   contractWon?: number;
   /** 보증금 중 입주 전에 내는 돈 */
   balanceWon?: number;
   monthlyRentWon: number | null;
+  monthlyRentMaxWon?: number;
+  /** 이 가격을 내는 대상 (예: 「수급자 등」). 대상마다 가격이 다를 때만 */
+  target?: string;
   /** 내 조건으로 신청할 수 있는 주택형 */
   mine?: boolean;
 };

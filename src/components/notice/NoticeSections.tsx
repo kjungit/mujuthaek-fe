@@ -7,13 +7,13 @@ import {
   documentGroupLabel,
   formatPeriod,
   formatWon,
-  formatWonOr,
+  formatWonRange,
   sectionTitles,
   selectionLabel,
   visibleSections,
 } from "@/features/notice/format";
 import { cn } from "@/lib/cn";
-import type { NoticeDoc, NoticeSectionKey } from "@/mocks/notice-doc";
+import type { NoticeDoc, NoticeHousingType, NoticeSectionKey } from "@/mocks/notice-doc";
 
 type Variant = "web" | "mobile";
 
@@ -23,6 +23,9 @@ type SectionsProps = {
   /** 원문 PDF가 있을 때만: 해당 쪽 열기 */
   onOpenPage?: (page: number, label: string) => void;
 };
+
+/** 가격 대상이 둘 이상일 때만 「가격 대상」 칸을 둬요 */
+const hasTarget = (types: NoticeHousingType[]) => new Set(types.map((t) => t.target)).size > 1;
 
 export const sectionId = (k: NoticeSectionKey) => `notice-${k}`;
 
@@ -135,12 +138,19 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                 <table className="w-full min-w-[520px] border-collapse text-[15px]">
                   <thead>
                     <tr className="text-text-sub text-left text-[13px]">
-                      {["주택형", "전용면적", "모집", "보증금", "월 임대료"].map((t, i) => (
+                      {[
+                        "주택형",
+                        "전용면적",
+                        ...(hasTarget(h.types) ? ["가격 대상"] : []),
+                        "모집",
+                        "보증금",
+                        "월 임대료",
+                      ].map((t, i, all) => (
                         <th
                           key={t}
                           className={cn(
                             "border-line border-b border-solid px-[12px] py-[10px] font-semibold",
-                            i >= 2 && "text-right",
+                            i >= all.length - 3 && "text-right",
                           )}
                         >
                           {t}
@@ -157,12 +167,15 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                             {t.code}
                           </td>
                           <td className={td}>{t.areaSqm === null ? "–" : `${t.areaSqm}㎡`}</td>
+                          {hasTarget(h.types) && <td className={td}>{t.target ?? "–"}</td>}
                           <td className={cn(td, "text-right")}>
                             {t.offered === null ? "–" : `${t.offered}호`}
                           </td>
-                          <td className={cn(td, "text-right")}>{formatWonOr(t.depositWon)}</td>
+                          <td className={cn(td, "text-right")}>
+                            {formatWonRange(t.depositWon, t.depositMaxWon)}
+                          </td>
                           <td className={cn(td, "text-right", t.mine && "rounded-r-[12px]")}>
-                            {formatWonOr(t.monthlyRentWon)}
+                            {formatWonRange(t.monthlyRentWon, t.monthlyRentMaxWon)}
                           </td>
                         </tr>
                       );
@@ -187,14 +200,18 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                     <span
                       className={cn("text-[13px]", t.mine ? "text-brand-strong" : "text-text-sub")}
                     >
-                      {[t.offered !== null && `${t.offered}호`, t.mine && "신청 가능"]
+                      {[
+                        hasTarget(h.types) && t.target,
+                        t.offered !== null && `${t.offered}호`,
+                        t.mine && "신청 가능",
+                      ]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
                   </span>
                   <span className="text-right text-[14px] font-bold">
-                    {formatWonOr(t.depositWon)}
-                    <br />월 {formatWonOr(t.monthlyRentWon)}
+                    {formatWonRange(t.depositWon, t.depositMaxWon)}
+                    <br />월 {formatWonRange(t.monthlyRentWon, t.monthlyRentMaxWon)}
                   </span>
                 </div>
               ))

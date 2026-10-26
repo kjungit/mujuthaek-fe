@@ -35,6 +35,11 @@ export type MapPoint = { x: number; y: number };
 export type NoticeUnit = MapPoint & {
   id: string;
   name: string;
+  /** 호 표기 (예: A동 214호). 단지별로 묶어 보여줄 때 */
+  label?: string;
+  siteName?: string;
+  /** 가격 대상이 여럿이면 대상별 보증금·월세 */
+  prices?: { target: string; deposit: string; rent: string }[];
   /** 모바일 지도 말풍선용 짧은 이름 */
   short?: string;
   addr?: string;

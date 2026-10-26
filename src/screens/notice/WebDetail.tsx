@@ -26,7 +26,8 @@ import { WebRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { dueText, formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
 import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/notice/judgment";
-import { toUnit, useNoticeUnits } from "@/features/notice/units";
+import { bySite, toUnit, useNoticeUnits } from "@/features/notice/units";
+import { UnitPrices } from "@/components/notice/UnitPrices";
 import { SitesMap } from "@/components/notice/SitesMap";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
@@ -105,39 +106,48 @@ function BlockUnits({ units, map, more, excel = true }: BlockUnitsProps) {
           className="box-content flex max-h-[400px] min-w-0 flex-col gap-[8px] overflow-y-auto pr-[2px]"
           style={{ flex: "1 1 270px" }}
         >
-          {shown.map((u) => {
-            const on = u.id === selected?.id;
-            return (
-              <button
-                key={u.id}
-                type="button"
-                aria-pressed={on}
-                onClick={() => select(u.id)}
-                className={cn(
-                  "text-text rounded-tile flex cursor-pointer flex-col gap-[4px] border-2 border-solid px-[14px] py-[12px] text-left",
-                  on ? "bg-row-selected border-brand" : "bg-surface border-line-soft",
-                )}
-              >
-                <span className="flex w-full items-center justify-between gap-[8px]">
-                  <span className="text-[15px] font-bold">{u.name}</span>
-                  <span
+          {bySite(shown).map((g) => (
+            <div key={g.key} role="group" aria-label={g.name} className="flex flex-col gap-[8px]">
+              {g.name && (
+                <h3 className="text-text-sub bg-surface sticky top-0 z-[1] m-0 py-[4px] text-[14px] font-extrabold">
+                  {g.name} <span className="text-brand">{g.count}호</span>
+                </h3>
+              )}
+              {g.units.map((u) => {
+                const on = u.id === selected?.id;
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => select(u.id)}
                     className={cn(
-                      "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
-                      u.ok ? "bg-ok-bg text-ok-text" : "bg-fill text-text-sub",
+                      "text-text rounded-tile flex cursor-pointer flex-col gap-[4px] border-2 border-solid px-[14px] py-[12px] text-left",
+                      on ? "bg-row-selected border-brand" : "bg-surface border-line-soft",
                     )}
                   >
-                    {unitStatus(u)}
-                  </span>
-                </span>
-                <span className="text-text-sub text-[13px]">
-                  {u.type} · {u.area} · {u.floor}
-                </span>
-                <span className="text-[14px] font-bold">
-                  보증금 {u.deposit} · {u.rent}
-                </span>
-              </button>
-            );
-          })}
+                    <span className="flex w-full items-center justify-between gap-[8px]">
+                      <span className="text-[15px] font-bold">
+                        {g.name ? (u.label ?? u.name) : u.name}
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
+                          u.ok ? "bg-ok-bg text-ok-text" : "bg-fill text-text-sub",
+                        )}
+                      >
+                        {unitStatus(u)}
+                      </span>
+                    </span>
+                    <span className="text-text-sub text-[13px]">
+                      {u.type} · {u.area} · {u.floor}
+                    </span>
+                    <UnitPrices unit={u} />
+                  </button>
+                );
+              })}
+            </div>
+          ))}
           {more && (
             <button
               type="button"
@@ -272,10 +282,24 @@ function BlockUnits({ units, map, more, excel = true }: BlockUnitsProps) {
                 .filter(Boolean)
                 .join(" · ")}
             </span>
-            <span className="text-[15px]">
-              보증금 <strong>{selected.deposit}</strong> · <strong>{selected.rent}</strong> · 준비할
-              돈 <strong className="text-brand-strong">{selected.prep}</strong>
-            </span>
+            {selected.prices ? (
+              <>
+                {selected.prices.map((p) => (
+                  <span key={p.target} className="text-[15px]">
+                    <span className="text-text-sub mr-[6px] text-[14px]">{p.target}</span>
+                    보증금 <strong>{p.deposit}</strong> · <strong>{p.rent}</strong>
+                  </span>
+                ))}
+                <span className="text-[15px]">
+                  준비할 돈 <strong className="text-brand-strong">{selected.prep}</strong>
+                </span>
+              </>
+            ) : (
+              <span className="text-[15px]">
+                보증금 <strong>{selected.deposit}</strong> · <strong>{selected.rent}</strong> ·
+                준비할 돈 <strong className="text-brand-strong">{selected.prep}</strong>
+              </span>
+            )}
           </div>
           <div className="flex gap-[8px]">
             <Link
