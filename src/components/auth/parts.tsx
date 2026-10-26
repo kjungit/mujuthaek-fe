@@ -1,15 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
-import { passwordRules } from "@/features/auth/password";
+import { useSearchParams } from "next/navigation";
+import {
+  loginErrorMessage,
+  socialLoginUrl,
+  socialProviders,
+  type SocialProvider,
+} from "@/features/auth/social";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-
-/** 인증 화면 입력칸 (높이는 PC 56 · 모바일 54) */
-export const authInput =
-  "rounded-control border border-solid border-line bg-surface text-text px-[16px] text-[17px] font-medium min-h-[56px] min-w-0";
-
-export const authLabel = "flex flex-col gap-[8px] text-[15px] font-bold";
 
 /** PC 인증 화면 헤더: 로고 + 오른쪽 */
 export function AuthWebHeader({ right }: { right?: React.ReactNode }) {
@@ -30,66 +32,53 @@ export function AuthWebHeader({ right }: { right?: React.ReactNode }) {
   );
 }
 
-/** 간편 로그인 버튼 (로고 없이 색만) */
+/** 간편 로그인 버튼 (로고 없이 색만). 누르면 백엔드 로그인 시작 주소로 가요 */
 export function SocialButtons({
-  labels,
+  suffix = "",
   className,
   buttonClassName,
 }: {
-  labels: [string, string, string];
+  /** 버튼 이름 뒤에 붙일 말 (예: "로 계속하기") */
+  suffix?: string;
   className?: string;
   buttonClassName?: string;
 }) {
-  const base = cn(
-    "cursor-pointer rounded-control min-h-[56px] text-[16px] font-bold",
-    buttonClassName,
-  );
+  const tone: Record<SocialProvider, string> = {
+    kakao: "bg-kakao-bg text-kakao-text hover:text-kakao-text",
+    naver: "bg-naver-bg text-naver-text hover:text-naver-text",
+    google: "border border-solid border-line bg-surface text-text hover:text-text",
+  };
   return (
     <div className={className}>
-      <button type="button" className={cn(base, "bg-kakao-bg text-kakao-text border-0")}>
-        {labels[0]}
-      </button>
-      <button type="button" className={cn(base, "bg-naver-bg text-naver-text border-0")}>
-        {labels[1]}
-      </button>
-      <button
-        type="button"
-        className={cn(base, "border-line bg-surface text-text border border-solid")}
-      >
-        {labels[2]}
-      </button>
-    </div>
-  );
-}
-
-/** 비밀번호 규칙 표시 */
-export function PasswordRules({ pw }: { pw: string }) {
-  return (
-    <div aria-live="polite" className="flex flex-wrap gap-x-[14px] gap-y-[6px]">
-      {passwordRules(pw).map((r) => (
-        <span
-          key={r.label}
+      {socialProviders.map((p) => (
+        <a
+          key={p.key}
+          href={socialLoginUrl(p.key)}
           className={cn(
-            "inline-flex items-center gap-[4px] text-[14px] font-semibold",
-            r.ok ? "text-brand-strong" : "text-text-tertiary",
+            "rounded-control flex min-h-[56px] items-center justify-center text-[16px] font-bold no-underline",
+            tone[p.key],
+            buttonClassName,
           )}
         >
-          <Check size={16} strokeWidth={2.4} aria-hidden />
-          {r.label}
-        </span>
+          {p.name}
+          {suffix}
+        </a>
       ))}
     </div>
   );
 }
 
-/** 이메일 구분선 */
-export function OrDivider() {
+/** 로그인 실패 안내 (백엔드가 /login?error=social&reason=…로 돌려보내요) */
+export function LoginError() {
+  const params = useSearchParams();
+  if (params.get("error") !== "social") return null;
   return (
-    <div role="separator" className="text-text-tertiary flex items-center gap-[12px] text-[14px]">
-      <span className="bg-line h-px flex-1" />
-      또는 이메일로
-      <span className="bg-line h-px flex-1" />
-    </div>
+    <p
+      role="alert"
+      className="rounded-control bg-check-bg text-check-text m-0 px-[16px] py-[12px] text-[15px] font-semibold"
+    >
+      {loginErrorMessage(params.get("reason"))}
+    </p>
   );
 }
 
@@ -156,7 +145,7 @@ export function StepDots({
 export function LegalNote() {
   return (
     <span className="text-text-tertiary text-center text-[13px] leading-[1.6]">
-      계속하면{" "}
+      처음 로그인하면{" "}
       <Link href={routes.terms} className="text-text-sub hover:text-text-sub font-semibold">
         이용약관
       </Link>
@@ -164,7 +153,7 @@ export function LegalNote() {
       <Link href={routes.privacy} className="text-text hover:text-text font-bold">
         개인정보처리방침
       </Link>
-      에 동의하는 것으로 봐요
+      에 동의를 받아요
     </span>
   );
 }
