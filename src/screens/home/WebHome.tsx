@@ -67,7 +67,8 @@ function SummaryCard({
 }
 
 export function WebHome() {
-  const { data } = useHomeSummary();
+  const { data, loading, error } = useHomeSummary();
+  const n = (v: number, unit: string) => (loading ? "…" : `${v}${unit}`);
   const conditions = useConditionSummary();
 
   return (
@@ -131,22 +132,30 @@ export function WebHome() {
                 href={routes.homes}
                 icon={House}
                 label="지원 가능한 청약·공공임대"
-                value={`${data.homes.count}곳`}
-                note={`이번 주 새로 ${data.homes.newThisWeek}곳 · 마감 임박 ${data.homes.closingSoon}곳`}
+                value={error ? "–" : n(data.homes.count, "곳")}
+                note={
+                  error
+                    ? "공고를 불러오지 못했어요"
+                    : `이번 주 새로 ${n(data.homes.newThisWeek, "곳")} · 마감 임박 ${n(data.homes.closingSoon, "곳")}`
+                }
               />
               <SummaryCard
                 href={routes.benefits}
                 icon={Wallet}
                 label="받을 수 있는 혜택"
-                value={`연 ${data.benefits.yearlyAmount}`}
-                note={`${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`}
+                value={data.benefits ? `연 ${data.benefits.yearlyAmount}` : "준비 중"}
+                note={
+                  data.benefits
+                    ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
+                    : "혜택 판정은 준비 중이에요"
+                }
               />
               <SummaryCard
-                href={routes.life}
+                href={data.life?.href ?? routes.life}
                 icon={MapPin}
                 label="내 생활권 점수"
-                value={`${data.life.score}점`}
-                note={`${data.life.area} · 직장까지 평균 ${data.life.commuteMinutes}분`}
+                value={data.life ? `${data.life.score}점` : loading ? "…" : "–"}
+                note={data.life?.note ?? "생활권 점수가 있는 공고가 아직 없어요"}
               />
             </section>
 
@@ -160,6 +169,11 @@ export function WebHome() {
                   <h2 className="tracking-title m-0 text-[20px] font-extrabold">이번 주 새 소식</h2>
                   <span className="text-text-tertiary text-[14px]">내 조건에 맞는 것만</span>
                 </div>
+                {!loading && data.news.length === 0 && (
+                  <p className="text-text-sub m-0 px-[26px] py-[20px] text-[15px]">
+                    이번 주에 새로 올라온 공고가 없어요
+                  </p>
+                )}
                 {data.news.map((item) => {
                   const Icon = newsIcon[item.kind];
                   return (
@@ -192,41 +206,48 @@ export function WebHome() {
               </section>
 
               <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 320px" }}>
-                <Link
-                  href={routes.benefit(data.suggestedBenefit.id)}
-                  className="rounded-card bg-brand-soft text-text hover:text-text flex flex-col gap-[10px] p-[24px] no-underline"
-                >
-                  <span className="text-brand-strong inline-flex items-center gap-[6px] text-[14px] font-bold">
-                    <Sparkles size={18} aria-hidden />
-                    이런 혜택도 있어요
-                  </span>
-                  <span className="tracking-title text-[20px] font-extrabold">
-                    {data.suggestedBenefit.title}
-                  </span>
-                  <span className="text-text-sub text-[15px] leading-[1.6]">
-                    내 조건으로 받을 수 있는데 아직 안 본 혜택이에요
-                  </span>
-                  <span className="text-brand-strong inline-flex items-center gap-[2px] text-[15px] font-bold">
-                    자세히 보기
-                    <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
-                  </span>
-                </Link>
+                {data.suggestedBenefit && (
+                  <Link
+                    href={routes.benefit(data.suggestedBenefit.id)}
+                    className="rounded-card bg-brand-soft text-text hover:text-text flex flex-col gap-[10px] p-[24px] no-underline"
+                  >
+                    <span className="text-brand-strong inline-flex items-center gap-[6px] text-[14px] font-bold">
+                      <Sparkles size={18} aria-hidden />
+                      이런 혜택도 있어요
+                    </span>
+                    <span className="tracking-title text-[20px] font-extrabold">
+                      {data.suggestedBenefit.title}
+                    </span>
+                    <span className="text-text-sub text-[15px] leading-[1.6]">
+                      내 조건으로 받을 수 있는데 아직 안 본 혜택이에요
+                    </span>
+                    <span className="text-brand-strong inline-flex items-center gap-[2px] text-[15px] font-bold">
+                      자세히 보기
+                      <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
+                    </span>
+                  </Link>
+                )}
 
                 <section
-                  aria-label="마감 임박 관심 공고"
+                  aria-label="마감 임박 공고"
                   className="rounded-card bg-surface flex flex-col gap-[6px] px-[24px] py-[22px]"
                 >
                   <div className="mb-[6px] flex items-center justify-between">
                     <h2 className="tracking-title m-0 text-[18px] font-extrabold">
-                      마감 임박 관심 공고
+                      마감 임박 공고
                     </h2>
                     <Link
-                      href={routes.me}
+                      href={routes.homes}
                       className="text-brand-strong inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
                     >
                       전체
                     </Link>
                   </div>
+                  {!loading && data.deadlines.length === 0 && (
+                    <span className="text-text-sub text-[14px]">
+                      2주 안에 마감하는 공고가 없어요
+                    </span>
+                  )}
                   {data.deadlines.map((d) => (
                     <Link
                       key={d.id}
@@ -243,7 +264,7 @@ export function WebHome() {
                           d.dday <= 3 ? "bg-text text-white" : "bg-fill text-text-sub",
                         )}
                       >
-                        D-{d.dday}
+                        {d.dday === 0 ? "오늘" : `D-${d.dday}`}
                       </span>
                     </Link>
                   ))}

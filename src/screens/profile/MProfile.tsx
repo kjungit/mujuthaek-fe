@@ -148,10 +148,19 @@ export function MProfile() {
               청약통장 가입 기간
               <select className={cn(mSelect, "font-medium")} {...form.field("bankbookPeriod")}>
                 <SelectOptions
-                  items={options.bankbookPeriod.slice(0, 3)}
+                  items={options.bankbookPeriod}
                   value={form.field("bankbookPeriod").value}
                 />
               </select>
+            </label>
+            <label className={pLabel}>
+              납입 횟수
+              <UnitInput
+                unit="회"
+                placeholder="26"
+                className="min-h-[54px]"
+                {...form.field("paymentCount")}
+              />
             </label>
             <label className={pLabel}>
               지금 쓸 수 있는 돈

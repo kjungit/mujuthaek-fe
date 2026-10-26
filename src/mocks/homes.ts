@@ -1,9 +1,9 @@
 // 화면용 예시 데이터 (디자인 WebHomes · MHomes). 실제 값은 API에서 받아요.
-import type { Verdict } from "@/components/ui/Badge";
+import type { ListingVerdict } from "@/components/ui/Badge";
 
 export type HomeListing = {
   id: string;
-  verdict: Verdict;
+  verdict: ListingVerdict;
   /** 순위가 있는 공고만 */
   rank?: number;
   org: string;
@@ -19,9 +19,10 @@ export type HomeListing = {
   dueLong?: string;
   /** 전세임대처럼 원하는 집을 직접 구하는 공고 */
   findYourOwn?: boolean;
-  /** 공급 지역. 전국 공고는 "nationwide" */
   /** 공고 지역 코드 (시·군·구 5자리). 전국 대상이면 "nationwide" */
   region: string;
+  /** 서버가 준 지역 이름 ("경남 양산시"). 없으면 region 코드로 이름을 찾아요 */
+  regionName?: string;
   liked: boolean;
 };
 
