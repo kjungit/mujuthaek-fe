@@ -13,7 +13,12 @@ import {
   visibleSections,
 } from "@/features/notice/format";
 import { cn } from "@/lib/cn";
-import type { NoticeDoc, NoticeHousingType, NoticeSectionKey } from "@/mocks/notice-doc";
+import type {
+  EligibilityCategory,
+  NoticeDoc,
+  NoticeHousingType,
+  NoticeSectionKey,
+} from "@/mocks/notice-doc";
 
 type Variant = "web" | "mobile";
 
@@ -91,34 +96,49 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
   };
 
   const body: Record<NoticeSectionKey, () => React.ReactNode> = {
-    eligibility: () => (
-      <ul className="m-0 flex list-none flex-col p-0">
-        {doc.eligibility.map((e, i) => (
-          <li
-            key={e.id}
-            className={cn(
-              "flex gap-[12px] py-[12px]",
-              i < doc.eligibility.length - 1 && "border-line-soft border-b border-solid",
-            )}
-          >
-            <span
+    eligibility: () => {
+      // 같은 분류는 배지 하나 아래에 모아요 (분류 순서: 나이 · 무주택 · 소득 … 기타)
+      const groups = (Object.keys(categoryLabel) as EligibilityCategory[])
+        .map((category) => ({
+          category,
+          items: doc.eligibility.filter((e) => e.category === category),
+        }))
+        .filter((g) => g.items.length);
+      return (
+        <ul className="m-0 flex list-none flex-col p-0">
+          {groups.map((g, i) => (
+            <li
+              key={g.category}
               className={cn(
-                "rounded-tag bg-fill text-text-sub flex-none self-start px-[8px] py-[3px] text-center text-[12px] font-bold",
-                web ? "min-w-[56px]" : "min-w-[48px]",
+                "flex gap-[12px] py-[12px]",
+                i < groups.length - 1 && "border-line-soft border-b border-solid",
               )}
             >
-              {categoryLabel[e.category]}
-            </span>
-            <span className="flex min-w-0 flex-col gap-[4px]">
-              <span className={cn(sub, "leading-[1.5]")}>{e.text}</span>
-              {e.detail && (
-                <span className="text-text-sub text-[13px] leading-[1.5]">예외 · {e.detail}</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-    ),
+              <span
+                className={cn(
+                  "rounded-tag bg-fill text-text-sub flex-none self-start px-[8px] py-[3px] text-center text-[12px] font-bold",
+                  web ? "min-w-[56px]" : "min-w-[48px]",
+                )}
+              >
+                {categoryLabel[g.category]}
+              </span>
+              <ul className="m-0 flex min-w-0 list-none flex-col gap-[8px] p-0">
+                {g.items.map((e) => (
+                  <li key={e.id} className="flex flex-col gap-[4px]">
+                    <span className={cn(sub, "leading-[1.5]")}>{e.text}</span>
+                    {e.detail && (
+                      <span className="text-text-sub text-[13px] leading-[1.5]">
+                        예외 · {e.detail}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      );
+    },
 
     housing: () => (
       <div className="flex flex-col gap-[16px]">
