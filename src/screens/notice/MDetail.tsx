@@ -138,11 +138,7 @@ export function MDetail({ id }: { id: string }) {
         {n.ranking && <MRankCard ranking={n.ranking} />}
 
         <NoticeToc doc={doc} variant="mobile" />
-        <NoticeSections
-          doc={doc}
-          variant="mobile"
-          onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
-        />
+        <NoticeSections doc={doc} variant="mobile" onOpenPage={pdfUrl ? openOriginal : undefined} />
 
         <section aria-labelledby="life-h" className={cn(card, "gap-[10px] px-[20px] py-[16px]")}>
           <div className="flex items-center justify-between">

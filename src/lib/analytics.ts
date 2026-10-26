@@ -42,9 +42,27 @@ export type AnalyticsEvent =
   | "notice_source_open" // 공고 원문(PDF·기관 사이트)을 엶
   | "notice_bookmark"; // 관심 등록
 
-/** 이벤트를 보내요. GA를 불러오지 않았으면(측정 ID 없음·동의 안 함) 아무 일도 하지 않아요 */
+/** GA 스크립트가 준비되기 전에 나온 이벤트를 잠깐 모아 두는 곳. GA 초기화 스크립트가 config 뒤에 보내요 */
+export const QUEUE_KEY = "__mujuthaekGaQueue";
+const QUEUE_MAX = 20;
+
+type GaWindow = Window & {
+  gtag?: (...args: unknown[]) => void;
+  [QUEUE_KEY]?: [AnalyticsEvent, Record<string, string | number>][];
+};
+
+/**
+ * 이벤트를 보내요. GA를 불러오지 않았으면(측정 ID 없음·동의 안 함) 아무 일도 하지 않아요.
+ * 공고 주소로 바로 들어오면 화면이 GA 스크립트보다 먼저 그려져요. 그때 나온 이벤트는 모아 뒀다가 GA가 준비되면 보내요
+ */
 export function track(name: AnalyticsEvent, params: Record<string, string | number> = {}) {
   if (typeof window === "undefined") return;
-  const gtag = (window as { gtag?: (...args: unknown[]) => void }).gtag;
-  gtag?.("event", name, params);
+  const w = window as GaWindow;
+  if (w.gtag) {
+    w.gtag("event", name, params);
+    return;
+  }
+  if (!GA_ID || readConsent() !== "granted") return;
+  const queue = (w[QUEUE_KEY] ??= []);
+  if (queue.length < QUEUE_MAX) queue.push([name, params]);
 }

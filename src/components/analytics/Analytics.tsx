@@ -8,6 +8,7 @@ import {
   GA_DEBUG,
   GA_ID,
   onConsentChange,
+  QUEUE_KEY,
   readConsent,
   writeConsent,
   type Consent,
@@ -37,7 +38,7 @@ export function Analytics() {
         strategy="afterInteractive"
       />
       <Script id="ga-init" strategy="afterInteractive">
-        {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('js',new Date());gtag('config','${GA_ID}'${GA_DEBUG ? ",{debug_mode:true}" : ""});`}
+        {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=gtag;gtag('js',new Date());gtag('config','${GA_ID}'${GA_DEBUG ? ",{debug_mode:true}" : ""});(window.${QUEUE_KEY}||[]).splice(0).forEach(function(e){gtag('event',e[0],e[1]);});`}
       </Script>
     </>
   );

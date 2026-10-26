@@ -7,8 +7,10 @@ import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { MRankCard } from "@/components/notice/RankCard";
 import { pdfSections } from "@/features/notice/format";
+import { noticeParams, useJudgmentViewed } from "@/features/notice/analytics";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
+import { track } from "@/lib/analytics";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -28,9 +30,16 @@ export function MDetailUnits({ id }: { id: string }) {
   const units = n.kind === "units" ? n.units.slice(0, MOBILE_UNIT_COUNT) : [];
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
   const pdf = usePdfViewer();
+  useJudgmentViewed(id, n);
   if (n.kind !== "units") return null;
   const { doc } = n;
   const pdfUrl = doc.source.pdfUrl;
+  /** 원문 PDF가 있으면 시트로 열고, 없으면 기관 사이트로 */
+  const openOriginal = (page = 1, label?: string) => {
+    track("notice_source_open", { ...noticeParams(n), via: pdfUrl ? "pdf" : "site" });
+    if (pdfUrl) pdf.show(page, label);
+    else window.open(doc.source.detailUrl, "_blank", "noreferrer");
+  };
 
   const seg = (on: boolean) =>
     cn(
@@ -183,11 +192,7 @@ export function MDetailUnits({ id }: { id: string }) {
         {n.ranking && <MRankCard ranking={n.ranking} />}
 
         <NoticeToc doc={doc} variant="mobile" />
-        <NoticeSections
-          doc={doc}
-          variant="mobile"
-          onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
-        />
+        <NoticeSections doc={doc} variant="mobile" onOpenPage={pdfUrl ? openOriginal : undefined} />
       </main>
       <MBottomActions>
         <div className="flex w-full flex-col gap-[6px]">
@@ -198,9 +203,7 @@ export function MDetailUnits({ id }: { id: string }) {
           )}
           <button
             type="button"
-            onClick={() =>
-              pdfUrl ? pdf.show() : window.open(doc.source.detailUrl, "_blank", "noreferrer")
-            }
+            onClick={() => openOriginal()}
             className="rounded-control bg-brand flex min-h-[56px] cursor-pointer items-center justify-center border-0 text-[17px] font-extrabold text-white"
           >
             {n.agency} 공고 원문 보기

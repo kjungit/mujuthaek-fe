@@ -347,7 +347,7 @@ export function WebDetail({ id }: { id: string }) {
               <NoticeSections
                 doc={doc}
                 variant="web"
-                onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
+                onOpenPage={pdfUrl ? openOriginal : undefined}
               />
 
               {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
