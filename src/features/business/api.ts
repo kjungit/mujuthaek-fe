@@ -292,7 +292,7 @@ export function toSupportItem(it: ApiSupportItem): SupportItem {
     mReason: reason,
     summary: [org, period].filter(Boolean).join(" · "),
     due: dueOf(it),
-    href: routes.bizSupportItem(it.id),
+    href: `${routes.bizSupport}/${encodeURIComponent(it.id)}`,
   };
 }
 

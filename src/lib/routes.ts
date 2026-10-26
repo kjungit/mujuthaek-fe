@@ -21,7 +21,6 @@ export const routes = {
   bizOnboarding: "/business/onboarding",
   space: (id: string) => `/business/spaces/${id}`,
   bizSupport: "/business/support",
-  bizSupportItem: (id: string) => `/business/support/${id}`,
   announcements: "/announcements",
   faq: "/faq",
   terms: "/terms",
