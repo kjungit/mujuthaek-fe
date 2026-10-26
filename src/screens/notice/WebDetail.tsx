@@ -462,15 +462,15 @@ export function WebDetail({ id }: { id: string }) {
                 </div>
               </section>
 
+              {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
+              {n.hasUnits && <ApiBlockUnits notice={n} judgment={j.judgment} />}
+
               <NoticeToc doc={doc} variant="web" />
               <NoticeSections
                 doc={doc}
                 variant="web"
                 onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
               />
-
-              {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
-              {n.hasUnits && <ApiBlockUnits notice={n} judgment={j.judgment} />}
 
               {n.life && (
                 <section
