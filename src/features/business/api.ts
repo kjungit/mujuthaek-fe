@@ -1,6 +1,7 @@
 "use client";
 
 // 사업공간 실제 API: POST /api/v1/spaces/search (맞춤 목록) · POST /api/v1/spaces/{id}/evaluate (공간 하나의 판정)
+// 사업 지원: POST /api/v1/supports/search · POST /api/v1/supports/{id}/evaluate (창업지원 사업, 상세 API 없이 판정 응답으로)
 // 공간 상세: 공고면 공고 상세(GET /notices/{id}) + 판정, 모집 정책(K-Startup·기업마당)은 판정 응답(기간·지역·자격 조건)만으로
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -13,12 +14,15 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { snapshotRegions } from "@/lib/regions";
 import {
-  businessSummary,
   type BusinessSummary,
   type SpaceDetail,
   type SpaceItem,
   type SpaceType,
+  type SupportItem,
+  type SupportList,
+  type SupportType,
 } from "@/mocks/business";
+import { routes } from "@/lib/routes";
 
 type Overall = "ELIGIBLE" | "NEEDS_INPUT" | "INELIGIBLE";
 type ApiSpaceType = "STARTUP_SPACE" | "SHOP_RENTAL" | "MEETING_ROOM";
@@ -84,6 +88,38 @@ type ApiSpaceEvaluation = {
     groups: { id: string; name: string; result: Overall; criteria: ApiCriterion[] }[];
   } | null;
 };
+
+type ApiSubField = "FUND" | "LOAN" | "TAX";
+
+/** POST /api/v1/supports/search 한 줄 (백엔드 SupportSearchResponse.Item) */
+type ApiSupportItem = {
+  id: string;
+  source: PolicySource | null;
+  /** 이름으로 정한 지원 종류 */
+  subField: ApiSubField;
+  title: string;
+  regionCodes: string[] | null;
+  status: ApiSpaceItem["status"];
+  applyStart: string | null;
+  applyEnd: string | null;
+  dday: number | null;
+  overall: Overall;
+  reason: string | null;
+  groups: string[];
+  missingInputs: { field: string; label: string }[];
+  detailUrl: string | null;
+};
+
+type ApiSupportSearch = {
+  counts: { eligible: number; needsInput: number; ineligible: number };
+  subFieldCounts: Record<ApiSubField, number>;
+  items: ApiSupportItem[];
+  nextCursor: string | null;
+  hasNext: boolean;
+};
+
+/** POST /api/v1/supports/{id}/evaluate (백엔드 SupportEvaluationResponse). 판정 응답 모양은 사업공간과 같아요 */
+type ApiSupportEvaluation = Omit<ApiSpaceEvaluation, "policy"> & { subField: ApiSubField };
 
 /** 판정 입력 (판정 엔진 모양). 사업 입력은 아직 저장하지 않아서 사는 곳만 보내요 */
 type SpaceApplicant = { residenceRegionCode?: string };
@@ -180,11 +216,12 @@ function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
 }
 
 /**
- * 사업공간 홈: 맞춤 목록으로 공간 카드와 개수를 채워요. 사업 지원 칸은 아직 목업이에요 (창업지원 목록 API 전).
+ * 사업공간 홈: 공간 맞춤 목록으로 공간 카드와 개수를, 사업 지원 맞춤 목록으로 지원 개수를 채워요.
  * 불러오는 동안은 빈 목록이에요
  */
 export function useApiBusinessSummary() {
   const { ready, applicant } = useSpaceApplicant();
+  const supports = useApiSupportSearch();
   const q = useQuery({
     queryKey: ["spaces", "search", applicant] as const,
     queryFn: () => api.post<ApiSpaceSearch>(endpoints.spacesSearch, { applicant, size: PAGE_SIZE }),
@@ -198,12 +235,119 @@ export function useApiBusinessSummary() {
         count: q.data?.counts.eligible ?? 0,
         closingSoon: items.filter((i) => i.dday !== null && i.dday <= CLOSING_SOON_DAYS).length,
       },
-      support: businessSummary.support,
+      support: supports.data
+        ? {
+            count: supports.data.counts.eligible,
+            needCheck: supports.data.counts.needsInput,
+          }
+        : { count: 0, needCheck: 0 },
       list: items.map(toSpaceItem),
+    };
+  }, [q.data, supports.data]);
+  return { data, loading: q.isPending, error: q.isError };
+}
+
+function useApiSupportSearch() {
+  const { ready, applicant } = useSpaceApplicant();
+  return useQuery({
+    queryKey: ["supports", "search", applicant] as const,
+    queryFn: () =>
+      api.post<ApiSupportSearch>(endpoints.supportsSearch, { applicant, size: PAGE_SIZE }),
+    enabled: ready,
+    staleTime: 60 * 1000,
+  });
+}
+
+const subFieldOf: Record<ApiSubField, SupportType> = { FUND: "fund", LOAN: "loan", TAX: "tax" };
+
+/** 판정 이유 한 줄: 지원 가능이면 충족한 대상, 확인 필요면 넣을 입력 */
+function supportReason(it: ApiSupportItem) {
+  if (it.reason === "CONDITIONS_NOT_READY") return "자격 조건 정리 중";
+  if (it.overall === "ELIGIBLE")
+    return it.groups.length ? `${it.groups.join(" · ")} 충족` : "조건 충족";
+  const inputs = it.missingInputs.map((m) => m.label).slice(0, 2);
+  return inputs.length
+    ? `${inputs.join(" · ")}를 넣으면 판정돼요`
+    : "원문에서 조건을 확인해 주세요";
+}
+
+/** 응답 한 줄 → 사업 지원 줄. 지원 금액은 판정 틀에 없어서 원문에서 */
+export function toSupportItem(it: ApiSupportItem): SupportItem {
+  const org = [it.source ? sourceLabel[it.source] : null, regionLabelOf(it.regionCodes)]
+    .filter(Boolean)
+    .join(" · ");
+  const period = formatPeriod(it.applyStart, it.applyEnd);
+  const reason = supportReason(it);
+  return {
+    id: it.id,
+    type: subFieldOf[it.subField],
+    status: it.overall === "ELIGIBLE" ? "ok" : "check",
+    title: it.title,
+    org,
+    mOrg: org,
+    body: "지원 내용은 원문에서 확인",
+    note: period ? `${statusLabel[it.status]} · ${period}` : statusLabel[it.status],
+    mBody: period ?? statusLabel[it.status],
+    reason,
+    mReason: reason,
+    summary: [org, period].filter(Boolean).join(" · "),
+    due: dueOf(it),
+    href: routes.bizSupportItem(it.id),
+  };
+}
+
+/** 사업 지원 목록 (불러오는 동안은 빈 목록) */
+export function useApiSupportList() {
+  const q = useApiSupportSearch();
+  const data: SupportList = useMemo(() => {
+    const items = q.data?.items ?? [];
+    return {
+      count: q.data?.counts.eligible ?? 0,
+      baseDate: new Intl.DateTimeFormat("ko-KR", {
+        month: "long",
+        day: "numeric",
+        timeZone: "Asia/Seoul",
+      }).format(new Date()),
+      items: items.map(toSupportItem),
+      missingSiteCount: items.filter((i) =>
+        i.missingInputs.some((m) => m.field.includes("siteRegionCode")),
+      ).length,
     };
   }, [q.data]);
   return { data, loading: q.isPending, error: q.isError };
 }
+
+/** 사업 지원 상세: 상세 API가 없어서 판정 응답(기간 · 지역 · 자격 조건)과 원문으로 */
+export function useApiSupportDetail(id: string) {
+  const { ready, applicant } = useSpaceApplicant();
+  const q = useQuery({
+    queryKey: ["supports", "evaluate", id, applicant] as const,
+    queryFn: () => api.post<ApiSupportEvaluation>(endpoints.supportEvaluate(id), { applicant }),
+    enabled: ready,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+  const data = useMemo(
+    () =>
+      q.data &&
+      policyDetail(q.data, {
+        kind: supportKindLabel[q.data.subField],
+        note: "지원 금액 · 신청 방법 · 제출 서류는 원문에서 확인해 주세요",
+      }),
+    [q.data],
+  );
+  return { data, loading: !q.isError && q.isPending, error: q.isError };
+}
+
+const supportKindLabel: Record<ApiSubField, string> = {
+  FUND: "창업 지원금",
+  LOAN: "정책자금",
+  TAX: "세금 감면",
+};
+
+/** 판정 설명 안의 법정동코드(10자리)를 지역 이름으로 ("4400000000 지역 안" → "충남 지역 안") */
+const withRegionNames = (text: string) =>
+  text.replace(/\b\d{10}\b/g, (code) => regionLabelOf([code]) ?? code);
 
 /** 판정 조건 → 내 자격 줄. 근거 문장이 있으면 같이 */
 function rulesOf(j: ApiSpaceEvaluation["judgment"]): SpaceDetail["rules"] {
@@ -212,15 +356,21 @@ function rulesOf(j: ApiSpaceEvaluation["judgment"]): SpaceDetail["rules"] {
     .filter((c) => c.kind !== "RULE" && (c.summary || c.quote))
     .map((c) => ({
       label: criterionLabel[c.kind] ?? "조건",
-      rule: c.summary ?? c.quote ?? "",
-      mRule: c.summary ?? c.quote ?? "",
+      rule: withRegionNames(c.summary ?? c.quote ?? ""),
+      mRule: withRegionNames(c.summary ?? c.quote ?? ""),
       quote: c.summary && c.quote ? c.quote : undefined,
       met: c.result === "MET",
     }));
 }
 
-/** 모집 정책 상세: 공고 상세가 없어서 판정 응답(기간 · 지역 · 자격 조건)과 원문으로 */
-function policyDetail(e: ApiSpaceEvaluation): SpaceDetail {
+/** 모집 정책·사업 지원 상세: 공고 상세가 없어서 판정 응답(기간 · 지역 · 자격 조건)과 원문으로 */
+function policyDetail(
+  e: Omit<ApiSpaceEvaluation, "policy">,
+  text = {
+    kind: "입주기업 모집",
+    note: "입주 공간 · 기간 · 비용 · 준비 서류는 원문에서 확인해 주세요",
+  },
+): SpaceDetail {
   const period = formatPeriod(e.applyStart, e.applyEnd);
   const region = regionLabelOf(e.regionCodes);
   const source = e.source ? sourceLabel[e.source] : "원문";
@@ -230,7 +380,7 @@ function policyDetail(e: ApiSpaceEvaluation): SpaceDetail {
     due: dueOf(e),
     tag: statusLabel[e.status],
     title: e.title,
-    kind: "입주기업 모집",
+    kind: text.kind,
     host: e.source ? sourceLabel[e.source] : "",
     area: region ?? "",
     facts: [
@@ -245,7 +395,7 @@ function policyDetail(e: ApiSpaceEvaluation): SpaceDetail {
     rules: rulesOf(e.judgment),
     sourceUrl: e.detailUrl ?? undefined,
     notReady: !e.judgment,
-    summaryNote: "입주 공간 · 기간 · 비용 · 준비 서류는 원문에서 확인해 주세요",
+    summaryNote: text.note,
   };
 }
 

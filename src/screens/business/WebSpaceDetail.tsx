@@ -6,7 +6,7 @@ import { useState } from "react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
-import { useSpaceDetail } from "@/features/business/queries";
+import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -66,12 +66,42 @@ function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
   );
 }
 
+/** 돌아갈 목록: 공간 상세는 사업공간 홈, 사업 지원 상세는 사업 지원 목록 */
+type Back = { href: string; label: string; noun: string };
+
 export function WebSpaceDetail({ id }: { id: string }) {
-  const { data, loading, error } = useSpaceDetail(id);
+  return (
+    <WebBizDetail
+      {...useSpaceDetail(id)}
+      back={{ href: routes.business, label: "공간 목록", noun: "공간" }}
+    />
+  );
+}
+
+export function WebSupportDetail({ id }: { id: string }) {
+  return (
+    <WebBizDetail
+      {...useSupportDetail(id)}
+      back={{ href: routes.bizSupport, label: "사업 지원 목록", noun: "사업 지원" }}
+    />
+  );
+}
+
+function WebBizDetail({
+  data,
+  loading,
+  error,
+  back,
+}: {
+  data: SpaceDetail | undefined;
+  loading: boolean;
+  error: boolean;
+  back: Back;
+}) {
   if (!data) {
     return (
       <WebPage>
-        <WebHeader mode="business" current={routes.business} unread={3} />
+        <WebHeader mode="business" current={back.href} unread={3} />
         <WebMain className="pt-[24px]">
           {(loading || error) && (
             <div
@@ -79,18 +109,18 @@ export function WebSpaceDetail({ id }: { id: string }) {
               className="rounded-card-lg bg-surface text-text-sub px-[24px] py-[64px] text-center text-[15px]"
             >
               {error
-                ? "공간을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요"
-                : "공간을 불러오는 중이에요"}
+                ? `${back.noun}을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요`
+                : `${back.noun}을 불러오는 중이에요`}
             </div>
           )}
         </WebMain>
       </WebPage>
     );
   }
-  return <WebSpaceDetailView data={data} />;
+  return <WebSpaceDetailView data={data} back={back} />;
 }
 
-function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
+function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const [fav, setFav] = useState(false);
   // 모집 정책은 공간 정보 대신 자격 조건이 많아서 넓은 칸에 보여줘요
@@ -100,14 +130,14 @@ function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
 
   return (
     <WebPage>
-      <WebHeader mode="business" current={routes.business} unread={3} />
+      <WebHeader mode="business" current={back.href} unread={3} />
       <WebMain className="gap-[16px] pt-[24px]">
         <Link
-          href={routes.business}
+          href={back.href}
           className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[4px] self-start text-[15px] font-semibold no-underline"
         >
           <ChevronLeft size={18} aria-hidden />
-          공간 목록
+          {back.label}
         </Link>
 
         <div className="flex flex-wrap items-start gap-[24px]">

@@ -24,7 +24,7 @@ const colTemplate = {
 };
 
 export function WebBizSupport() {
-  const { data } = useSupportList();
+  const { data, loading } = useSupportList();
   const { filter, setFilter, count, visible } = useTypeFilter(data.items);
 
   return (
@@ -49,28 +49,30 @@ export function WebBizSupport() {
           />
         </div>
 
-        <section
-          aria-label="판정 보완"
-          className="rounded-card bg-surface flex flex-wrap items-center gap-x-[16px] gap-y-[12px] px-[22px] py-[18px]"
-        >
-          <span className="bg-check-bg text-check-text flex size-[40px] flex-none items-center justify-center rounded-sm">
-            <MapPin size={20} aria-hidden />
-          </span>
-          <span className="flex flex-col gap-[2px]" style={{ flex: "1 1 280px" }}>
-            <span className="text-[16px] font-extrabold">
-              사업장 소재지를 알려주면 1개를 더 판정할 수 있어요
-            </span>
-            <span className="text-text-sub text-[14px]">
-              지역 지원금은 사업장이 어디인지에 따라 대상이 달라요
-            </span>
-          </span>
-          <Link
-            href={routes.bizOnboarding}
-            className="bg-brand inline-flex min-h-[44px] items-center rounded-sm px-[18px] text-[15px] font-bold text-white no-underline hover:text-white"
+        {Boolean(data.missingSiteCount) && (
+          <section
+            aria-label="판정 보완"
+            className="rounded-card bg-surface flex flex-wrap items-center gap-x-[16px] gap-y-[12px] px-[22px] py-[18px]"
           >
-            입력하기
-          </Link>
-        </section>
+            <span className="bg-check-bg text-check-text flex size-[40px] flex-none items-center justify-center rounded-sm">
+              <MapPin size={20} aria-hidden />
+            </span>
+            <span className="flex flex-col gap-[2px]" style={{ flex: "1 1 280px" }}>
+              <span className="text-[16px] font-extrabold">
+                사업장 소재지를 알려주면 {data.missingSiteCount}개를 더 판정할 수 있어요
+              </span>
+              <span className="text-text-sub text-[14px]">
+                지역 지원금은 사업장이 어디인지에 따라 대상이 달라요
+              </span>
+            </span>
+            <Link
+              href={routes.bizOnboarding}
+              className="bg-brand inline-flex min-h-[44px] items-center rounded-sm px-[18px] text-[15px] font-bold text-white no-underline hover:text-white"
+            >
+              입력하기
+            </Link>
+          </section>
+        )}
 
         <section aria-label="사업 지원 목록" className="rounded-card-lg bg-surface overflow-hidden">
           <div className="overflow-x-auto">
@@ -90,6 +92,13 @@ export function WebBizSupport() {
                   기한
                 </span>
               </div>
+              {visible.length === 0 && (
+                <p className="text-text-sub m-0 px-[28px] py-[48px] text-center text-[15px]">
+                  {loading
+                    ? "사업 지원을 불러오는 중이에요"
+                    : "지금 받을 수 있는 사업 지원이 없어요"}
+                </p>
+              )}
               {visible.map((it) => {
                 const Icon = typeIcon[it.type];
                 return (
@@ -112,9 +121,18 @@ export function WebBizSupport() {
                         <Icon size={22} aria-hidden />
                       </span>
                       <span className="flex min-w-0 flex-col gap-[4px]">
-                        <span className="text-[17px] font-extrabold tracking-[-0.02em]">
-                          {it.title}
-                        </span>
+                        {it.href ? (
+                          <Link
+                            href={it.href}
+                            className="text-text hover:text-text text-[17px] font-extrabold tracking-[-0.02em] no-underline"
+                          >
+                            {it.title}
+                          </Link>
+                        ) : (
+                          <span className="text-[17px] font-extrabold tracking-[-0.02em]">
+                            {it.title}
+                          </span>
+                        )}
                         <span className="text-text-sub text-[13px]">{it.org}</span>
                       </span>
                     </span>

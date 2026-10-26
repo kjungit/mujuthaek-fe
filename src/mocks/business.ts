@@ -43,7 +43,8 @@ export type SpaceItem = {
 export type BusinessSummary = {
   /** newThisWeek: 실제 API는 아직 몰라서 없어요 */
   spaces: { count: number; closingSoon: number; newThisWeek?: number };
-  support: { count: number; maxAmount: string; needCheck: number };
+  /** maxAmount: 실제 API는 지원 금액을 몰라서 없어요 */
+  support: { count: number; maxAmount?: string; needCheck: number };
   list: SpaceItem[];
 };
 
@@ -133,17 +134,22 @@ export type SupportItem = {
   /** 사업공간 홈 오른쪽 목록의 한 줄 설명 */
   summary: string;
   due: string;
+  /** 상세 화면 (실제 API) */
+  href?: string;
 };
 
 export type SupportList = {
   count: number;
   baseDate: string;
   items: SupportItem[];
+  /** 사업장 소재지를 넣으면 판정할 수 있는 사업 수 */
+  missingSiteCount?: number;
 };
 
 export const supportList: SupportList = {
   count: 3,
   baseDate: "10월 20일",
+  missingSiteCount: 1,
   items: [
     {
       id: "f1",

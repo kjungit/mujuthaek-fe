@@ -98,8 +98,13 @@ export function WebBusiness() {
               </span>
               <span className="tracking-h1 text-[40px] font-extrabold">{data.support.count}개</span>
               <span className="text-text-sub text-[14px]">
-                지원금 최대 <strong className="text-brand-strong">{data.support.maxAmount}</strong>{" "}
-                · 확인 필요 {data.support.needCheck}개
+                {data.support.maxAmount && (
+                  <>
+                    지원금 최대{" "}
+                    <strong className="text-brand-strong">{data.support.maxAmount}</strong> ·{" "}
+                  </>
+                )}
+                확인 필요 {data.support.needCheck}개
               </span>
             </span>
             <span className="rounded-pill bg-fill text-text flex size-[44px] flex-none items-center justify-center">
@@ -203,7 +208,7 @@ export function WebBusiness() {
               return (
                 <Link
                   key={s.id}
-                  href={routes.bizSupport}
+                  href={s.href ?? routes.bizSupport}
                   className={cn(
                     "text-text hover:text-text flex flex-col gap-[6px] no-underline",
                     last

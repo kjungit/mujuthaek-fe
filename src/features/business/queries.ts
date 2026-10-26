@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useApiBusinessSummary, useApiSpaceDetail } from "@/features/business/api";
+import {
+  useApiBusinessSummary,
+  useApiSpaceDetail,
+  useApiSupportDetail,
+  useApiSupportList,
+} from "@/features/business/api";
 import { mockQuery } from "@/features/mock-query";
 import { USE_MOCKS } from "@/lib/api/config";
 import {
@@ -30,9 +35,19 @@ function useMockBusinessSummary() {
 // USE_MOCKS는 빌드 때 정해지는 값이라 훅 순서가 바뀌지 않아요
 export const useBusinessSummary = USE_MOCKS ? useMockBusinessSummary : useApiBusinessSummary;
 
-export function useSupportList() {
-  return useQuery(mockQuery(businessKeys.support, supportList));
+function useMockSupportList() {
+  const { data } = useQuery(mockQuery(businessKeys.support, supportList));
+  return { data, loading: false, error: false };
 }
+
+export const useSupportList = USE_MOCKS ? useMockSupportList : useApiSupportList;
+
+/** 목업 단계: 사업 지원 상세는 공간 예시를 보여줘요 */
+function useMockSupportDetail(id: string) {
+  return useMockSpaceDetail(id);
+}
+
+export const useSupportDetail = USE_MOCKS ? useMockSupportDetail : useApiSupportDetail;
 
 /** 목업 단계: 없는 id면 첫 공간을 보여줘요 */
 function useMockSpaceDetail(id: string) {

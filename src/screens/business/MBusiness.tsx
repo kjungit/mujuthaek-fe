@@ -65,7 +65,11 @@ export function MBusiness() {
           >
             <span className="text-text-sub text-[13px] font-semibold">사업 지원</span>
             <span className="tracking-h1 text-[28px] font-extrabold">{data.support.count}개</span>
-            <span className="text-text-sub text-[12px]">최대 {data.support.maxAmount}</span>
+            <span className="text-text-sub text-[12px]">
+              {data.support.maxAmount
+                ? `최대 ${data.support.maxAmount}`
+                : `확인 필요 ${data.support.needCheck}개`}
+            </span>
           </Link>
         </div>
 

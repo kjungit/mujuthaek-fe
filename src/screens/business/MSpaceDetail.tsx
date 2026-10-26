@@ -6,7 +6,7 @@ import { useState } from "react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
-import { useSpaceDetail } from "@/features/business/queries";
+import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -17,29 +17,59 @@ const h3 = "m-0 text-[17px] font-extrabold";
 const row = (last: boolean) =>
   cn("flex justify-between text-[15px]", last ? "" : "border-line-soft border-b border-solid");
 
+/** 돌아갈 목록과 머리 제목: 공간 상세 · 사업 지원 상세 */
+type Back = { href: string; title: string; noun: string };
+
 export function MSpaceDetail({ id }: { id: string }) {
-  const { data, loading, error } = useSpaceDetail(id);
+  return (
+    <MBizDetail
+      {...useSpaceDetail(id)}
+      back={{ href: routes.business, title: "공간 공고 상세", noun: "공간" }}
+    />
+  );
+}
+
+export function MSupportDetail({ id }: { id: string }) {
+  return (
+    <MBizDetail
+      {...useSupportDetail(id)}
+      back={{ href: routes.bizSupport, title: "사업 지원 상세", noun: "사업 지원" }}
+    />
+  );
+}
+
+function MBizDetail({
+  data,
+  loading,
+  error,
+  back,
+}: {
+  data: SpaceDetail | undefined;
+  loading: boolean;
+  error: boolean;
+  back: Back;
+}) {
   if (!data) {
     return (
       <MPage>
-        <MBackHeader title="공간 공고 상세" backHref={routes.business} />
+        <MBackHeader title={back.title} backHref={back.href} />
         {(loading || error) && (
           <p
             role={error ? "alert" : undefined}
             className="text-text-sub m-0 px-[20px] py-[64px] text-center text-[15px]"
           >
             {error
-              ? "공간을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요"
-              : "공간을 불러오는 중이에요"}
+              ? `${back.noun}을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요`
+              : `${back.noun}을 불러오는 중이에요`}
           </p>
         )}
       </MPage>
     );
   }
-  return <MSpaceDetailView data={data} />;
+  return <MSpaceDetailView data={data} back={back} />;
 }
 
-function MSpaceDetailView({ data }: { data: SpaceDetail }) {
+function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const [fav, setFav] = useState(false);
   const met = data.rules.filter((r) => r.met).length;
@@ -47,7 +77,7 @@ function MSpaceDetailView({ data }: { data: SpaceDetail }) {
 
   return (
     <MPage>
-      <MBackHeader title="공간 공고 상세" backHref={routes.business} />
+      <MBackHeader title={back.title} backHref={back.href} />
       <main className="flex flex-1 flex-col gap-[12px] pb-[24px]">
         <section className="bg-surface flex flex-col">
           <div className="bg-brand-soft text-brand flex h-[180px] items-center justify-center">
