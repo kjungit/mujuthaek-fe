@@ -391,13 +391,15 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
               <span className="text-[15px] font-bold">{c.name}</span>
               <span className="text-text-sub text-[13px]">{c.desc}</span>
             </span>
-            <a
-              href={`tel:${c.phone}`}
-              className="bg-surface text-text hover:text-text inline-flex min-h-[44px] flex-none items-center gap-[6px] rounded-sm px-[14px] text-[14px] font-bold no-underline"
-            >
-              <Phone size={16} aria-hidden />
-              {c.phone}
-            </a>
+            {c.phone && (
+              <a
+                href={`tel:${c.phone}`}
+                className="bg-surface text-text hover:text-text inline-flex min-h-[44px] flex-none items-center gap-[6px] rounded-sm px-[14px] text-[14px] font-bold no-underline"
+              >
+                <Phone size={16} aria-hidden />
+                {c.phone}
+              </a>
+            )}
           </li>
         ))}
       </ul>
