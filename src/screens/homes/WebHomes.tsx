@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Building, Heart, House } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
@@ -14,9 +14,11 @@ import {
   filterGroups,
   moveInModes,
   sortOptions,
+  tenureParam,
   type FilterKey,
   type SortOption,
 } from "@/features/homes/filters";
+import { HomesMap } from "@/components/homes/HomesMap";
 import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomeList } from "@/features/homes/list";
 import { useRegionFilter } from "@/features/homes/region";
@@ -113,6 +115,9 @@ export function WebHomes() {
     showCheck: checked.check,
   });
   const visible = list.listings;
+  const [view, setView] = useState<"list" | "map">("list");
+  const verdicts = useMemo(() => new Map(visible.map((l) => [l.id, l.verdict])), [visible]);
+  const verdictOf = useCallback((id: string) => verdicts.get(id), [verdicts]);
   // 관심 공고는 로그인 연결 때 서버 값으로 바꿔요 (지금은 이 화면 안에서만)
   const [liked, setLiked] = useState(
     () => new Set(visible.filter((l) => l.liked).map((l) => l.id)),
@@ -147,20 +152,22 @@ export function WebHomes() {
           </div>
           <div className="flex flex-wrap items-center gap-[10px]">
             <div role="group" aria-label="보기 방식" className="bg-surface flex rounded-sm p-[4px]">
-              <button
-                type="button"
-                aria-pressed="true"
-                className="bg-text min-h-[36px] cursor-pointer rounded-[9px] border-0 px-[14px] text-[14px] font-bold text-white"
-              >
-                목록
-              </button>
-              <button
-                type="button"
-                aria-pressed="false"
-                className="text-text-sub min-h-[36px] cursor-pointer rounded-[9px] border-0 bg-transparent px-[14px] text-[14px] font-semibold"
-              >
-                지도
-              </button>
+              {(["list", "map"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={view === v}
+                  onClick={() => setView(v)}
+                  className={cn(
+                    "min-h-[36px] cursor-pointer rounded-[9px] border-0 px-[14px] text-[14px]",
+                    view === v
+                      ? "bg-text font-bold text-white"
+                      : "text-text-sub bg-transparent font-semibold",
+                  )}
+                >
+                  {v === "list" ? "목록" : "지도"}
+                </button>
+              ))}
             </div>
             <label className="text-text-sub inline-flex items-center gap-[8px] text-[14px]">
               정렬
@@ -247,6 +254,14 @@ export function WebHomes() {
             className="flex min-w-0 flex-col gap-[20px]"
             style={{ flex: "999 1 560px" }}
           >
+            {view === "map" && (
+              <HomesMap
+                regionCodes={region.codes}
+                tenure={tenureParam[mode]}
+                verdictOf={verdictOf}
+                className="h-[520px]"
+              />
+            )}
             <div
               className="grid gap-[16px]"
               style={{ gridTemplateColumns: "repeat(auto-fill, minmax(262px, 1fr))" }}
