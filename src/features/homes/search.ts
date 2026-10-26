@@ -90,6 +90,10 @@ export function toListing(item: SearchItem): HomeListing {
     // 목록 응답에는 아직 보증금·월세가 없어요 (공고 상세에서 보여요)
     price: "",
     tags: item.tags.map((t) => tagLabel[t]).filter(Boolean),
+    life:
+      item.areaScore === null
+        ? undefined
+        : `생활권 ${item.siteCount > 1 ? "최고 " : ""}${Math.round(item.areaScore)}점`,
     prepAmount: item.prepareCostWon !== null ? manWonLabel(item.prepareCostWon) : undefined,
     prepNote:
       item.prepareCostWon === null

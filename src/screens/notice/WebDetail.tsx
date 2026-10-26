@@ -1,23 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   Building,
   ChevronRight,
-  Clock4,
   FileText,
   Heart,
   MapPin,
   MessageSquareWarning,
-  TrainFront,
-  Trees,
-  type LucideIcon,
 } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
+import { LifeCard } from "@/components/notice/LifeCard";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { WebUnitFilter } from "@/components/notice/UnitFilter";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
@@ -34,13 +31,7 @@ import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { NoticeLifeItem, NoticeUnit, StandardNotice } from "@/mocks/notice";
-
-const lifeIcon: Record<NoticeLifeItem["kind"], LucideIcon> = {
-  commute: Clock4,
-  station: TrainFront,
-  park: Trees,
-};
+import type { NoticeUnit, StandardNotice } from "@/mocks/notice";
 
 const sectionTitle = "tracking-title m-0 text-[21px] font-extrabold";
 
@@ -59,9 +50,11 @@ type BlockUnitsProps = {
   more?: { onClick: () => void; loading: boolean };
   /** 원본 엑셀 버튼 (목업만) */
   excel?: boolean;
+  /** 고른 집 단지의 생활권 카드로 (실제 API) */
+  onShowLife?: (siteId: string) => void;
 };
 
-function BlockUnits({ units, map, more, excel = true }: BlockUnitsProps) {
+function BlockUnits({ units, map, more, excel = true, onShowLife }: BlockUnitsProps) {
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
 
   return (
@@ -111,6 +104,9 @@ function BlockUnits({ units, map, more, excel = true }: BlockUnitsProps) {
               {g.name && (
                 <h3 className="text-text-sub bg-surface sticky top-0 z-[1] m-0 py-[4px] text-[14px] font-extrabold">
                   {g.name} <span className="text-brand">{g.count}호</span>
+                  {g.lifeScore !== undefined && (
+                    <span className="text-text-tertiary font-bold"> · 생활권 {g.lifeScore}점</span>
+                  )}
                 </h3>
               )}
               {g.units.map((u) => {
@@ -302,12 +298,24 @@ function BlockUnits({ units, map, more, excel = true }: BlockUnitsProps) {
             )}
           </div>
           <div className="flex gap-[8px]">
-            <Link
-              href={routes.life}
-              className="text-text hover:text-text inline-flex min-h-[46px] items-center gap-[6px] rounded-sm bg-white px-[14px] text-[14px] font-bold no-underline"
-            >
-              <MapPin size={17} aria-hidden />이 집 생활권
-            </Link>
+            {onShowLife && selected.siteId ? (
+              selected.lifeScore !== undefined && (
+                <button
+                  type="button"
+                  onClick={() => onShowLife(selected.siteId!)}
+                  className="text-text inline-flex min-h-[46px] cursor-pointer items-center gap-[6px] rounded-sm border-0 bg-white px-[14px] text-[14px] font-bold"
+                >
+                  <MapPin size={17} aria-hidden />이 집 생활권 {selected.lifeScore}점
+                </button>
+              )
+            ) : (
+              <Link
+                href={routes.life}
+                className="text-text hover:text-text inline-flex min-h-[46px] items-center gap-[6px] rounded-sm bg-white px-[14px] text-[14px] font-bold no-underline"
+              >
+                <MapPin size={17} aria-hidden />이 집 생활권
+              </Link>
+            )}
             <button
               type="button"
               className="bg-brand inline-flex min-h-[46px] cursor-pointer items-center gap-[6px] rounded-sm border-0 px-[14px] text-[14px] font-bold text-white"
@@ -326,9 +334,11 @@ function BlockUnits({ units, map, more, excel = true }: BlockUnitsProps) {
 function ApiBlockUnits({
   notice,
   judgment,
+  onShowLife,
 }: {
   notice: StandardNotice;
   judgment: NoticeJudgment | null;
+  onShowLife: (siteId: string) => void;
 }) {
   const q = useNoticeUnits(notice.id, true);
   const sites = useMemo(() => notice.sites ?? [], [notice.sites]);
@@ -341,6 +351,7 @@ function ApiBlockUnits({
     <BlockUnits
       units={units}
       excel={false}
+      onShowLife={onShowLife}
       more={
         q.hasNextPage
           ? { onClick: () => void q.fetchNextPage(), loading: q.isFetchingNextPage }
@@ -366,6 +377,7 @@ export function WebDetail({ id }: { id: string }) {
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
   const pdf = usePdfViewer();
+  const [lifeSite, setLifeSite] = useState<string>();
   if (!n) {
     return (
       <WebPage>
@@ -392,6 +404,11 @@ export function WebDetail({ id }: { id: string }) {
   /** 원문 PDF가 있으면 옆에 열고, 없으면 기관 사이트로 */
   const openOriginal = (page = 1, label?: string) =>
     pdfUrl ? pdf.show(page, label) : window.open(doc.source.detailUrl, "_blank", "noreferrer");
+  /** 주택목록에서 고른 집 단지의 생활권으로 */
+  const showLife = (siteId: string) => {
+    setLifeSite(siteId);
+    document.getElementById("life")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
     <WebPage>
@@ -463,7 +480,9 @@ export function WebDetail({ id }: { id: string }) {
               </section>
 
               {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
-              {n.hasUnits && <ApiBlockUnits notice={n} judgment={j.judgment} />}
+              {n.hasUnits && (
+                <ApiBlockUnits notice={n} judgment={j.judgment} onShowLife={showLife} />
+              )}
 
               <NoticeToc doc={doc} variant="web" />
               <NoticeSections
@@ -473,50 +492,12 @@ export function WebDetail({ id }: { id: string }) {
               />
 
               {n.life && (
-                <section
-                  aria-label="생활권"
-                  className="rounded-card-lg bg-surface flex flex-col gap-[18px] px-[30px] py-[28px]"
-                >
-                  <div className="flex items-center justify-between">
-                    <h2 className={sectionTitle}>
-                      생활권 <span className="text-brand">{n.life.score}점</span>
-                    </h2>
-                    <Link
-                      href={routes.life}
-                      className="text-brand-strong inline-flex min-h-[44px] items-center gap-[2px] text-[15px] font-bold no-underline"
-                    >
-                      자세히
-                      <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
-                    </Link>
-                  </div>
-                  {n.life.items.length > 0 && (
-                    <div
-                      className="grid gap-[16px]"
-                      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}
-                    >
-                      {n.life.items.map((it) => {
-                        const Icon = lifeIcon[it.kind];
-                        return (
-                          <div key={it.kind} className="flex flex-col gap-[8px]">
-                            <span className="flex justify-between text-[15px]">
-                              <span className="inline-flex items-center gap-[6px]">
-                                <Icon size={18} className="text-text-sub" aria-hidden />
-                                {it.label}
-                              </span>
-                              <strong>{it.value}</strong>
-                            </span>
-                            <span className="bg-fill h-[8px] overflow-hidden rounded-[4px]">
-                              <span
-                                className="bg-brand block h-full rounded-[4px]"
-                                style={{ width: `${it.pct}%` }}
-                              />
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
+                <LifeCard
+                  life={n.life}
+                  variant="web"
+                  siteId={lifeSite}
+                  onSiteChange={setLifeSite}
+                />
               )}
 
               {benefits.length > 0 && (

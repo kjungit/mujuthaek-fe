@@ -62,8 +62,11 @@ export function SitesMap({ sites, selectedSiteId, onSelectSite, className }: Pro
     const overlays = located.map((s) => {
       const el = document.createElement("button");
       el.type = "button";
-      el.textContent = s.name;
-      el.setAttribute("aria-label", `${s.name} 위치`);
+      el.textContent = s.lifeScore === undefined ? s.name : `${s.name} · ${s.lifeScore}점`;
+      el.setAttribute(
+        "aria-label",
+        s.lifeScore === undefined ? `${s.name} 위치` : `${s.name} 위치 · 생활권 ${s.lifeScore}점`,
+      );
       el.className = cn(pin, s.id === focus?.id ? "bg-brand text-white" : "bg-surface text-text");
       el.addEventListener("click", () => onSelectSite?.(s.id));
       return new maps.CustomOverlay({

@@ -10,6 +10,8 @@ export type HomeListing = {
   title: string;
   price: string;
   tags: string[];
+  /** "생활권 82점" · 단지가 여럿이면 "생활권 최고 82점". 점수가 없으면 없음 */
+  life?: string;
   /** 준비할 돈. 없으면 note를 보여줘요 */
   prepAmount?: string;
   prepNote?: string;

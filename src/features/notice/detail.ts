@@ -66,6 +66,8 @@ export type ApiNoticeDetail = {
     address: string | null;
     lat: number | null;
     lng: number | null;
+    /** area 위치 ID (GET /areas/sites/{siteId}). area가 아직 모르는 위치면 null */
+    siteId: string | null;
     tags: string[];
   }[];
   unitTypes: {
@@ -419,7 +421,22 @@ const todayYmd = (now: Date) =>
 /** 상세 응답 → 화면 값. 판정(배지 · 내 자격 · 준비할 돈)은 판정 응답에서 따로 채워요 */
 export function toNotice(d: ApiNoticeDetail, now = new Date()): StandardNotice {
   const { header: h } = d;
-  const living = d.areaSummaries.filter((a) => a.kind === "LIVING").map((a) => a.score);
+  const scoreOf = new Map(
+    d.areaSummaries
+      .filter((a) => a.kind === "LIVING")
+      .map((a) => [a.siteId, Math.round(a.score)] as const),
+  );
+  const siteName = (s: ApiNoticeDetail["sites"][number]) => s.name ?? s.address ?? "단지";
+  const lifeSites = d.sites
+    .filter((s) => scoreOf.has(s.id))
+    .map((s) => ({
+      id: s.id,
+      areaId: s.siteId,
+      name: siteName(s),
+      score: scoreOf.get(s.id)!,
+      tags: s.tags.map((t) => tagLabel[t]).filter(Boolean),
+    }))
+    .sort((a, b) => b.score - a.score);
   const tags = [...new Set(d.sites.flatMap((s) => s.tags))].map((t) => tagLabel[t]).filter(Boolean);
   const agency = providerName(h.provider);
   const notice: StandardNotice = {
@@ -440,12 +457,15 @@ export function toNotice(d: ApiNoticeDetail, now = new Date()): StandardNotice {
     facts: factsOf(d),
     eligibility: [],
     doc: docOf(d, todayYmd(now)),
-    life: living.length ? { score: Math.round(Math.max(...living)), items: [] } : undefined,
+    life: lifeSites.length
+      ? { score: lifeSites[0].score, min: lifeSites.at(-1)!.score, sites: lifeSites }
+      : undefined,
     sites: d.sites.map((s) => ({
       id: s.id,
-      name: s.name ?? s.address ?? "단지",
+      name: siteName(s),
       lat: s.lat,
       lng: s.lng,
+      lifeScore: scoreOf.get(s.id),
     })),
     hasUnits: d.hasUnits,
   };
