@@ -2,11 +2,13 @@
 
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { sourceAction } from "@/features/admin/api";
 import { AdminTitle } from "@/components/admin/AdminShell";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
-import { useAdminSources } from "@/features/admin/queries";
+import { useAdminSources, useSetAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import type { SourceRow, SourceRun, SourceStatus } from "@/mocks/admin";
+import { USE_MOCKS } from "@/lib/api/config";
 
 type ShownStatus = SourceStatus | "paused" | "running";
 
@@ -57,14 +59,34 @@ function SummaryTile({
 export function AdminWebSources() {
   const { data } = useAdminSources();
   const [sel, setSel] = useState("gh");
-  const [rerun, setRerun] = useState<Record<string, boolean>>({});
+  // 다시 수집을 요청한 때의 기준 시각(asOf). 다음 새로고침(asOf가 바뀜)부터는 실제 상태를 보여요.
+  // 예전엔 true로 남아 수집이 실패해도 「수집 중」이 계속 보였어요
+  const [rerun, setRerun] = useState<Record<string, string>>({});
   const [paused, setPaused] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<string | null>(null);
+  const setCounts = useSetAdminCounts();
+  const live = !USE_MOCKS;
+  // 수집기 관리자 API로 지금 다시 수집·멈춤·다시 켜기를 보내요
+  const act = async (code: string, action: "run" | "pause" | "resume") => {
+    if (!live) return true;
+    try {
+      setError(null);
+      await sourceAction(code, action);
+      setCounts({});
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      return false;
+    }
+  };
 
   const stOf = (r: SourceRow): ShownStatus =>
-    rerun[r.id] ? "running" : paused[r.id] ? "paused" : r.st;
+    rerun[r.id] === data.asOf ? "running" : paused[r.id] ? "paused" : r.st;
   const cur = data.rows.find((r) => r.id === sel) ?? data.rows[0];
+  if (!cur)
+    return <div className="text-text-sub p-[24px] text-[15px]">수집 현황을 불러오는 중이에요…</div>;
   const curSt = ST[stOf(cur)];
-  const hasIssue = !!cur.issue && !rerun[cur.id];
+  const hasIssue = !!cur.issue && rerun[cur.id] !== data.asOf;
 
   return (
     <>
@@ -168,9 +190,9 @@ export function AdminWebSources() {
           )}
           <div className="flex flex-col">
             <span className="mb-[6px] text-[15px] font-extrabold">최근 기록</span>
-            {cur.runs.map((x) => (
+            {cur.runs.map((x, i) => (
               <div
-                key={x.at}
+                key={`${i}-${x.at}`}
                 className="border-line-soft flex justify-between gap-[10px] border-t border-solid py-[9px] text-[14px]"
               >
                 <span className="text-text-sub">{x.at}</span>
@@ -192,19 +214,32 @@ export function AdminWebSources() {
           <div className="flex flex-wrap gap-[8px]">
             <button
               type="button"
-              onClick={() => setRerun({ ...rerun, [cur.id]: true })}
+              onClick={async () => {
+                if (await act(cur.id, "run")) setRerun({ ...rerun, [cur.id]: data.asOf });
+              }}
               className="rounded-control bg-brand inline-flex min-h-[48px] cursor-pointer items-center gap-[6px] border-0 px-[18px] text-[15px] font-extrabold text-white"
             >
               <RefreshCw size={18} aria-hidden />
-              {rerun[cur.id] ? "수집 요청함" : "지금 다시 수집"}
+              {rerun[cur.id] === data.asOf ? "수집 요청함" : "지금 다시 수집"}
             </button>
             <button
               type="button"
-              onClick={() => setPaused({ ...paused, [cur.id]: !paused[cur.id] })}
+              onClick={async () => {
+                const now = paused[cur.id] ?? data.enabled?.[cur.id] === false;
+                if (await act(cur.id, now ? "resume" : "pause"))
+                  setPaused({ ...paused, [cur.id]: !now });
+              }}
               className="rounded-control bg-fill text-text min-h-[48px] cursor-pointer border-0 px-[18px] text-[15px] font-bold"
             >
-              {paused[cur.id] ? "수집 다시 켜기" : "일시 중지"}
+              {(paused[cur.id] ?? data.enabled?.[cur.id] === false)
+                ? "수집 다시 켜기"
+                : "일시 중지"}
             </button>
+            {error && (
+              <span className="text-text-sub self-center text-[14px] font-bold">
+                처리하지 못했어요 · {error}
+              </span>
+            )}
           </div>
         </section>
       </div>

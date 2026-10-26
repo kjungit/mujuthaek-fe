@@ -4,20 +4,22 @@ import { ChevronRight, ExternalLink, Users } from "lucide-react";
 import { useState } from "react";
 import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/Badge";
+import { decideReview, reviewMeta } from "@/features/admin/api";
 import { useReviewQueue, useSetAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import type { ReviewReason, SourcePartKind } from "@/mocks/admin";
+import { USE_MOCKS } from "@/lib/api/config";
 
 const REASON: Record<ReviewReason, { label: string; tone: "ok" | "check" | "danger" }> = {
   must: { label: "필수 검수", tone: "ok" },
-  low: { label: "신뢰도 낮음", tone: "check" },
+  low: { label: "확인 필요", tone: "check" },
   format: { label: "형식 오류", tone: "danger" },
 };
 
 const FILTERS: { key: "all" | ReviewReason; label: string }[] = [
   { key: "all", label: "전체" },
   { key: "must", label: "필수 검수" },
-  { key: "low", label: "신뢰도 낮음" },
+  { key: "low", label: "확인 필요" },
   { key: "format", label: "형식 오류" },
 ];
 
@@ -40,6 +42,9 @@ export function AdminWebReview() {
   const [sel, setSel] = useState(items[0].id);
   const [done, setDone] = useState<Record<string, Done>>({});
   const [edits, setEdits] = useState<Record<string, Record<string, string>>>({});
+  const [rejectReason, setRejectReason] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const shown = items.filter((i) => filter === "all" || i.reason === filter);
   const selId = shown.some((i) => i.id === sel) ? sel : (shown[0]?.id ?? items[0].id);
@@ -47,12 +52,33 @@ export function AdminWebReview() {
   const curEdits = edits[cur.id] ?? {};
   const edited = Object.keys(curEdits).length > 0;
   const curDone = done[cur.id];
-  const pending = data.total - Object.keys(done).length;
+  // 처리하면 대기열을 다시 받아 total이 이미 줄어요. 처리한 수를 또 빼지 않아요
+  const pending = !USE_MOCKS ? data.total : data.total - Object.keys(done).length;
+  const meta = reviewMeta.get(cur.id);
+  /** 건을 바꾸면 반려 사유·오류도 그 건 것이 아니므로 비워요 */
+  const select = (id: string) => {
+    setSel(id);
+    setRejectReason(null);
+    setError(null);
+  };
 
   const statusText = (id: string) =>
     done[id] === "ok" ? "승인함" : done[id] === "no" ? "반려함" : "대기 중";
 
-  const finish = (kind: Done) => {
+  const finish = async (kind: Done) => {
+    // 실제 백엔드에 승인·반려를 보내요(고친 칸은 칸별 수정으로). 목업이면 화면만 바꿔요
+    if (reviewMeta.has(cur.id)) {
+      setBusy(true);
+      setError(null);
+      try {
+        await decideReview(cur.id, kind === "ok", curEdits, rejectReason);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        setBusy(false);
+        return;
+      }
+      setBusy(false);
+    }
     const next = { ...done, [cur.id]: kind };
     setDone(next);
     setCounts({ reviewPending: data.total - Object.keys(next).length });
@@ -60,7 +86,7 @@ export function AdminWebReview() {
 
   const goNext = () => {
     const idx = items.findIndex((i) => i.id === cur.id);
-    setSel(items[(idx + 1) % items.length].id);
+    select(items[(idx + 1) % items.length].id);
     setFilter("all");
   };
 
@@ -71,7 +97,7 @@ export function AdminWebReview() {
       <AdminTitleRow>
         <AdminTitle
           title="검수"
-          desc="AI가 원문에서 뽑은 조건을 확인하고 서비스에 내보내요 · 승인 전에는 사용자에게 보이지 않아요"
+          desc="AI가 원문에서 뽑은 조건을 확인하고 서비스에 내보내요 · 필수 검수·형식 오류는 승인 전까지 안 보이고, 확인 필요는 이미 공개 중이며 보류 칸만 승인 전까지 안 보여요"
         />
       </AdminTitleRow>
 
@@ -114,7 +140,7 @@ export function AdminWebReview() {
                 key={q.id}
                 type="button"
                 aria-pressed={on}
-                onClick={() => setSel(q.id)}
+                onClick={() => select(q.id)}
                 className={cn(
                   "border-t-line-soft text-text flex cursor-pointer flex-col gap-[6px] border-0 border-t border-l-4 border-solid py-[14px] pr-[18px] pl-[14px] text-left",
                   on ? "bg-row-selected border-l-brand" : "bg-surface border-l-transparent",
@@ -135,7 +161,12 @@ export function AdminWebReview() {
           })}
         </section>
 
-        <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 600px" }}>
+        {/* 검수 건을 바꾸면 상세 영역을 통째로 새로 그려요(이전 건의 문단·칸이 남아 보이지 않게) */}
+        <div
+          key={cur.id}
+          className="flex min-w-0 flex-col gap-[16px]"
+          style={{ flex: "999 1 600px" }}
+        >
           <section
             aria-label="검수 대상"
             className="rounded-card bg-surface flex flex-wrap items-center justify-between gap-[12px] px-[26px] py-[22px]"
@@ -155,7 +186,9 @@ export function AdminWebReview() {
               </span>
             </div>
             <a
-              href="#"
+              href={reviewMeta.get(cur.id)?.detailUrl ?? "#"}
+              target="_blank"
+              rel="noreferrer"
               className="bg-fill text-text hover:text-text inline-flex min-h-[44px] items-center gap-[6px] rounded-sm px-[14px] text-[14px] font-bold no-underline"
             >
               원문 사이트
@@ -205,11 +238,14 @@ export function AdminWebReview() {
                 <h3 id="ex-h" className="m-0 text-[17px] font-extrabold">
                   AI 추출 결과
                 </h3>
-                <span className="text-text-sub text-[13px]">신뢰도</span>
+                <span className="text-text-sub text-[13px]">상태</span>
               </div>
               {cur.fields.map((f) => {
-                const low = f.conf < 0.7;
+                // 신뢰도 숫자 대신 백엔드 칸 상태(보류·확인 필요)로 표시해요
+                const low = f.status ? true : f.conf < 0.7;
                 const value = curEdits[f.label] ?? f.value;
+                // 백엔드가 칸별 수정을 받지 않는 칸(목록·묶음 등)은 읽기만
+                const readOnly = meta ? meta.fields[f.label]?.editable === false : false;
                 return (
                   <label
                     key={f.label}
@@ -220,6 +256,10 @@ export function AdminWebReview() {
                     <input
                       type="text"
                       value={value}
+                      readOnly={readOnly}
+                      title={
+                        readOnly ? "여기서 고칠 수 없는 칸이에요. 다르면 반려해 주세요" : undefined
+                      }
                       onChange={(e) =>
                         setEdits({
                           ...edits,
@@ -239,14 +279,25 @@ export function AdminWebReview() {
                         low ? "text-check-text" : "text-text-sub",
                       )}
                     >
-                      {f.conf === 0 ? "없음" : f.conf.toFixed(2)}
+                      {f.status === "HELD"
+                        ? "보류"
+                        : f.status === "CHECK"
+                          ? "확인"
+                          : f.status === "EMPTY"
+                            ? "값 없음"
+                            : ""}
                     </span>
+                    {f.why && (
+                      <span className="text-check-text col-start-2 col-end-4 text-[12px] font-medium">
+                        {f.why}
+                      </span>
+                    )}
                   </label>
                 );
               })}
               <span className="text-text-sub border-line-soft border-t border-solid pt-[10px] text-[13px]">
-                신뢰도 0.7 미만은 노란색으로 표시해요 · 고친 칸은 &apos;수정 후 승인&apos;으로
-                저장돼요
+                보류: 확인 전까지 회원 화면·판정에 안 보이는 칸 · 확인: 확인이 필요한 칸 · 고친 칸은
+                &apos;수정 후 승인&apos;으로 저장돼요
               </span>
             </section>
           </div>
@@ -265,6 +316,14 @@ export function AdminWebReview() {
             aria-label="처리"
             className="rounded-card bg-surface flex flex-col gap-[14px] px-[24px] py-[20px]"
           >
+            {error && (
+              <div
+                role="alert"
+                className="rounded-control bg-fill text-text px-[16px] py-[12px] text-[14px] font-bold"
+              >
+                처리하지 못했어요 · {error}
+              </div>
+            )}
             {curDone && (
               <div
                 role="status"
@@ -284,6 +343,7 @@ export function AdminWebReview() {
               <button
                 type="button"
                 onClick={() => finish("ok")}
+                disabled={busy || cur.id === "empty"}
                 className="rounded-control bg-brand min-h-[52px] cursor-pointer border-0 px-[22px] text-[16px] font-extrabold text-white"
               >
                 {edited ? "수정 후 승인" : "승인"}
@@ -291,12 +351,15 @@ export function AdminWebReview() {
               <button
                 type="button"
                 onClick={() => finish("no")}
+                disabled={busy || cur.id === "empty"}
                 className="rounded-control bg-fill text-text min-h-[52px] cursor-pointer border-0 px-[20px] text-[15px] font-bold"
               >
                 반려
               </button>
               <select
                 aria-label="반려 사유"
+                value={rejectReason ?? "반려 사유 선택"}
+                onChange={(e) => setRejectReason(e.target.selectedIndex ? e.target.value : null)}
                 className="rounded-control border-line bg-surface text-text min-h-[52px] border border-solid px-[14px] text-[15px]"
               >
                 <option>반려 사유 선택</option>
@@ -323,9 +386,9 @@ export function AdminWebReview() {
             <h3 id="log-h" className="m-0 mb-[6px] text-[17px] font-extrabold">
               처리 기록
             </h3>
-            {cur.log.map((l) => (
+            {cur.log.map((l, i) => (
               <div
-                key={l.at + l.text}
+                key={`${i}-${l.at}`}
                 className="border-line-soft grid gap-[12px] border-t border-solid py-[10px] text-[14px]"
                 style={{ gridTemplateColumns: "120px 80px minmax(0, 1fr)" }}
               >

@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
-import { useAdminCriteria } from "@/features/admin/queries";
+import { scheduleMedianIncome } from "@/features/admin/api";
+import { useAdminCriteria, useSetAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
+import { USE_MOCKS } from "@/lib/api/config";
 
 type Tab = "income" | "score" | "region";
 
@@ -26,6 +28,29 @@ const td = "border-line-soft border-b border-solid px-[8px] py-[12px] text-right
 function IncomePanel() {
   const { data } = useAdminCriteria();
   const [year, setYear] = useState(2026);
+  const [note, setNote] = useState<string | null>(null);
+  const setCounts = useSetAdminCounts();
+  // 2027년 고시값을 「적용 예약」으로 실제 기준값 API에 넣어요
+  const schedule = async (form: HTMLElement | null) => {
+    if (USE_MOCKS || !form) return;
+    const inputs = [...form.querySelectorAll<HTMLInputElement>("input[data-household]")];
+    const monthly: Record<string, number> = {};
+    for (const i of inputs) {
+      const v = Number(i.value.replace(/[^0-9]/g, ""));
+      if (v > 0) monthly[i.dataset.household as string] = v;
+    }
+    if (!monthly["1"]) {
+      setNote("1인 가구 값부터 넣어 주세요");
+      return;
+    }
+    try {
+      await scheduleMedianIncome(year, monthly, "관리자 화면 입력");
+      setNote(`${year}년 값을 예약했어요 · ${year}년 1월 1일 0시부터 판정에 쓰여요`);
+      setCounts({});
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   return (
     <div className="flex flex-wrap items-start gap-[20px]">
@@ -105,7 +130,7 @@ function IncomePanel() {
         ) : (
           <>
             <div className="rounded-tile bg-check-bg text-check-text px-[16px] py-[14px] text-[15px] font-bold">
-              고시값을 입력하면 2027년 1월 1일 0시부터 적용돼요
+              {note ?? "고시값을 입력하면 2027년 1월 1일 0시부터 적용돼요"}
             </div>
             <div
               className="grid gap-[12px]"
@@ -118,6 +143,7 @@ function IncomePanel() {
                     <input
                       type="text"
                       inputMode="numeric"
+                      data-household={i + 1}
                       placeholder="고시값 입력"
                       className="border-line text-text min-h-[50px] min-w-0 flex-1 rounded-sm border border-solid pr-[40px] pl-[14px] text-[16px]"
                     />
@@ -131,6 +157,7 @@ function IncomePanel() {
             <div className="flex flex-wrap gap-[8px]">
               <button
                 type="button"
+                onClick={(e) => schedule(e.currentTarget.closest("section"))}
                 className="rounded-control bg-brand min-h-[50px] cursor-pointer border-0 px-[20px] text-[15px] font-extrabold text-white"
               >
                 적용 예약
@@ -152,7 +179,7 @@ function IncomePanel() {
           className="rounded-card-lg bg-surface flex flex-col gap-[10px] p-[24px]"
         >
           <h2 id="use-h" className="m-0 text-[18px] font-extrabold">
-            이 값을 쓰는 규칙 {data.rulesCount}개
+            이 값을 쓰는 판정 틀 {data.rulesCount}개
           </h2>
           {data.rules.map((r) => (
             <span
@@ -163,12 +190,15 @@ function IncomePanel() {
               <span className="text-text-sub">{r.ratio}</span>
             </span>
           ))}
-          <a
-            href="#"
-            className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
-          >
-            {data.rulesCount - data.rules.length}개 더 보기
-          </a>
+          {/* 실제 API는 목록을 다 주므로 「더 보기」 없음 */}
+          {USE_MOCKS && (
+            <a
+              href="#"
+              className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
+            >
+              {data.rulesCount - data.rules.length}개 더 보기
+            </a>
+          )}
         </section>
         <section
           aria-labelledby="his-h"
@@ -179,7 +209,7 @@ function IncomePanel() {
           </h2>
           {data.history.map((h, i) => (
             <span
-              key={h.title}
+              key={`${i}-${h.title}`}
               className={cn(
                 "flex flex-col gap-[2px] py-[8px] text-[14px]",
                 i < data.history.length - 1 && "border-line-soft border-b border-solid",
