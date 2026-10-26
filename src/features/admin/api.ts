@@ -6,6 +6,7 @@
 import { api } from "@/lib/api/client";
 import { routes } from "@/lib/routes";
 import type { BotTrafficData, RealtimeData, TrafficData } from "@/mocks/admin-traffic";
+import type { AdminUser, AdminUserRole, AdminUsersPage, RoleChange } from "@/mocks/admin-users";
 import type {
   ChatReport,
   ChatReportGroup,
@@ -1188,3 +1189,23 @@ export async function liveChatReports(status: ChatReviewStatus) {
 /** 가림 유지(KEEP_HIDDEN) 또는 다시 보이기(RESTORE). 그 메시지의 검토 전 신고가 모두 처리돼요 */
 export const reviewChatMessage = (messageId: string, action: ChatReviewAction) =>
   api.patch(`/api/admin/chat/messages/${messageId}`, { action });
+
+// ---------- 회원 관리 (백엔드 user 모듈) ----------
+export function liveUsers(query: string, role: AdminUserRole | "", page: number) {
+  const q = new URLSearchParams({ page: String(page) });
+  if (query.trim()) q.set("query", query.trim());
+  if (role) q.set("role", role);
+  return api.get<AdminUsersPage>(`/api/admin/users?${q}`);
+}
+
+/** 여러 회원 (처리 기록의 관리자 이름). 최대 100명 */
+export function liveUsersByIds(ids: string[]) {
+  return api.get<AdminUser[]>(`/api/admin/users?ids=${ids.slice(0, 100).join(",")}`);
+}
+
+export const changeUserRole = (id: string, role: AdminUserRole) =>
+  api.patch<AdminUser>(`/api/admin/users/${id}/role`, { role });
+
+export function liveRoleChanges(days: number) {
+  return api.get<RoleChange[]>(`/api/admin/users/role-changes?days=${days}`);
+}
