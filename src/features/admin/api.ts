@@ -1056,7 +1056,7 @@ export async function liveCriteria(base: AdminCriteria): Promise<AdminCriteria> 
         meta: `${when(h.replacedAt)} · ${h.source ?? ""}`,
       })),
     ],
-    score: { ...base.score, lastChecked: "판정 코드(주택공급에 관한 규칙 별표 1) 기준" },
+    score: { ...base.score, lastChecked: "판정 코드" },
     // 「지역 구분」은 수도권 과밀억제권역(수도권정비계획법 시행령 별표 1) 법정 목록이에요. 백엔드에 저장소가 없어 화면 목록을 그대로 써요.
     // 규제지역(투기과열·조정대상)은 별도 관리 API(/api/admin/regulated-areas)에 있어요
     regions: base.regions,
