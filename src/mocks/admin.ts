@@ -7,9 +7,16 @@ export type AdminCounts = {
   reviewPending: number | null;
   sourceIssues: number | null;
   newReports: number | null;
+  /** 검토 전 채팅 신고가 있는 메시지 수 */
+  chatReports: number | null;
 };
 
-export const adminCounts: AdminCounts = { reviewPending: 12, sourceIssues: 2, newReports: 5 };
+export const adminCounts: AdminCounts = {
+  reviewPending: 12,
+  sourceIssues: 2,
+  newReports: 5,
+  chatReports: 2,
+};
 
 export const adminOperator = "김○○";
 
