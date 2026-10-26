@@ -1,6 +1,7 @@
 "use client";
 
 import { useProfileFormData } from "@/features/profile/queries";
+import { useRegions } from "@/features/regions/queries";
 import { conditionChips, conditionRows, shortConditionChips } from "./format";
 import { useConditions } from "./store";
 
@@ -8,14 +9,15 @@ import { useConditions } from "./store";
 export function useConditionSummary() {
   const stored = useConditions();
   const { data } = useProfileFormData();
+  const regions = useRegions();
   if (stored.status === "loading") return { status: "loading" as const };
   const device = stored.device;
   return {
     status: "ready" as const,
     hasConditions: device !== null,
-    chips: device ? conditionChips(device, stored.session, data.rankCriteria) : [],
-    shortChips: device ? shortConditionChips(device) : [],
-    rows: device ? conditionRows(device) : [],
+    chips: device ? conditionChips(device, stored.session, data.rankCriteria, regions) : [],
+    shortChips: device ? shortConditionChips(device, regions) : [],
+    rows: device ? conditionRows(device, regions) : [],
     saveOnDevice: stored.saveOnDevice,
     savedAt: stored.savedAt,
   };

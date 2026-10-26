@@ -20,7 +20,8 @@ export type HomeListing = {
   /** 전세임대처럼 원하는 집을 직접 구하는 공고 */
   findYourOwn?: boolean;
   /** 공급 지역. 전국 공고는 "nationwide" */
-  region: { sido: string; sigungu: string } | "nationwide";
+  /** 공고 지역 코드 (시·군·구 5자리). 전국 대상이면 "nationwide" */
+  region: string;
   liked: boolean;
 };
 
@@ -46,7 +47,7 @@ export const homesSummary: HomesSummary = {
   listings: [
     {
       id: "n1",
-      region: { sido: "서울특별시", sigungu: "서초구" },
+      region: "11650",
       verdict: "ok",
       rank: 1,
       org: "LH · 행복주택",
@@ -59,7 +60,7 @@ export const homesSummary: HomesSummary = {
     },
     {
       id: "n3",
-      region: { sido: "서울특별시", sigungu: "강서구" },
+      region: "11500",
       verdict: "check",
       org: "SH · 장기전세",
       title: "○○ 장기전세",
@@ -84,7 +85,7 @@ export const homesSummary: HomesSummary = {
     },
     {
       id: "n2",
-      region: { sido: "경기도", sigungu: "성남시" },
+      region: "41130",
       verdict: "ok",
       org: "GH · 국민임대",
       title: "○○ 국민임대",
@@ -96,7 +97,7 @@ export const homesSummary: HomesSummary = {
     },
     {
       id: "n4",
-      region: { sido: "인천광역시", sigungu: "미추홀구" },
+      region: "28177",
       verdict: "ok",
       rank: 3,
       org: "iH · 매입임대",
@@ -109,7 +110,7 @@ export const homesSummary: HomesSummary = {
     },
     {
       id: "n6",
-      region: { sido: "경기도", sigungu: "하남시" },
+      region: "41450",
       verdict: "check",
       org: "청약홈 · 공공분양",
       title: "○○ 공공분양",

@@ -3,51 +3,54 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { MAX_SEARCH_REGIONS, type ProfileForm } from "@/features/profile/useProfileForm";
+import { useRegions } from "@/features/regions/queries";
 import { cn } from "@/lib/cn";
-import { regionLabel, regions, sidoByName } from "@/lib/regions";
 
-/** 시·도 → 시·군·구 두 칸 */
+/**
+ * 시·도 → 시·군·구 두 칸. 값은 지역 코드 하나예요.
+ * 시·도만 고르면 2자리, 시·군·구까지 고르면 5자리, 아무것도 안 고르면 ""
+ */
 function PlaceSelects({
-  sido,
-  sigungu,
-  onSido,
-  onSigungu,
+  code,
+  onChange,
   selectClassName,
   sigunguEmpty,
 }: {
-  sido: string;
-  sigungu: string;
-  onSido: (v: string) => void;
-  onSigungu: (v: string) => void;
+  code: string;
+  onChange: (code: string) => void;
   selectClassName: string;
   sigunguEmpty: string;
 }) {
+  const regions = useRegions();
+  const sidoCode = code.slice(0, 2);
+  const sido = sidoCode ? regions.sido(sidoCode) : undefined;
+
   return (
     <div className="grid grid-cols-2 gap-[8px]">
       <select
         aria-label="시·도"
-        value={sido}
-        onChange={(e) => onSido(e.target.value)}
+        value={sidoCode}
+        onChange={(e) => onChange(e.target.value)}
         className={selectClassName}
       >
-        {!sido && <option value="">시·도 선택</option>}
-        {regions.map((r) => (
-          <option key={r.name} value={r.name}>
+        {!sidoCode && <option value="">시·도 선택</option>}
+        {regions.sidos.map((r) => (
+          <option key={r.code} value={r.code}>
             {r.name}
           </option>
         ))}
       </select>
       <select
         aria-label="시·군·구"
-        value={sigungu}
-        onChange={(e) => onSigungu(e.target.value)}
+        value={code.length === 5 ? code : ""}
+        onChange={(e) => onChange(e.target.value || sidoCode)}
         disabled={!sido}
         className={cn(selectClassName, "disabled:bg-fill disabled:text-text-sub")}
       >
         <option value="">{sigunguEmpty}</option>
-        {(sidoByName(sido)?.sigungu ?? []).map((g) => (
-          <option key={g} value={g}>
-            {g}
+        {(sido?.sigungus ?? []).map((g) => (
+          <option key={g.code} value={g.code}>
+            {g.name}
           </option>
         ))}
       </select>
@@ -63,15 +66,12 @@ export function ResidenceField({
   form: ProfileForm;
   selectClassName: string;
 }) {
-  const sigungu = form.field("sigungu");
   return (
     <div className="flex flex-col gap-[8px]">
       <span className="text-[15px] font-bold">지금 사는 곳</span>
       <PlaceSelects
-        sido={form.sido}
-        sigungu={sigungu.value}
-        onSido={form.setSido}
-        onSigungu={(v) => sigungu.onChange({ target: { value: v } })}
+        code={form.regionCode}
+        onChange={form.setRegionCode}
         selectClassName={selectClassName}
         sigunguEmpty="시·군·구 선택"
       />
@@ -88,11 +88,12 @@ export function SearchRegionsField({
   form: ProfileForm;
   selectClassName: string;
 }) {
-  const [draft, setDraft] = useState({ sido: "", sigungu: "" });
-  const full = form.searchRegions.length >= MAX_SEARCH_REGIONS;
+  const regions = useRegions();
+  const [draft, setDraft] = useState("");
+  const full = form.searchRegionCodes.length >= MAX_SEARCH_REGIONS;
   const add = () => {
     form.addSearchRegion(draft);
-    setDraft({ sido: "", sigungu: "" });
+    setDraft("");
   };
 
   return (
@@ -101,18 +102,18 @@ export function SearchRegionsField({
         어떤 지역 공고를 찾아볼까요?{" "}
         <span className="text-text-sub font-medium">· 최대 {MAX_SEARCH_REGIONS}곳</span>
       </span>
-      {form.searchRegions.length > 0 && (
+      {form.searchRegionCodes.length > 0 && (
         <ul aria-label="찾아볼 지역" className="m-0 flex list-none flex-wrap gap-[6px] p-0">
-          {form.searchRegions.map((r) => {
-            const label = regionLabel(r.sido, r.sigungu || undefined);
+          {form.searchRegionCodes.map((code) => {
+            const label = regions.label(code);
             return (
-              <li key={`${r.sido}-${r.sigungu}`}>
+              <li key={code}>
                 <span className="rounded-pill bg-brand-soft text-brand-strong inline-flex min-h-[36px] items-center gap-[2px] pl-[12px] text-[14px] font-bold">
-                  {r.sigungu ? label : `${label} 전체`}
+                  {code.length === 2 ? `${label} 전체` : label}
                   <button
                     type="button"
                     aria-label={`${label} 빼기`}
-                    onClick={() => form.removeSearchRegion(r)}
+                    onClick={() => form.removeSearchRegion(code)}
                     className="text-brand-strong inline-flex size-[36px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent"
                   >
                     <X size={16} aria-hidden />
@@ -126,17 +127,15 @@ export function SearchRegionsField({
       {!full && (
         <div className="flex flex-col gap-[8px]">
           <PlaceSelects
-            sido={draft.sido}
-            sigungu={draft.sigungu}
-            onSido={(sido) => setDraft({ sido, sigungu: "" })}
-            onSigungu={(sigungu) => setDraft((d) => ({ ...d, sigungu }))}
+            code={draft}
+            onChange={setDraft}
             selectClassName={selectClassName}
             sigunguEmpty="전체"
           />
           <button
             type="button"
             onClick={add}
-            disabled={!draft.sido}
+            disabled={!draft}
             className="bg-fill text-text disabled:text-text-tertiary inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-[4px] self-start rounded-sm border-0 px-[16px] text-[14px] font-bold disabled:cursor-default"
           >
             <Plus size={16} aria-hidden />

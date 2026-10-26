@@ -1,293 +1,61 @@
-// 시·도와 시·군·구 목록 (2026년 10월 행정구역 기준). 도는 시·군 단위로 나눠요.
+// 시·도와 시·군·구 (코드 기준). 데이터는 GET /api/v1/regions, 받기 전과 목업 모드에선 regionSnapshot
+import { regionSnapshot } from "./regions-data";
 
-export type Sido = { name: string; short: string; sigungu: string[] };
+export type Sigungu = { code: string; name: string };
+export type Sido = { code: string; name: string; shortName: string; sigungus: Sigungu[] };
+export type RegionTree = { baseDate: string; sidos: Sido[] };
 
-export const regions: Sido[] = [
-  {
-    name: "서울특별시",
-    short: "서울",
-    sigungu: [
-      "강남구",
-      "강동구",
-      "강북구",
-      "강서구",
-      "관악구",
-      "광진구",
-      "구로구",
-      "금천구",
-      "노원구",
-      "도봉구",
-      "동대문구",
-      "동작구",
-      "마포구",
-      "서대문구",
-      "서초구",
-      "성동구",
-      "성북구",
-      "송파구",
-      "양천구",
-      "영등포구",
-      "용산구",
-      "은평구",
-      "종로구",
-      "중구",
-      "중랑구",
-    ],
-  },
-  {
-    name: "부산광역시",
-    short: "부산",
-    sigungu: [
-      "강서구",
-      "금정구",
-      "기장군",
-      "남구",
-      "동구",
-      "동래구",
-      "부산진구",
-      "북구",
-      "사상구",
-      "사하구",
-      "서구",
-      "수영구",
-      "연제구",
-      "영도구",
-      "중구",
-      "해운대구",
-    ],
-  },
-  {
-    name: "대구광역시",
-    short: "대구",
-    sigungu: ["군위군", "남구", "달서구", "달성군", "동구", "북구", "서구", "수성구", "중구"],
-  },
-  {
-    name: "인천광역시",
-    short: "인천",
-    sigungu: [
-      "강화군",
-      "계양구",
-      "검단구",
-      "남동구",
-      "미추홀구",
-      "부평구",
-      "서구",
-      "연수구",
-      "영종구",
-      "옹진군",
-      "제물포구",
-    ],
-  },
-  { name: "광주광역시", short: "광주", sigungu: ["광산구", "남구", "동구", "북구", "서구"] },
-  { name: "대전광역시", short: "대전", sigungu: ["대덕구", "동구", "서구", "유성구", "중구"] },
-  { name: "울산광역시", short: "울산", sigungu: ["남구", "동구", "북구", "울주군", "중구"] },
-  { name: "세종특별자치시", short: "세종", sigungu: ["세종시"] },
-  {
-    name: "경기도",
-    short: "경기",
-    sigungu: [
-      "가평군",
-      "고양시",
-      "과천시",
-      "광명시",
-      "광주시",
-      "구리시",
-      "군포시",
-      "김포시",
-      "남양주시",
-      "동두천시",
-      "부천시",
-      "성남시",
-      "수원시",
-      "시흥시",
-      "안산시",
-      "안성시",
-      "안양시",
-      "양주시",
-      "양평군",
-      "여주시",
-      "연천군",
-      "오산시",
-      "용인시",
-      "의왕시",
-      "의정부시",
-      "이천시",
-      "파주시",
-      "평택시",
-      "포천시",
-      "하남시",
-      "화성시",
-    ],
-  },
-  {
-    name: "강원특별자치도",
-    short: "강원",
-    sigungu: [
-      "강릉시",
-      "고성군",
-      "동해시",
-      "삼척시",
-      "속초시",
-      "양구군",
-      "양양군",
-      "영월군",
-      "원주시",
-      "인제군",
-      "정선군",
-      "철원군",
-      "춘천시",
-      "태백시",
-      "평창군",
-      "홍천군",
-      "화천군",
-      "횡성군",
-    ],
-  },
-  {
-    name: "충청북도",
-    short: "충북",
-    sigungu: [
-      "괴산군",
-      "단양군",
-      "보은군",
-      "영동군",
-      "옥천군",
-      "음성군",
-      "제천시",
-      "증평군",
-      "진천군",
-      "청주시",
-      "충주시",
-    ],
-  },
-  {
-    name: "충청남도",
-    short: "충남",
-    sigungu: [
-      "계룡시",
-      "공주시",
-      "금산군",
-      "논산시",
-      "당진시",
-      "보령시",
-      "부여군",
-      "서산시",
-      "서천군",
-      "아산시",
-      "예산군",
-      "천안시",
-      "청양군",
-      "태안군",
-      "홍성군",
-    ],
-  },
-  {
-    name: "전북특별자치도",
-    short: "전북",
-    sigungu: [
-      "고창군",
-      "군산시",
-      "김제시",
-      "남원시",
-      "무주군",
-      "부안군",
-      "순창군",
-      "완주군",
-      "익산시",
-      "임실군",
-      "장수군",
-      "전주시",
-      "정읍시",
-      "진안군",
-    ],
-  },
-  {
-    name: "전라남도",
-    short: "전남",
-    sigungu: [
-      "강진군",
-      "고흥군",
-      "곡성군",
-      "광양시",
-      "구례군",
-      "나주시",
-      "담양군",
-      "목포시",
-      "무안군",
-      "보성군",
-      "순천시",
-      "신안군",
-      "여수시",
-      "영광군",
-      "영암군",
-      "완도군",
-      "장성군",
-      "장흥군",
-      "진도군",
-      "함평군",
-      "해남군",
-      "화순군",
-    ],
-  },
-  {
-    name: "경상북도",
-    short: "경북",
-    sigungu: [
-      "경산시",
-      "경주시",
-      "고령군",
-      "구미시",
-      "김천시",
-      "문경시",
-      "봉화군",
-      "상주시",
-      "성주군",
-      "안동시",
-      "영덕군",
-      "영양군",
-      "영주시",
-      "영천시",
-      "예천군",
-      "울릉군",
-      "울진군",
-      "의성군",
-      "청도군",
-      "청송군",
-      "칠곡군",
-      "포항시",
-    ],
-  },
-  {
-    name: "경상남도",
-    short: "경남",
-    sigungu: [
-      "거제시",
-      "거창군",
-      "고성군",
-      "김해시",
-      "남해군",
-      "밀양시",
-      "사천시",
-      "산청군",
-      "양산시",
-      "의령군",
-      "진주시",
-      "창녕군",
-      "창원시",
-      "통영시",
-      "하동군",
-      "함안군",
-      "함양군",
-      "합천군",
-    ],
-  },
-  { name: "제주특별자치도", short: "제주", sigungu: ["서귀포시", "제주시"] },
-];
+/** 지역 코드: 시·도 2자리("11") 또는 시·군·구 5자리("11440") */
+export const isSidoCode = (code: string) => code.length === 2;
 
-export const sidoByName = (name: string) => regions.find((r) => r.name === name);
-
-/** "서울 서초구"처럼 짧게 */
-export const regionLabel = (sido: string, sigungu?: string) => {
-  const short = sidoByName(sido)?.short ?? sido;
-  return sigungu ? `${short} ${sigungu}` : short;
+// 2026년 개편 전 이름으로 저장한 조건을 읽을 때 써요
+const legacySidoNames: Record<string, string> = {
+  광주광역시: "12",
+  전라남도: "12",
 };
+
+/** 지역 트리로 코드 → 이름, 포함 관계를 찾는 도구 */
+export function regionIndex(tree: RegionTree) {
+  const sidoByCode = new Map(tree.sidos.map((s) => [s.code, s]));
+  const sigunguByCode = new Map(
+    tree.sidos.flatMap((s) => s.sigungus.map((g) => [g.code, { sido: s, sigungu: g }] as const)),
+  );
+
+  const sido = (code: string) => sidoByCode.get(code.slice(0, 2));
+
+  /** "서울 마포구" · 시·도 코드면 "서울". 모르는 코드면 코드 그대로 */
+  const label = (code: string) => {
+    if (isSidoCode(code)) return sidoByCode.get(code)?.shortName ?? code;
+    const hit = sigunguByCode.get(code);
+    return hit ? `${hit.sido.shortName} ${hit.sigungu.name}` : code;
+  };
+
+  /**
+   * 필터 지역(filter)이 공고 지역(code)을 포함하는지.
+   * 시·도는 그 시·도 전체, 일반구가 있는 시("용인시")는 그 구("용인시 처인구")까지 포함해요
+   */
+  const contains = (filter: string, code: string) => {
+    if (isSidoCode(filter)) return code.startsWith(filter);
+    if (filter === code) return true;
+    const city = sigunguByCode.get(filter)?.sigungu.name;
+    const target = sigunguByCode.get(code)?.sigungu.name;
+    return Boolean(city && target?.startsWith(`${city} `));
+  };
+
+  /** 이름으로 저장한 예전 조건 → 코드. 못 찾으면 null */
+  const codeByNames = (sidoName: string, sigunguName: string) => {
+    const s =
+      tree.sidos.find((x) => x.name === sidoName || x.shortName === sidoName) ??
+      sidoByCode.get(legacySidoNames[sidoName] ?? "");
+    if (!s) return null;
+    if (!sigunguName) return s.code;
+    return s.sigungus.find((g) => g.name === sigunguName)?.code ?? s.code;
+  };
+
+  return { tree, sidos: tree.sidos, sido, label, contains, codeByNames };
+}
+
+export type Regions = ReturnType<typeof regionIndex>;
+
+/** API를 받기 전에도 쓸 수 있는 기본 지역 (저장값 변환, 목업) */
+export const snapshotRegions = regionIndex(regionSnapshot);

@@ -2,8 +2,8 @@
 
 import { MapPin } from "lucide-react";
 import type { RegionFilter } from "@/features/homes/region";
+import { useRegions } from "@/features/regions/queries";
 import { cn } from "@/lib/cn";
-import { regionLabel, regions, sidoByName } from "@/lib/regions";
 
 const select =
   "border-line bg-surface text-text min-h-[44px] min-w-0 rounded-sm border border-solid px-[12px] text-[15px] font-semibold disabled:text-text-sub disabled:bg-fill";
@@ -13,9 +13,11 @@ const chip =
 
 /** 지역 필터: 내 지역(찾아볼 지역 · 사는 곳) / 전체, 또는 시·도 → 시·군·구 */
 export function RegionSelect({ filter, compact }: { filter: RegionFilter; compact?: boolean }) {
-  const { region, mine } = filter;
-  const sigungu = sidoByName(region.sido)?.sigungu ?? [];
-  const mineLabel = mine.map((p) => regionLabel(p.sido, p.sigungu || undefined)).join(" · ");
+  const regions = useRegions();
+  const { code, mine } = filter;
+  const sidoCode = code.slice(0, 2);
+  const sigungu = sidoCode ? (regions.sido(sidoCode)?.sigungus ?? []) : [];
+  const mineLabel = mine.map(regions.label).join(" · ");
 
   return (
     <div className="flex flex-col gap-[8px]">
@@ -48,28 +50,28 @@ export function RegionSelect({ filter, compact }: { filter: RegionFilter; compac
       <div className={cn("grid grid-cols-2", compact ? "gap-[6px]" : "gap-[8px]")}>
         <select
           aria-label="시·도"
-          value={region.sido}
-          onChange={(e) => filter.setSido(e.target.value)}
+          value={sidoCode}
+          onChange={(e) => filter.pick(e.target.value)}
           className={select}
         >
           <option value="">{mine.length > 0 ? "다른 지역 고르기" : "전체 지역"}</option>
-          {regions.map((r) => (
-            <option key={r.name} value={r.name}>
+          {regions.sidos.map((r) => (
+            <option key={r.code} value={r.code}>
               {r.name}
             </option>
           ))}
         </select>
         <select
           aria-label="시·군·구"
-          value={region.sigungu}
-          onChange={(e) => filter.setSigungu(e.target.value)}
-          disabled={!region.sido}
+          value={code.length === 5 ? code : ""}
+          onChange={(e) => filter.pick(e.target.value || sidoCode)}
+          disabled={!sidoCode}
           className={select}
         >
-          <option value="">{region.sido ? "전체" : "시·군·구"}</option>
+          <option value="">{sidoCode ? "전체" : "시·군·구"}</option>
           {sigungu.map((g) => (
-            <option key={g} value={g}>
-              {g}
+            <option key={g.code} value={g.code}>
+              {g.name}
             </option>
           ))}
         </select>
