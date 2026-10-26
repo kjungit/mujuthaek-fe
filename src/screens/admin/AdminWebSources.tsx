@@ -81,7 +81,12 @@ export function AdminWebSources() {
   };
 
   const stOf = (r: SourceRow): ShownStatus =>
-    rerun[r.id] === data.asOf ? "running" : paused[r.id] ? "paused" : r.st;
+    rerun[r.id] === data.asOf
+      ? "running"
+      : // 방금 누른 중지·다시 켜기가 먼저, 아니면 백엔드가 준 켜짐 여부
+        (paused[r.id] ?? data.enabled?.[r.id] === false)
+        ? "paused"
+        : r.st;
   const cur = data.rows.find((r) => r.id === sel) ?? data.rows[0];
   if (!cur)
     return <div className="text-text-sub p-[24px] text-[15px]">수집 현황을 불러오는 중이에요…</div>;
@@ -101,11 +106,7 @@ export function AdminWebSources() {
         style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}
       >
         <SummaryTile dot="bg-brand" label="정상" value={`${data.summary.ok}곳`} />
-        <SummaryTile
-          dot="bg-warn-dot"
-          label="지연 · 주기보다 늦음"
-          value={`${data.summary.late}곳`}
-        />
+        <SummaryTile dot="bg-warn-dot" label="지연 · 일시 중지" value={`${data.summary.late}곳`} />
         <SummaryTile
           dot="bg-danger-text"
           label="실패 · 연속 0건"

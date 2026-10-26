@@ -935,7 +935,9 @@ export async function liveSources() {
       src.lastRun?.status === "FAILED" ||
       src.lastRun?.status === "BLOCKED"
         ? "fail"
-        : src.state === "ok"
+        : src.state === "ok" ||
+            // 일시 중지한 곳은 중지 표시를 따로 하고(화면), 여기서는 마지막 수집 결과로 봐요. 다시 켠 직후 「지연」으로 잠깐 보이지 않게
+            (src.state === "paused" && src.lastRun?.status === "SUCCESS")
           ? "ok"
           : "late";
     const issue = !src.enabled
