@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useApiBusinessSummary, useApiSpaceDetail } from "@/features/business/api";
 import { mockQuery } from "@/features/mock-query";
+import { USE_MOCKS } from "@/lib/api/config";
 import {
   bizOnboarding,
   bizProfile,
@@ -20,19 +22,26 @@ export function useBizProfile() {
   return useQuery(mockQuery(businessKeys.profile, bizProfile));
 }
 
-export function useBusinessSummary() {
-  return useQuery(mockQuery(businessKeys.summary, businessSummary));
+function useMockBusinessSummary() {
+  const { data } = useQuery(mockQuery(businessKeys.summary, businessSummary));
+  return { data, loading: false, error: false };
 }
+
+// USE_MOCKS는 빌드 때 정해지는 값이라 훅 순서가 바뀌지 않아요
+export const useBusinessSummary = USE_MOCKS ? useMockBusinessSummary : useApiBusinessSummary;
 
 export function useSupportList() {
   return useQuery(mockQuery(businessKeys.support, supportList));
 }
 
 /** 목업 단계: 없는 id면 첫 공간을 보여줘요 */
-export function useSpaceDetail(id: string) {
+function useMockSpaceDetail(id: string) {
   const detail = spaceDetails.find((s) => s.id === id) ?? spaceDetails[0];
-  return useQuery(mockQuery(businessKeys.space(id), detail));
+  const { data } = useQuery(mockQuery(businessKeys.space(id), detail));
+  return { data, loading: false, error: false };
 }
+
+export const useSpaceDetail = USE_MOCKS ? useMockSpaceDetail : useApiSpaceDetail;
 
 export function useBizOnboarding() {
   return useQuery(mockQuery(businessKeys.onboarding, bizOnboarding));

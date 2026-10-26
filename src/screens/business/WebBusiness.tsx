@@ -10,12 +10,12 @@ import { useBizProfile, useBusinessSummary, useSupportList } from "@/features/bu
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import { SupportBadge, TypeFilters, spaceFilters, spaceIcon, spaceThumb } from "./parts";
+import { SupportBadge, TypeFilters, spaceFilters, spaceIcon, spaceLink, spaceThumb } from "./parts";
 
 const ASIDE_SUPPORT_COUNT = 3;
 
 export function WebBusiness() {
-  const { data } = useBusinessSummary();
+  const { data, loading } = useBusinessSummary();
   const { data: profile } = useBizProfile();
   const { data: support } = useSupportList();
   const { filter, setFilter, count, visible } = useTypeFilter(data.list);
@@ -79,8 +79,9 @@ export function WebBusiness() {
               </span>
               <span className="tracking-h1 text-[40px] font-extrabold">{data.spaces.count}곳</span>
               <span className="text-brand-deep-text text-[14px]">
-                마감 임박 {data.spaces.closingSoon}곳 · 이번 주 새로 올라온 공간{" "}
-                {data.spaces.newThisWeek}곳
+                마감 임박 {data.spaces.closingSoon}곳
+                {data.spaces.newThisWeek !== undefined &&
+                  ` · 이번 주 새로 올라온 공간 ${data.spaces.newThisWeek}곳`}
               </span>
             </span>
             <span className="rounded-pill flex size-[44px] flex-none items-center justify-center bg-white/12">
@@ -126,6 +127,11 @@ export function WebBusiness() {
               />
             </div>
 
+            {visible.length === 0 && (
+              <p className="rounded-card bg-surface text-text-sub m-0 px-[24px] py-[48px] text-center text-[15px]">
+                {loading ? "공간을 불러오는 중이에요" : "지금 지원할 수 있는 공간이 없어요"}
+              </p>
+            )}
             <div
               className="grid gap-[16px]"
               style={{ gridTemplateColumns: "repeat(auto-fill, minmax(262px, 1fr))" }}
@@ -152,7 +158,7 @@ export function WebBusiness() {
                       )}
                     </div>
                     <Link
-                      href={routes.space(it.id)}
+                      {...spaceLink(it)}
                       className="text-text hover:text-text flex flex-1 flex-col gap-[8px] px-[20px] pt-[18px] pb-[20px] no-underline"
                     >
                       <span className="text-text-tertiary text-[13px]">{it.org}</span>

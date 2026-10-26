@@ -1,5 +1,5 @@
 // 화면용 예시 데이터 (디자인 WebBusiness · WebBizOnboarding · WebSpaceDetail · WebBizSupport와 모바일 짝). 실제 값은 API에서 받아요.
-import type { Verdict } from "@/components/ui/Badge";
+import type { ListingVerdict, Verdict } from "@/components/ui/Badge";
 
 /* ---------- 사업 정보 ---------- */
 
@@ -36,10 +36,13 @@ export type SpaceItem = {
   tags: string[];
   money: string;
   due: string;
+  /** 상세 화면 없이 원문으로 보내는 공간 (사업공간 모집 정책) */
+  externalUrl?: string;
 };
 
 export type BusinessSummary = {
-  spaces: { count: number; closingSoon: number; newThisWeek: number };
+  /** newThisWeek: 실제 API는 아직 몰라서 없어요 */
+  spaces: { count: number; closingSoon: number; newThisWeek?: number };
   support: { count: number; maxAmount: string; needCheck: number };
   list: SpaceItem[];
 };
@@ -215,7 +218,7 @@ export type SpaceRule = { label: string; rule: string; mRule: string; met: boole
 
 export type SpaceDetail = {
   id: string;
-  verdict: Verdict;
+  verdict: ListingVerdict;
   due: string;
   tag: string;
   title: string;
@@ -229,7 +232,12 @@ export type SpaceDetail = {
   currentStep: number;
   schedule: SpaceStep[];
   rules: SpaceRule[];
-  linkedSupport: { id: string; title: string; desc: string; amount: string };
+  /** 함께 받을 지원. 실제 API는 아직 없어요 */
+  linkedSupport?: { id: string; title: string; desc: string; amount: string };
+  /** 공고 원문 */
+  sourceUrl?: string;
+  /** 판정 틀이 아직 없어 자격을 판정하지 못함 (자격 조건 정리 중) */
+  notReady?: boolean;
 };
 
 export const spaceDetails: SpaceDetail[] = [

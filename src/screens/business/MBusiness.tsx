@@ -10,10 +10,10 @@ import { useBizProfile, useBusinessSummary } from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import { TypeFilters, spaceFilters, spaceThumb } from "./parts";
+import { TypeFilters, spaceFilters, spaceLink, spaceThumb } from "./parts";
 
 export function MBusiness() {
-  const { data } = useBusinessSummary();
+  const { data, loading } = useBusinessSummary();
   const { data: profile } = useBizProfile();
   const { filter, setFilter, count, visible } = useTypeFilter(data.list);
 
@@ -80,10 +80,15 @@ export function MBusiness() {
           className="overflow-x-auto px-[4px] pt-[4px] pb-[2px]"
         />
 
+        {visible.length === 0 && (
+          <p className="text-text-sub m-0 px-[20px] py-[40px] text-center text-[15px]">
+            {loading ? "공간을 불러오는 중이에요" : "지금 지원할 수 있는 공간이 없어요"}
+          </p>
+        )}
         {visible.map((it) => (
           <Link
             key={it.id}
-            href={routes.space(it.id)}
+            {...spaceLink(it)}
             className="bg-surface text-text hover:text-text flex gap-[14px] rounded-[22px] p-[16px] no-underline"
           >
             <span

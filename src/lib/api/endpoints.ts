@@ -21,6 +21,10 @@ export const endpoints = {
   noticeDetail: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}`,
   /** 공고 주택목록 (호별, 커서) */
   noticeUnits: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}/units`,
+  /** 사업공간 맞춤 목록: 판정 입력(사는 곳 · 사업 입력) → 공간마다 판정, 종류별 개수 */
+  spacesSearch: "/api/v1/spaces/search",
+  /** 사업공간 하나의 판정 (상세 내용은 noticeDetail) */
+  spaceEvaluate: (id: string) => `/api/v1/spaces/${encodeURIComponent(id)}/evaluate`,
   /** 단지 하나의 생활권 (항목 점수 · 가까운 시설 · 세권 태그). 공개 정보 */
   areaSite: (siteId: string) => `/api/v1/areas/sites/${encodeURIComponent(siteId)}`,
   /** 공고 하나의 판정 (조건별 결과) */

@@ -2,7 +2,14 @@ import { Building, Store, Users, type LucideIcon } from "lucide-react";
 import { Badge, verdictLabel } from "@/components/ui/Badge";
 import { FilterChip } from "@/components/ui/Chip";
 import { cn } from "@/lib/cn";
-import type { SpaceType, SupportStatus } from "@/mocks/business";
+import { routes } from "@/lib/routes";
+import type { SpaceItem, SpaceType, SupportStatus } from "@/mocks/business";
+
+/** 공간 카드 링크: 상세 화면이 없는 공간(모집 정책)은 원문을 새 탭으로 */
+export const spaceLink = (it: SpaceItem) =>
+  it.externalUrl
+    ? { href: it.externalUrl, target: "_blank", rel: "noreferrer" }
+    : { href: routes.space(it.id) };
 
 export const spaceIcon: Record<SpaceType, LucideIcon> = {
   startup: Building,

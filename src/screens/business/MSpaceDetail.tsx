@@ -10,6 +10,7 @@ import { useSpaceDetail } from "@/features/business/queries";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
+import type { SpaceDetail } from "@/mocks/business";
 
 const card = "bg-surface mx-[16px] flex flex-col rounded-card px-[20px] py-[16px]";
 const h3 = "m-0 text-[17px] font-extrabold";
@@ -17,7 +18,28 @@ const row = (last: boolean) =>
   cn("flex justify-between text-[15px]", last ? "" : "border-line-soft border-b border-solid");
 
 export function MSpaceDetail({ id }: { id: string }) {
-  const { data } = useSpaceDetail(id);
+  const { data, loading, error } = useSpaceDetail(id);
+  if (!data) {
+    return (
+      <MPage>
+        <MBackHeader title="공간 공고 상세" backHref={routes.business} />
+        {(loading || error) && (
+          <p
+            role={error ? "alert" : undefined}
+            className="text-text-sub m-0 px-[20px] py-[64px] text-center text-[15px]"
+          >
+            {error
+              ? "공간을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요"
+              : "공간을 불러오는 중이에요"}
+          </p>
+        )}
+      </MPage>
+    );
+  }
+  return <MSpaceDetailView data={data} />;
+}
+
+function MSpaceDetailView({ data }: { data: SpaceDetail }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const [fav, setFav] = useState(false);
   const met = data.rules.filter((r) => r.met).length;
@@ -34,18 +56,22 @@ export function MSpaceDetail({ id }: { id: string }) {
           <div className="flex flex-col gap-[10px] p-[20px]">
             <div className="flex flex-wrap gap-[6px]">
               <VerdictBadge verdict={data.verdict} size="md" />
-              <Badge tone="neutral" size="md" className="bg-text text-white">
-                {data.due}
-              </Badge>
-              <Badge tone="neutral" size="md" className="font-semibold">
-                {data.tag}
-              </Badge>
+              {data.due && (
+                <Badge tone="neutral" size="md" className="bg-text text-white">
+                  {data.due}
+                </Badge>
+              )}
+              {data.tag && (
+                <Badge tone="neutral" size="md" className="font-semibold">
+                  {data.tag}
+                </Badge>
+              )}
             </div>
             <h2 className="tracking-h1 m-0 text-[23px] leading-[1.35] font-extrabold">
               {data.title}
             </h2>
             <span className="text-text-sub text-[14px]">
-              {data.host} · {data.area}
+              {[data.host || data.kind, data.area].filter(Boolean).join(" · ")}
             </span>
             <dl className="m-0 grid grid-cols-2 gap-[8px]">
               {data.facts.map((f) => (
@@ -63,7 +89,9 @@ export function MSpaceDetail({ id }: { id: string }) {
             내 자격
           </h3>
           <span className="bg-ok-bg text-ok-text my-[4px] rounded-sm px-[12px] py-[10px] text-[14px] font-bold">
-            {data.rules.length}개 중 {met}개 충족 · {unmet}개 확인 필요
+            {data.notReady
+              ? "자격 조건을 정리하고 있어요 · 원문을 확인해 주세요"
+              : `${data.rules.length}개 중 ${met}개 충족 · ${unmet}개 확인 필요`}
           </span>
           {data.rules.map((r, i) =>
             r.met ? (
@@ -90,71 +118,79 @@ export function MSpaceDetail({ id }: { id: string }) {
           )}
         </section>
 
-        <section aria-labelledby="c-h" className={card}>
-          <h3 id="c-h" className={cn(h3, "mb-[6px]")}>
-            입주 조건
-          </h3>
-          {data.conditions.map((c, i) => (
-            <div key={c.label} className={cn(row(i === data.conditions.length - 1), "py-[10px]")}>
-              <span className="text-text-sub">{c.label}</span>
-              <span className="font-bold">{c.mValue}</span>
-            </div>
-          ))}
-        </section>
-
-        <section aria-labelledby="d-h" className={cn(card, "gap-[8px]")}>
-          <div className="flex items-baseline justify-between">
-            <h3 id="d-h" className={h3}>
-              준비 서류
+        {data.conditions.length > 0 && (
+          <section aria-labelledby="c-h" className={card}>
+            <h3 id="c-h" className={cn(h3, "mb-[6px]")}>
+              입주 조건
             </h3>
-            <span className="text-brand-strong text-[14px] font-bold">
-              {done} / {data.docs.length} 준비
-            </span>
-          </div>
-          {data.docs.map((d, i) => (
-            <button
-              key={d.name}
-              type="button"
-              role="checkbox"
-              aria-checked={checks[i]}
-              onClick={() => toggle(i)}
-              className="rounded-control bg-bg text-text flex min-h-[56px] cursor-pointer items-center gap-[12px] border-0 px-[14px] py-[12px] text-left"
-            >
-              <span
-                className={cn(
-                  "flex size-[24px] flex-none items-center justify-center rounded-[7px] border-2 border-solid text-white",
-                  checks[i] ? "border-brand bg-brand" : "border-off bg-surface",
-                )}
-              >
-                <Check size={14} strokeWidth={3} aria-hidden />
-              </span>
-              <span className="flex flex-col gap-[2px]">
-                <span className="text-[15px] font-bold">{d.name}</span>
-                <span className="text-text-sub text-[12px]">{d.mNote}</span>
-              </span>
-            </button>
-          ))}
-        </section>
+            {data.conditions.map((c, i) => (
+              <div key={c.label} className={cn(row(i === data.conditions.length - 1), "py-[10px]")}>
+                <span className="text-text-sub">{c.label}</span>
+                <span className="font-bold">{c.mValue}</span>
+              </div>
+            ))}
+          </section>
+        )}
 
-        <Link
-          href={routes.bizSupport}
-          className="bg-brand-deep mx-[16px] flex items-center justify-between gap-[10px] rounded-[22px] px-[20px] py-[18px] text-white no-underline hover:text-white"
-        >
-          <span className="flex flex-col gap-[4px]">
-            <span className="text-brand-deep-text text-[13px]">함께 받을 수 있는 지원</span>
-            <span className="text-[16px] font-extrabold">
-              {data.linkedSupport.title} · {data.linkedSupport.amount}
+        {data.docs.length > 0 && (
+          <section aria-labelledby="d-h" className={cn(card, "gap-[8px]")}>
+            <div className="flex items-baseline justify-between">
+              <h3 id="d-h" className={h3}>
+                준비 서류
+              </h3>
+              <span className="text-brand-strong text-[14px] font-bold">
+                {done} / {data.docs.length} 준비
+              </span>
+            </div>
+            {data.docs.map((d, i) => (
+              <button
+                key={d.name}
+                type="button"
+                role="checkbox"
+                aria-checked={checks[i]}
+                onClick={() => toggle(i)}
+                className="rounded-control bg-bg text-text flex min-h-[56px] cursor-pointer items-center gap-[12px] border-0 px-[14px] py-[12px] text-left"
+              >
+                <span
+                  className={cn(
+                    "flex size-[24px] flex-none items-center justify-center rounded-[7px] border-2 border-solid text-white",
+                    checks[i] ? "border-brand bg-brand" : "border-off bg-surface",
+                  )}
+                >
+                  <Check size={14} strokeWidth={3} aria-hidden />
+                </span>
+                <span className="flex flex-col gap-[2px]">
+                  <span className="text-[15px] font-bold">{d.name}</span>
+                  <span className="text-text-sub text-[12px]">{d.mNote}</span>
+                </span>
+              </button>
+            ))}
+          </section>
+        )}
+
+        {data.linkedSupport && (
+          <Link
+            href={routes.bizSupport}
+            className="bg-brand-deep mx-[16px] flex items-center justify-between gap-[10px] rounded-[22px] px-[20px] py-[18px] text-white no-underline hover:text-white"
+          >
+            <span className="flex flex-col gap-[4px]">
+              <span className="text-brand-deep-text text-[13px]">함께 받을 수 있는 지원</span>
+              <span className="text-[16px] font-extrabold">
+                {data.linkedSupport.title} · {data.linkedSupport.amount}
+              </span>
             </span>
-          </span>
-          <ChevronRight size={20} aria-hidden />
-        </Link>
+            <ChevronRight size={20} aria-hidden />
+          </Link>
+        )}
         <span className="text-text-sub px-[16px] pt-[4px] text-center text-[13px]">
           자격만 판정해요 · 선정 가능성은 알려드리지 않아요
         </span>
       </main>
       <MBottomActions>
         <a
-          href="#"
+          href={data.sourceUrl ?? "#"}
+          target={data.sourceUrl ? "_blank" : undefined}
+          rel={data.sourceUrl ? "noreferrer" : undefined}
           className="rounded-control bg-fill text-text hover:text-text flex min-h-[56px] min-w-0 items-center justify-center text-[15px] font-bold no-underline"
           style={{ flex: "1 1 0%" }}
         >

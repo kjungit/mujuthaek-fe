@@ -10,12 +10,36 @@ import { useSpaceDetail } from "@/features/business/queries";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
+import type { SpaceDetail } from "@/mocks/business";
 
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
 
 export function WebSpaceDetail({ id }: { id: string }) {
-  const { data } = useSpaceDetail(id);
+  const { data, loading, error } = useSpaceDetail(id);
+  if (!data) {
+    return (
+      <WebPage>
+        <WebHeader mode="business" current={routes.business} unread={3} />
+        <WebMain className="pt-[24px]">
+          {(loading || error) && (
+            <div
+              role={error ? "alert" : undefined}
+              className="rounded-card-lg bg-surface text-text-sub px-[24px] py-[64px] text-center text-[15px]"
+            >
+              {error
+                ? "공간을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요"
+                : "공간을 불러오는 중이에요"}
+            </div>
+          )}
+        </WebMain>
+      </WebPage>
+    );
+  }
+  return <WebSpaceDetailView data={data} />;
+}
+
+function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const [fav, setFav] = useState(false);
   const met = data.rules.filter((r) => r.met).length;
@@ -43,16 +67,20 @@ export function WebSpaceDetail({ id }: { id: string }) {
                 <div className="flex flex-col gap-[10px]">
                   <div className="flex flex-wrap gap-[6px]">
                     <VerdictBadge verdict={data.verdict} />
-                    <Badge tone="neutral" className="bg-text text-white">
-                      {data.due}
-                    </Badge>
-                    <Badge tone="neutral" className="font-semibold">
-                      {data.tag}
-                    </Badge>
+                    {data.due && (
+                      <Badge tone="neutral" className="bg-text text-white">
+                        {data.due}
+                      </Badge>
+                    )}
+                    {data.tag && (
+                      <Badge tone="neutral" className="font-semibold">
+                        {data.tag}
+                      </Badge>
+                    )}
                   </div>
                   <h1 className="tracking-h1 m-0 text-[32px] font-extrabold">{data.title}</h1>
                   <span className="text-text-sub text-[16px]">
-                    {data.kind} · {data.host} · {data.area}
+                    {[data.kind, data.host, data.area].filter(Boolean).join(" · ")}
                   </span>
                 </div>
                 <dl
@@ -69,129 +97,143 @@ export function WebSpaceDetail({ id }: { id: string }) {
               </div>
             </section>
 
-            <section aria-labelledby="cond-h" className={cn(card, "gap-[4px] px-[32px] py-[28px]")}>
-              <h2 id="cond-h" className={cn(h2, "mb-[8px]")}>
-                입주 조건
-              </h2>
-              {data.conditions.map((c, i) => {
-                const last = i === data.conditions.length - 1;
-                return (
-                  <div
-                    key={c.label}
-                    className={cn(
-                      "flex flex-wrap justify-between gap-x-[16px] gap-y-[6px] text-[16px]",
-                      last ? "pt-[14px]" : "border-line-soft border-b border-solid py-[14px]",
-                    )}
-                  >
-                    <span className="text-text-sub">{c.label}</span>
-                    <span className="font-bold">
-                      {c.value}
-                      {c.note && (
-                        <>
-                          {" "}
-                          <span className="text-text-sub font-medium">{c.note}</span>
-                        </>
-                      )}
-                    </span>
-                  </div>
-                );
-              })}
-            </section>
-
-            <section
-              aria-labelledby="docs-h"
-              className={cn(card, "gap-[14px] px-[32px] py-[28px]")}
-            >
-              <div className="flex items-baseline justify-between gap-[12px]">
-                <h2 id="docs-h" className={h2}>
-                  준비 서류
+            {data.conditions.length > 0 && (
+              <section
+                aria-labelledby="cond-h"
+                className={cn(card, "gap-[4px] px-[32px] py-[28px]")}
+              >
+                <h2 id="cond-h" className={cn(h2, "mb-[8px]")}>
+                  입주 조건
                 </h2>
-                <span className="text-brand-strong text-[14px] font-bold">
-                  {done} / {data.docs.length} 준비
-                </span>
-              </div>
-              <div className="flex flex-col gap-[8px]">
-                {data.docs.map((d, i) => (
-                  <button
-                    key={d.name}
-                    type="button"
-                    role="checkbox"
-                    aria-checked={checks[i]}
-                    onClick={() => toggle(i)}
-                    className="rounded-tile bg-bg text-text flex min-h-[60px] cursor-pointer items-center gap-[14px] border-0 px-[16px] py-[14px] text-left"
-                  >
-                    <span
+                {data.conditions.map((c, i) => {
+                  const last = i === data.conditions.length - 1;
+                  return (
+                    <div
+                      key={c.label}
                       className={cn(
-                        "rounded-badge flex size-[26px] flex-none items-center justify-center border-2 border-solid text-white",
-                        checks[i] ? "border-brand bg-brand" : "border-off bg-surface",
+                        "flex flex-wrap justify-between gap-x-[16px] gap-y-[6px] text-[16px]",
+                        last ? "pt-[14px]" : "border-line-soft border-b border-solid py-[14px]",
                       )}
                     >
-                      <Check size={16} strokeWidth={3} aria-hidden />
-                    </span>
-                    <span className="flex flex-col gap-[2px]">
-                      <span className="text-[16px] font-bold">{d.name}</span>
-                      <span className="text-text-sub text-[13px]">{d.note}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
+                      <span className="text-text-sub">{c.label}</span>
+                      <span className="font-bold">
+                        {c.value}
+                        {c.note && (
+                          <>
+                            {" "}
+                            <span className="text-text-sub font-medium">{c.note}</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </section>
+            )}
 
-            <section aria-labelledby="sch-h" className={cn(card, "gap-[18px] px-[32px] py-[28px]")}>
-              <h2 id="sch-h" className={h2}>
-                진행 일정
-              </h2>
-              <ol
-                className="m-0 grid list-none gap-[10px] p-0"
-                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}
+            {data.docs.length > 0 && (
+              <section
+                aria-labelledby="docs-h"
+                className={cn(card, "gap-[14px] px-[32px] py-[28px]")}
               >
-                {data.schedule.map((s) => {
-                  const now = s.step === data.currentStep;
-                  return (
-                    <li
-                      key={s.step}
-                      aria-current={now ? "step" : undefined}
-                      className={cn(
-                        "rounded-tile flex flex-col gap-[4px] p-[16px]",
-                        now ? "bg-brand text-white" : "bg-bg",
-                      )}
+                <div className="flex items-baseline justify-between gap-[12px]">
+                  <h2 id="docs-h" className={h2}>
+                    준비 서류
+                  </h2>
+                  <span className="text-brand-strong text-[14px] font-bold">
+                    {done} / {data.docs.length} 준비
+                  </span>
+                </div>
+                <div className="flex flex-col gap-[8px]">
+                  {data.docs.map((d, i) => (
+                    <button
+                      key={d.name}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={checks[i]}
+                      onClick={() => toggle(i)}
+                      className="rounded-tile bg-bg text-text flex min-h-[60px] cursor-pointer items-center gap-[14px] border-0 px-[16px] py-[14px] text-left"
                     >
                       <span
                         className={cn(
-                          "text-[13px] font-semibold",
-                          now ? "text-brand-deep-text-3" : "text-text-sub",
+                          "rounded-badge flex size-[26px] flex-none items-center justify-center border-2 border-solid text-white",
+                          checks[i] ? "border-brand bg-brand" : "border-off bg-surface",
                         )}
                       >
-                        {now ? `지금 · ${s.step}단계` : `${s.step}단계`}
+                        <Check size={16} strokeWidth={3} aria-hidden />
                       </span>
-                      <span className="text-[17px] font-extrabold">{s.title}</span>
-                      <span className={cn("text-[14px]", !now && "text-text-sub")}>{s.when}</span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </section>
+                      <span className="flex flex-col gap-[2px]">
+                        <span className="text-[16px] font-bold">{d.name}</span>
+                        <span className="text-text-sub text-[13px]">{d.note}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
-            <section
-              aria-labelledby="link-h"
-              className="rounded-card-lg bg-brand-deep flex flex-col gap-[12px] px-[32px] py-[26px] text-white"
-            >
-              <h2 id="link-h" className="m-0 text-[18px] font-extrabold tracking-[-0.02em]">
-                이 공간과 함께 받을 수 있는 지원
-              </h2>
-              <Link
-                href={routes.bizSupport}
-                className="box-content flex min-h-[44px] items-center justify-between gap-[12px] rounded-[18px] bg-white/8 px-[18px] py-[16px] text-white no-underline hover:text-white"
+            {data.schedule.length > 0 && (
+              <section
+                aria-labelledby="sch-h"
+                className={cn(card, "gap-[18px] px-[32px] py-[28px]")}
               >
-                <span className="flex flex-col gap-[4px]">
-                  <span className="text-[16px] font-extrabold">{data.linkedSupport.title}</span>
-                  <span className="text-brand-deep-text text-[14px]">
-                    {data.linkedSupport.desc}
+                <h2 id="sch-h" className={h2}>
+                  진행 일정
+                </h2>
+                <ol
+                  className="m-0 grid list-none gap-[10px] p-0"
+                  style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}
+                >
+                  {data.schedule.map((s) => {
+                    const now = s.step === data.currentStep;
+                    return (
+                      <li
+                        key={s.step}
+                        aria-current={now ? "step" : undefined}
+                        className={cn(
+                          "rounded-tile flex flex-col gap-[4px] p-[16px]",
+                          now ? "bg-brand text-white" : "bg-bg",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "text-[13px] font-semibold",
+                            now ? "text-brand-deep-text-3" : "text-text-sub",
+                          )}
+                        >
+                          {now ? `지금 · ${s.step}단계` : `${s.step}단계`}
+                        </span>
+                        <span className="text-[17px] font-extrabold">{s.title}</span>
+                        <span className={cn("text-[14px]", !now && "text-text-sub")}>{s.when}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
+            )}
+
+            {data.linkedSupport && (
+              <section
+                aria-labelledby="link-h"
+                className="rounded-card-lg bg-brand-deep flex flex-col gap-[12px] px-[32px] py-[26px] text-white"
+              >
+                <h2 id="link-h" className="m-0 text-[18px] font-extrabold tracking-[-0.02em]">
+                  이 공간과 함께 받을 수 있는 지원
+                </h2>
+                <Link
+                  href={routes.bizSupport}
+                  className="box-content flex min-h-[44px] items-center justify-between gap-[12px] rounded-[18px] bg-white/8 px-[18px] py-[16px] text-white no-underline hover:text-white"
+                >
+                  <span className="flex flex-col gap-[4px]">
+                    <span className="text-[16px] font-extrabold">{data.linkedSupport.title}</span>
+                    <span className="text-brand-deep-text text-[14px]">
+                      {data.linkedSupport.desc}
+                    </span>
                   </span>
-                </span>
-                <ChevronRight size={20} aria-hidden />
-              </Link>
-            </section>
+                  <ChevronRight size={20} aria-hidden />
+                </Link>
+              </section>
+            )}
           </div>
 
           <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 340px" }}>
@@ -208,7 +250,9 @@ export function WebSpaceDetail({ id }: { id: string }) {
                 </a>
               </div>
               <div className="rounded-tile bg-ok-bg text-ok-text px-[16px] py-[14px] text-[15px] font-bold">
-                {data.rules.length}개 조건 중 {met}개 충족 · {unmet}개 확인 필요
+                {data.notReady
+                  ? "자격 조건을 정리하고 있어요 · 원문을 확인해 주세요"
+                  : `${data.rules.length}개 조건 중 ${met}개 충족 · ${unmet}개 확인 필요`}
               </div>
               <div className="flex flex-col">
                 {data.rules.map((r, i) => {
@@ -269,7 +313,9 @@ export function WebSpaceDetail({ id }: { id: string }) {
                 {fav ? "마감 알림 받는 중" : "관심 등록 · 마감 알림"}
               </button>
               <a
-                href="#"
+                href={data.sourceUrl ?? "#"}
+                target={data.sourceUrl ? "_blank" : undefined}
+                rel={data.sourceUrl ? "noreferrer" : undefined}
                 className="rounded-control bg-fill text-text hover:text-text flex min-h-[52px] items-center justify-center gap-[6px] text-[16px] font-bold no-underline"
               >
                 공고 원문 보기
