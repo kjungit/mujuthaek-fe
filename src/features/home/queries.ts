@@ -124,12 +124,8 @@ function useApiHomeSummary() {
   const device = stored.status === "ready" ? stored.device : null;
   const body = useMemo(() => {
     if (stored.status !== "ready") return null;
-    const searching = device?.searchRegionCodes ?? [];
-    const regionCodes = searching.length
-      ? searching
-      : device?.regionCode
-        ? [device.regionCode]
-        : [];
+    // 찾아볼 지역(이사갈 곳)만 써요. 없으면 전체
+    const regionCodes = device?.searchRegionCodes ?? [];
     return {
       filters: regionCodes.length ? { regionCodes } : {},
       applicant: toApplicant(stored.device, stored.session, criteria.data),
