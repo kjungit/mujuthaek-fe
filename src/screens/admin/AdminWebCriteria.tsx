@@ -272,7 +272,7 @@ function RegionPanel() {
           수도권 과밀억제권역
         </h2>
         <span className="text-text-sub text-[14px]">
-          청년 창업 세액감면 비율(50% · 100%)을 가를 때 써요
+          수도권정비계획법 · 청년 창업 세액감면 비율(50% · 100%)을 가르는 기준이에요
         </span>
       </div>
       {data.regions.map((r, i) => (
@@ -289,7 +289,7 @@ function RegionPanel() {
         </div>
       ))}
       <span className="text-text-sub pt-[8px] text-[13px]">
-        &apos;일부&apos; 지역은 동 단위로 판정해요 · 동 목록 편집은 상세에서
+        참고용 목록이에요 · 아직 판정에 쓰지 않고, 여기서 바꿀 수 없어요
       </span>
     </section>
   );
