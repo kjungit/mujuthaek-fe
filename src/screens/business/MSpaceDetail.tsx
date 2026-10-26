@@ -81,6 +81,9 @@ function MSpaceDetailView({ data }: { data: SpaceDetail }) {
                 </div>
               ))}
             </dl>
+            {data.summaryNote && (
+              <span className="text-text-sub text-[13px]">{data.summaryNote}</span>
+            )}
           </div>
         </section>
 
@@ -95,7 +98,10 @@ function MSpaceDetailView({ data }: { data: SpaceDetail }) {
           </span>
           {data.rules.map((r, i) =>
             r.met ? (
-              <div key={r.label} className={cn(row(i === data.rules.length - 1), "py-[10px]")}>
+              <div
+                key={`${i}-${r.label}`}
+                className={cn(row(i === data.rules.length - 1), "py-[10px]")}
+              >
                 <span>
                   {r.label} · {r.mRule}
                 </span>
@@ -103,10 +109,13 @@ function MSpaceDetailView({ data }: { data: SpaceDetail }) {
               </div>
             ) : (
               <div
-                key={r.label}
+                key={`${i}-${r.label}`}
                 className={cn(row(i === data.rules.length - 1), "items-center py-[6px]")}
               >
-                <span>{r.label}</span>
+                <span className="flex min-w-0 flex-col gap-[2px]">
+                  <span>{r.label}</span>
+                  {r.mRule && <span className="text-text-sub text-[13px]">{r.mRule}</span>}
+                </span>
                 <Link
                   href={routes.bizOnboarding}
                   className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"

@@ -15,6 +15,57 @@ import type { SpaceDetail } from "@/mocks/business";
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
 
+function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
+  return (
+    <div className="flex flex-col">
+      {rules.map((r, i) => {
+        const last = i === rules.length - 1;
+        return (
+          <div
+            key={`${i}-${r.label}`}
+            className={cn(
+              "flex items-center gap-[12px]",
+              last ? "flex-wrap pt-[12px]" : "border-line-soft border-b border-solid py-[12px]",
+            )}
+          >
+            {r.met ? (
+              <span className="rounded-pill bg-brand flex size-[28px] flex-none items-center justify-center text-white">
+                <Check size={16} strokeWidth={3} aria-hidden />
+              </span>
+            ) : (
+              <span
+                aria-hidden
+                className="rounded-pill bg-check-bg text-check-text flex size-[28px] flex-none items-center justify-center text-[16px] font-extrabold"
+              >
+                ?
+              </span>
+            )}
+            <span className="flex flex-1 flex-col gap-[2px]">
+              <span className="text-[15px] font-bold">{r.label}</span>
+              <span className="text-text-sub text-[13px]">{r.rule}</span>
+              {r.quote && (
+                <span className="text-text-tertiary text-[12px] leading-[1.5]">
+                  원문 · {r.quote}
+                </span>
+              )}
+            </span>
+            {r.met ? (
+              <span className="text-ok-text text-[14px] font-bold">충족</span>
+            ) : (
+              <Link
+                href={routes.bizOnboarding}
+                className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
+              >
+                확인 필요 · 입력
+              </Link>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function WebSpaceDetail({ id }: { id: string }) {
   const { data, loading, error } = useSpaceDetail(id);
   if (!data) {
@@ -42,6 +93,8 @@ export function WebSpaceDetail({ id }: { id: string }) {
 function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const [fav, setFav] = useState(false);
+  // 모집 정책은 공간 정보 대신 자격 조건이 많아서 넓은 칸에 보여줘요
+  const wideRules = data.rules.length > 0 && Boolean(data.summaryNote);
   const met = data.rules.filter((r) => r.met).length;
   const unmet = data.rules.length - met;
 
@@ -94,8 +147,27 @@ function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
                     </div>
                   ))}
                 </dl>
+                {data.summaryNote && (
+                  <span className="text-text-sub text-[14px]">{data.summaryNote}</span>
+                )}
               </div>
             </section>
+
+            {wideRules && (
+              <section
+                aria-labelledby="rules-h"
+                className={cn(card, "gap-[4px] px-[32px] py-[28px]")}
+              >
+                <h2 id="rules-h" className={cn(h2, "mb-[4px]")}>
+                  신청 자격
+                </h2>
+                <span className="text-text-sub mb-[4px] text-[14px]">
+                  공고 원문에서 뽑은 조건이에요 · 확인 필요는 사업 정보를 넣거나 원문으로 확인해
+                  주세요
+                </span>
+                <RuleList rules={data.rules} />
+              </section>
+            )}
 
             {data.conditions.length > 0 && (
               <section
@@ -254,49 +326,7 @@ function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
                   ? "자격 조건을 정리하고 있어요 · 원문을 확인해 주세요"
                   : `${data.rules.length}개 조건 중 ${met}개 충족 · ${unmet}개 확인 필요`}
               </div>
-              <div className="flex flex-col">
-                {data.rules.map((r, i) => {
-                  const last = i === data.rules.length - 1;
-                  return (
-                    <div
-                      key={r.label}
-                      className={cn(
-                        "flex items-center gap-[12px]",
-                        last
-                          ? "flex-wrap pt-[12px]"
-                          : "border-line-soft border-b border-solid py-[12px]",
-                      )}
-                    >
-                      {r.met ? (
-                        <span className="rounded-pill bg-brand flex size-[28px] flex-none items-center justify-center text-white">
-                          <Check size={16} strokeWidth={3} aria-hidden />
-                        </span>
-                      ) : (
-                        <span
-                          aria-hidden
-                          className="rounded-pill bg-check-bg text-check-text flex size-[28px] flex-none items-center justify-center text-[16px] font-extrabold"
-                        >
-                          ?
-                        </span>
-                      )}
-                      <span className="flex flex-1 flex-col gap-[2px]">
-                        <span className="text-[15px] font-bold">{r.label}</span>
-                        <span className="text-text-sub text-[13px]">{r.rule}</span>
-                      </span>
-                      {r.met ? (
-                        <span className="text-ok-text text-[14px] font-bold">충족</span>
-                      ) : (
-                        <Link
-                          href={routes.bizOnboarding}
-                          className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-                        >
-                          확인 필요 · 입력
-                        </Link>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              {!wideRules && <RuleList rules={data.rules} />}
             </section>
 
             <section aria-label="신청" className={cn(card, "gap-[10px] p-[22px]")}>

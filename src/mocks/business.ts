@@ -214,7 +214,14 @@ export type SpaceFact = { label: string; value: string; mValue: string };
 export type SpaceCondition = { label: string; value: string; note?: string; mValue: string };
 export type SpaceDoc = { name: string; note: string; mNote: string; ready: boolean };
 export type SpaceStep = { step: number; title: string; when: string };
-export type SpaceRule = { label: string; rule: string; mRule: string; met: boolean };
+export type SpaceRule = {
+  label: string;
+  rule: string;
+  mRule: string;
+  met: boolean;
+  /** 근거 원문 문장 (실제 API) */
+  quote?: string;
+};
 
 export type SpaceDetail = {
   id: string;
@@ -238,6 +245,8 @@ export type SpaceDetail = {
   sourceUrl?: string;
   /** 판정 틀이 아직 없어 자격을 판정하지 못함 (자격 조건 정리 중) */
   notReady?: boolean;
+  /** 요약 아래 안내 (모집 정책: 입주 조건은 원문에서) */
+  summaryNote?: string;
 };
 
 export const spaceDetails: SpaceDetail[] = [
