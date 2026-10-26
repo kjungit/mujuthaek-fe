@@ -18,8 +18,11 @@ import {
   liveReports,
   liveReviewQueue,
   liveSources,
+  liveBotTraffic,
+  liveTraffic,
 } from "./api";
 import { USE_MOCKS } from "@/lib/api/config";
+import { botTrafficMock, trafficMock } from "@/mocks/admin-traffic";
 
 export const adminKeys = {
   counts: ["admin", "counts"] as const,
@@ -167,4 +170,22 @@ export function useAdminReports() {
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery(mockQuery(adminKeys.reports, adminReports));
+}
+
+/** 트래픽(GA·서버 숫자). 기간이 바뀌면 다시 받아요. GA 숫자는 백엔드가 한 시간쯤 다시 써요 */
+export function useAdminTraffic(days: number) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "traffic", days],
+    queryFn: () => (LIVE ? liveTraffic(days) : Promise.resolve(trafficMock)),
+    staleTime: 60_000,
+  });
+}
+
+/** 봇·보안(서버 요청 기록) */
+export function useAdminBotTraffic(days: number) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "traffic-bots", days],
+    queryFn: () => (LIVE ? liveBotTraffic(days) : Promise.resolve(botTrafficMock)),
+    staleTime: 60_000,
+  });
 }

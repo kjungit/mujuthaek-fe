@@ -5,6 +5,7 @@
  */
 import { api } from "@/lib/api/client";
 import { routes } from "@/lib/routes";
+import type { BotTrafficData, TrafficData } from "@/mocks/admin-traffic";
 import type {
   AdminCriteria,
   AdminCounts,
@@ -1094,4 +1095,13 @@ export async function collectedSummary() {
     fail: src?.summary.fail ?? 0,
     late: (src?.summary.late ?? 0) + (src?.summary.paused ?? 0),
   };
+}
+
+// ---------- 트래픽 (백엔드 traffic 모듈) ----------
+export function liveTraffic(days: number) {
+  return api.get<TrafficData>(`/api/admin/traffic?days=${days}`);
+}
+
+export function liveBotTraffic(days: number) {
+  return api.get<BotTrafficData>(`/api/admin/traffic/bots?days=${days}`);
 }
