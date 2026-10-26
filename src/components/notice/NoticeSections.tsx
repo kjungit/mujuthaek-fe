@@ -149,10 +149,10 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {h.types.map((t) => {
+                    {h.types.map((t, i) => {
                       const td = cn("px-[12px] py-[14px]", t.mine && "font-bold");
                       return (
-                        <tr key={t.code} className={cn(t.mine && "bg-brand-soft")}>
+                        <tr key={`${t.code}-${i}`} className={cn(t.mine && "bg-brand-soft")}>
                           <td className={cn(td, "font-bold", t.mine && "rounded-l-[12px]")}>
                             {t.code}
                           </td>
@@ -171,9 +171,9 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                 </table>
               </div>
             ) : (
-              h.types.map((t) => (
+              h.types.map((t, i) => (
                 <div
-                  key={t.code}
+                  key={`${t.code}-${i}`}
                   className={cn(
                     "rounded-tile flex items-center justify-between gap-[10px] p-[14px]",
                     t.mine ? "bg-brand-soft" : "bg-bg",
@@ -201,8 +201,8 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
             )}
             {h.types
               .filter((t) => t.contractWon && t.balanceWon)
-              .map((t) => (
-                <span key={t.code} className="text-text-sub text-[13px]">
+              .map((t, i) => (
+                <span key={`${t.code}-${i}`} className="text-text-sub text-[13px]">
                   {h.types.length > 1 && `${t.code} · `}보증금 = 계약금 {formatWon(t.contractWon!)}{" "}
                   + 잔금 {formatWon(t.balanceWon!)}
                 </span>
