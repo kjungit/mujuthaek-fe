@@ -282,7 +282,7 @@ export function AdminWebUsers() {
                             type="button"
                             aria-expanded={open === u.id}
                             onClick={() => setOpen(open === u.id ? null : u.id)}
-                            className="rounded-control bg-fill text-text min-h-[38px] cursor-pointer border-0 px-[12px] text-[13px] font-bold"
+                            className="rounded-control bg-fill text-text min-h-[38px] cursor-pointer border-0 px-[12px] text-[13px] font-bold whitespace-nowrap"
                           >
                             {open === u.id ? "닫기" : "관리"}
                           </button>
