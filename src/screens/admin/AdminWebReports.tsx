@@ -211,9 +211,9 @@ export function AdminWebReports() {
                   className="rounded-control border-line text-text resize-y border border-solid px-[14px] py-[12px] text-[15px] leading-[1.6] font-medium"
                 />
                 <span className="text-text-sub text-[13px] font-medium">
-                  {/* 제보한 회원에게 「제보 답변」 알림: 알림함에는 이 답변까지, 푸시에는 결과만(개인정보 때문에) */}
-                  같은 제보를 보낸 {cur.groupCount}명 모두에게 알림이 가요 · 이 답변은 알림함에서만
-                  보이고, 푸시에는 결과만 나가요
+                  {/* 제보한 회원에게 처리 결과(고침·그대로 둠) 알림이 가요. 답변 원문은 개인정보가 들어갈 수 있어 알림에 넣지 않아요 */}
+                  같은 제보를 보낸 {cur.groupCount}명 모두에게 처리 결과 알림이 가요 · 답변 내용은
+                  알림에 담기지 않아요
                 </span>
               </label>
               <div className="flex flex-wrap gap-[8px]">
