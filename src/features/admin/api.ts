@@ -7,6 +7,12 @@ import { api } from "@/lib/api/client";
 import { routes } from "@/lib/routes";
 import type { BotTrafficData, TrafficData } from "@/mocks/admin-traffic";
 import type {
+  ChatReport,
+  ChatReportGroup,
+  ChatReviewAction,
+  ChatReviewStatus,
+} from "@/mocks/admin-chat";
+import type {
   AdminCriteria,
   AdminCounts,
   AdminOverview,
@@ -730,19 +736,21 @@ export async function reopenFromReport(id: string) {
 
 // ---------- 사이드바 숫자·개요 ----------
 export async function liveCounts(): Promise<AdminCounts> {
-  const [n, b, r, c] = await Promise.all([
-    api.get<{ reviewPending: number }>("/api/admin/reviews/counts"),
-    api.get<BenefitReviewList>("/api/admin/benefit-reviews"),
-    api.get<{ newCount: number }>("/api/admin/reports/counts"),
-    collectedSummary(),
+  // 숫자마다 따로 받아요. 추출·수집 서비스가 꺼져 있어도 다른 숫자는 보이고, 못 받은 숫자는 0 대신 비워요(null)
+  const settle = <T>(p: Promise<T>) => p.catch(() => null);
+  const [n, b, r, area, src, chat] = await Promise.all([
+    settle(api.get<{ reviewPending: number }>("/api/admin/reviews/counts")),
+    settle(api.get<BenefitReviewList>("/api/admin/benefit-reviews")),
+    settle(api.get<{ newCount: number }>("/api/admin/reports/counts")),
+    settle(api.get<{ newCount: number }>("/api/admin/area-reports/counts")),
+    settle(api.get<CollectorStatus>("/api/admin/sources")),
+    settle(chatReportPage("PENDING")),
   ]);
-  const area = await api
-    .get<{ newCount: number }>("/api/admin/area-reports/counts")
-    .catch(() => ({ newCount: 0 }));
   return {
-    reviewPending: n.reviewPending + b.items.length,
-    sourceIssues: c.fail + c.late,
-    newReports: r.newCount + area.newCount,
+    reviewPending: n && b ? n.reviewPending + b.items.length : null,
+    sourceIssues: src ? src.summary.fail + src.summary.late + src.summary.paused : null,
+    newReports: r ? r.newCount + (area?.newCount ?? 0) : null,
+    chatReports: chat ? new Set(chat.items.map((x) => x.messageId)).size : null,
   };
 }
 
@@ -1105,3 +1113,74 @@ export function liveTraffic(days: number) {
 export function liveBotTraffic(days: number) {
   return api.get<BotTrafficData>(`/api/admin/traffic/bots?days=${days}`);
 }
+
+// ---------- 채팅 신고 (백엔드 chat 모듈) ----------
+type ChatReportPage = { items: ChatReport[]; nextCursor: string | null; hasNext: boolean };
+
+const chatReportPage = (status: ChatReviewStatus, cursor?: string) =>
+  api.get<ChatReportPage>(
+    `/api/admin/chat/reports?status=${status}&size=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+  );
+
+/** 상태별 신고를 모두 받아요(한 번에 100건, 최대 500건) */
+async function allChatReports(status: ChatReviewStatus) {
+  const all: ChatReport[] = [];
+  let cursor: string | undefined;
+  for (let i = 0; i < 5; i++) {
+    const page = await chatReportPage(status, cursor);
+    all.push(...page.items);
+    if (!page.hasNext || !page.nextCursor) break;
+    cursor = page.nextCursor;
+  }
+  return all;
+}
+
+/** 신고 응답에는 공고 ID만 있어요. 화면에 보일 공고 제목을 공고 상세에서 찾아요(못 찾으면 비움) */
+async function noticeTitles(ids: string[]) {
+  const pairs = await Promise.all(
+    ids.map((id) =>
+      api
+        .get<{ header: { title: string } }>(`/api/v1/notices/${id}`)
+        .then((d) => [id, d.header.title] as const)
+        .catch(() => [id, null] as const),
+    ),
+  );
+  return Object.fromEntries(pairs.filter((p) => p[1] !== null)) as Record<string, string>;
+}
+
+/** 신고를 메시지별로 묶어요. 최근에 신고가 들어온 메시지부터 */
+export function groupChatReports(
+  reports: ChatReport[],
+  titles: Record<string, string>,
+): ChatReportGroup[] {
+  const groups = new Map<string, ChatReportGroup>();
+  for (const r of reports) {
+    const g = groups.get(r.messageId) ?? {
+      messageId: r.messageId,
+      noticeId: r.noticeId,
+      noticeTitle: titles[r.noticeId] ?? null,
+      message: r.message,
+      reports: [],
+      lastReportedAt: r.reportedAt,
+    };
+    g.reports.push({
+      reportId: r.reportId,
+      reason: r.reason,
+      detail: r.detail,
+      reportedAt: r.reportedAt,
+    });
+    if (r.reportedAt > g.lastReportedAt) g.lastReportedAt = r.reportedAt;
+    groups.set(r.messageId, g);
+  }
+  return [...groups.values()].sort((a, b) => b.lastReportedAt.localeCompare(a.lastReportedAt));
+}
+
+export async function liveChatReports(status: ChatReviewStatus) {
+  const reports = await allChatReports(status);
+  const titles = await noticeTitles([...new Set(reports.map((r) => r.noticeId))]);
+  return groupChatReports(reports, titles);
+}
+
+/** 가림 유지(KEEP_HIDDEN) 또는 다시 보이기(RESTORE). 그 메시지의 검토 전 신고가 모두 처리돼요 */
+export const reviewChatMessage = (messageId: string, action: ChatReviewAction) =>
+  api.patch(`/api/admin/chat/messages/${messageId}`, { action });

@@ -8,6 +8,7 @@ import {
   Database,
   ExternalLink,
   Flag,
+  MessageSquareWarning,
   LayoutDashboard,
   SlidersHorizontal,
   type LucideIcon,
@@ -48,6 +49,12 @@ const menu: MenuItem[] = [
     count: { key: "newReports", tone: "wait" },
   },
   { href: routes.adminTraffic, label: "트래픽", icon: Activity },
+  {
+    href: routes.adminChat,
+    label: "채팅 신고",
+    icon: MessageSquareWarning,
+    count: { key: "chatReports", tone: "wait" },
+  },
 ];
 
 /** 관리자 화면 틀: 왼쪽 232px 어두운 사이드바 + 본문 */
@@ -90,7 +97,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon size={20} aria-hidden />
                 <span className="flex-1">{label}</span>
-                {count && (
+                {count && counts[count.key] != null && (
                   <span
                     className={cn(
                       "rounded-pill px-[8px] py-[2px] text-[12px] font-extrabold",

@@ -20,9 +20,12 @@ import {
   liveSources,
   liveBotTraffic,
   liveTraffic,
+  groupChatReports,
+  liveChatReports,
 } from "./api";
 import { USE_MOCKS } from "@/lib/api/config";
 import { botTrafficMock, trafficMock } from "@/mocks/admin-traffic";
+import { chatReportTitlesMock, chatReportsMock, type ChatReviewStatus } from "@/mocks/admin-chat";
 
 export const adminKeys = {
   counts: ["admin", "counts"] as const,
@@ -39,7 +42,7 @@ export const adminKeys = {
  */
 const LIVE = !USE_MOCKS;
 const live = (key: readonly string[]) => ["admin", "live", ...key.slice(1)] as const;
-const ZERO: AdminCounts = { reviewPending: 0, sourceIssues: 0, newReports: 0 };
+const ZERO: AdminCounts = { reviewPending: 0, sourceIssues: 0, newReports: 0, chatReports: 0 };
 
 /** 사이드바 메뉴 옆 숫자 */
 export function useAdminCounts() {
@@ -187,5 +190,22 @@ export function useAdminBotTraffic(days: number) {
     queryKey: ["admin", LIVE ? "live" : "mock", "traffic-bots", days],
     queryFn: () => (LIVE ? liveBotTraffic(days) : Promise.resolve(botTrafficMock)),
     staleTime: 60_000,
+  });
+}
+
+/** 채팅 신고(메시지별로 묶음). 상태가 바뀌면 다시 받아요 */
+export function useAdminChatReports(status: ChatReviewStatus) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "chat-reports", status],
+    queryFn: () =>
+      LIVE
+        ? liveChatReports(status)
+        : Promise.resolve(
+            groupChatReports(
+              chatReportsMock.filter((r) => r.reviewStatus === status),
+              chatReportTitlesMock,
+            ),
+          ),
+    staleTime: 0,
   });
 }
