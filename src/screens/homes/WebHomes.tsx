@@ -80,6 +80,7 @@ function ListingCard({
         <span className="tracking-title text-[18px] font-extrabold">{item.title}</span>
         {item.price && <span className="text-[15px] font-semibold">{item.price}</span>}
         <span className="flex flex-wrap gap-[4px]">
+          {item.life && <InfoTag>{item.life}</InfoTag>}
           {item.tags.map((t) => (
             <InfoTag key={t}>{t}</InfoTag>
           ))}

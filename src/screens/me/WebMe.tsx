@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronRight, Heart, Lock, User } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebPage } from "@/components/layout/Responsive";
@@ -12,6 +13,7 @@ import { DEVICE_TTL_MS, clearConditions, setSaveOnDevice } from "@/features/cond
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useMe } from "@/features/me/queries";
 import { cn } from "@/lib/cn";
+import { useLogout } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
 import type { MeChannelKey, MeNotifKey } from "@/mocks/me";
 
@@ -61,6 +63,8 @@ const selectCls =
   "border-line bg-surface text-text min-h-[44px] rounded-sm border border-solid px-[12px] text-[15px]";
 
 export function WebMe() {
+  const logout = useLogout();
+  const router = useRouter();
   const { data } = useMe();
   const push = usePush();
   const [tab, setTab] = useState<Tab>("cond");
@@ -123,12 +127,13 @@ export function WebMe() {
               <span className="rounded-badge bg-fill text-text-sub px-[10px] py-[5px] text-[13px] font-semibold">
                 {data.account.provider}로 로그인
               </span>
-              <Link
-                href={routes.main}
-                className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center text-[14px] font-semibold no-underline"
+              <button
+                type="button"
+                onClick={() => void logout().then(() => router.push(routes.main))}
+                className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-semibold"
               >
                 로그아웃
-              </Link>
+              </button>
             </div>
           </section>
 

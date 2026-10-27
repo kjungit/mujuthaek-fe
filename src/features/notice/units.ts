@@ -78,6 +78,7 @@ export function toUnit(
     otherTarget: judgment ? "다른 대상" : "판정 전",
     prep: judgment?.prepByType[type] ?? "확인 필요",
     siteId: u.siteId ?? undefined,
+    lifeScore: site?.lifeScore,
     // 호마다 좌표가 없어서 그림 지도 위치는 쓰지 않아요 (단지 위치는 카카오맵으로)
     x: 0,
     y: 0,
@@ -85,8 +86,17 @@ export function toUnit(
 }
 
 /** 단지별로 묶어요 (백엔드가 단지 순서로 줘요). count는 all에서 센 그 단지 호수 (목록을 일부만 보여줘도 전체 수) */
-export function bySite<T extends { siteId?: string; siteName?: string }>(units: T[], all = units) {
-  const groups: { key: string; name: string | undefined; count: number; units: T[] }[] = [];
+export function bySite<T extends { siteId?: string; siteName?: string; lifeScore?: number }>(
+  units: T[],
+  all = units,
+) {
+  const groups: {
+    key: string;
+    name: string | undefined;
+    count: number;
+    lifeScore: number | undefined;
+    units: T[];
+  }[] = [];
   for (const u of units) {
     const key = u.siteId ?? "";
     const last = groups.at(-1);
@@ -95,6 +105,7 @@ export function bySite<T extends { siteId?: string; siteName?: string }>(units: 
       groups.push({
         key,
         name: u.siteName,
+        lifeScore: u.lifeScore,
         count: all.filter((a) => (a.siteId ?? "") === key).length,
         units: [u],
       });

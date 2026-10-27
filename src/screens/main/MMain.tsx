@@ -6,6 +6,7 @@ import { Logo } from "@/components/brand/Logo";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { useMainLanding } from "@/features/main/queries";
 import { cn } from "@/lib/cn";
+import { useSession } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
 
 const eyebrow = "text-brand-strong text-[14px] font-bold";
@@ -20,11 +21,6 @@ const features = [
     desc: "청년 월세 지원, 전세자금 대출처럼 받을 수 있는 정책과 금액",
   },
   { href: routes.homes, title: "청약·공공임대 공고", desc: "지원할 수 있는 곳과 내가 준비할 돈" },
-  {
-    href: routes.life,
-    title: "생활권",
-    desc: "직장까지 시간과 역세권·학세권을 내 우선순위로 점수화",
-  },
   {
     href: routes.business,
     title: "사업공간 · 사업 지원",
@@ -78,6 +74,8 @@ function StatCard({
 }
 
 export function MMain() {
+  // 로그인했으면 로그인 대신 이름 · 내 홈 (불러오는 동안은 숨겨요)
+  const { data: session } = useSession();
   const { data } = useMainLanding();
   const { example, judgeExample } = data;
 
@@ -92,12 +90,14 @@ export function MMain() {
           <Logo size={28} />
           <span className="tracking-logo text-[18px] font-extrabold">무주택자들</span>
         </Link>
-        <Link
-          href={routes.login}
-          className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center px-[12px] text-[15px] font-semibold no-underline"
-        >
-          로그인
-        </Link>
+        {session !== undefined && (
+          <Link
+            href={session ? routes.home : routes.login}
+            className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center px-[12px] text-[15px] font-semibold no-underline"
+          >
+            {session ? `${session.nickname}님 · 내 홈` : "로그인"}
+          </Link>
+        )}
       </header>
 
       <main className="flex flex-1 flex-col">
