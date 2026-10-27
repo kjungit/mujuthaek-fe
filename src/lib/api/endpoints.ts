@@ -35,6 +35,11 @@ export const endpoints = {
   areaSite: (siteId: string) => `/api/v1/areas/sites/${encodeURIComponent(siteId)}`,
   /** 공고 하나의 판정 (조건별 결과) */
   noticeEvaluate: (id: string) => `/api/v1/eligibility/notices/${encodeURIComponent(id)}/evaluate`,
-  // 백엔드 알림 API 전 (설계: POST /api/v1/me/push-subscriptions)
-  pushSubscriptions: "/api/v1/notifications/subscriptions",
+  /** 웹 푸시 기기 등록(PUT)·해제(DELETE). 본문은 subscription.toJSON() 그대로 */
+  pushSubscriptions: "/api/users/me/push-subscriptions",
+  /** 웹 푸시 VAPID 공개키 (로그인 없이) */
+  pushPublicKey: "/api/v1/push/public-key",
+  /** 알림함: 목록(GET ?cursor&size&unread) · /unread-count · /{id}/read · /read-all */
+  notifications: "/api/users/me/notifications",
+  notificationSettings: "/api/users/me/notification-settings",
 } as const;
