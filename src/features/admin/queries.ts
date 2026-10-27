@@ -19,13 +19,21 @@ import {
   liveReviewQueue,
   liveSources,
   liveBotTraffic,
+  liveActivity,
+  liveRealtime,
+  liveAdminChanges,
+  liveUsers,
+  liveUserNames,
   liveTraffic,
+  noticeTitles,
   groupChatReports,
   liveChatReports,
 } from "./api";
 import { USE_MOCKS } from "@/lib/api/config";
-import { botTrafficMock, trafficMock } from "@/mocks/admin-traffic";
+import { botTrafficMock, noticeTitlesMock, realtimeMock, trafficMock } from "@/mocks/admin-traffic";
 import { chatReportTitlesMock, chatReportsMock, type ChatReviewStatus } from "@/mocks/admin-chat";
+import { adminChangesMock, adminUsersMock, type AdminUserFilter } from "@/mocks/admin-users";
+import { activityMock } from "@/mocks/admin-activity";
 
 export const adminKeys = {
   counts: ["admin", "counts"] as const,
@@ -85,13 +93,14 @@ export function useAdminOverview() {
     const empty = {
       ...adminOverview,
       asOf: wait,
-      review: { count: 0, oldest: "-" },
-      collected: { count: 0, note: wait },
-      issues: { count: 0, note: wait },
-      reports: { count: 0, note: wait },
+      // 받기 전에는 0이 아니라 「-」로 보여요
+      review: { count: null, oldest: wait },
+      collected: { count: null, note: wait },
+      issues: { count: null, note: wait },
+      reports: { count: null, note: wait },
       todos: [],
       quality: { asIs: "-", edited: "-", rejected: "-", medianTime: "-", fixedByReport: "-" },
-      today: { approved: 0, editedApproved: 0, rejected: 0, replied: 0 },
+      today: { approved: null, editedApproved: null, rejected: null, replied: null },
     };
     return { ...q, data: q.data ?? empty };
   }
@@ -206,6 +215,76 @@ export function useAdminChatReports(status: ChatReviewStatus) {
               chatReportTitlesMock,
             ),
           ),
+    staleTime: 0,
+  });
+}
+
+/** 지금 접속자. 화면을 열어 둔 동안 30초마다 다시 받아요(백엔드도 30초 다시 써요) */
+export function useAdminRealtime() {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "traffic-realtime"],
+    queryFn: () => (LIVE ? liveRealtime() : Promise.resolve(realtimeMock)),
+    refetchInterval: 30_000,
+    staleTime: 30_000,
+  });
+}
+
+/** 공고 ID → 제목 (많이 본 공고·채팅 신고 등). 못 찾은 공고는 빠져요 */
+export function useNoticeTitles(ids: string[]) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "notice-titles", ...ids],
+    queryFn: () => (LIVE ? noticeTitles(ids) : Promise.resolve(noticeTitlesMock)),
+    enabled: ids.length > 0,
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** 회원 찾기 (한 쪽 30명) */
+export function useAdminUsers(query: string, filter: AdminUserFilter, page: number) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "users", query, filter, page],
+    queryFn: () => {
+      if (LIVE) return liveUsers(query, filter, page);
+      const items = adminUsersMock.filter(
+        (u) =>
+          (!filter ||
+            (filter === "ADMIN" && u.role !== "USER") ||
+            (filter === "USER" && u.role === "USER") ||
+            (filter === "SUSPENDED" && u.suspension)) &&
+          (!query.trim() || (u.nickname ?? "").includes(query.trim()) || u.id === query.trim()),
+      );
+      return Promise.resolve({ items, total: items.length });
+    },
+    staleTime: 0,
+  });
+}
+
+/** 회원 ID → 이름 (처리 기록의 관리자 이름) */
+export function useAdminUserNames(ids: string[]) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "user-names", ...ids],
+    queryFn: () =>
+      LIVE ? liveUserNames(ids) : Promise.resolve(adminUsersMock.filter((u) => ids.includes(u.id))),
+    enabled: ids.length > 0,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** 관리자 변경 기록 (지정·해제·권한·정지·넘기기·긴급 정지) */
+export function useAdminChanges(days: number, enabled = true) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "admin-changes", days],
+    queryFn: () => (LIVE ? liveAdminChanges(days) : Promise.resolve(adminChangesMock)),
+    enabled,
+    staleTime: 0,
+  });
+}
+
+/** 처리 기록 (검수·제보·기준값·권한) */
+export function useAdminActivity(days: number) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "activity", days],
+    queryFn: () => (LIVE ? liveActivity(days) : Promise.resolve(activityMock)),
     staleTime: 0,
   });
 }

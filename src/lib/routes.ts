@@ -33,6 +33,8 @@ export const routes = {
   adminReports: "/admin/reports",
   adminTraffic: "/admin/traffic",
   adminChat: "/admin/chat",
+  adminUsers: "/admin/users",
+  adminActivity: "/admin/activity",
 } as const;
 
 export type Mode = "home" | "business";

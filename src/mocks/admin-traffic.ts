@@ -8,6 +8,17 @@ export type TrafficDaily = {
   pageViews: number;
 };
 export type FunnelStep = { event: string; label: string; count: number; users: number };
+/** 많이 본 공고 한 줄 (제목은 화면이 공고 ID로 찾아요) */
+export type NoticeView = { noticeId: string; views: number; users: number };
+/** 지금 접속자 (GA 실시간, GET /api/admin/traffic/realtime) */
+export type RealtimeData = {
+  connected: boolean;
+  error: string | null;
+  fetchedAt: string | null;
+  last30Minutes: number;
+  last5Minutes: number;
+  devices: TrafficItem[];
+};
 export type ServerDaily = {
   date: string;
   humanRequests: number;
@@ -36,6 +47,7 @@ export type TrafficData = {
     browsers: TrafficItem[];
     regions: TrafficItem[];
     funnel: FunnelStep[];
+    popularNotices: NoticeView[];
   };
   server: ServerDaily[];
 };
@@ -142,6 +154,11 @@ export const trafficMock: TrafficData = {
       { event: "notice_source_open", label: "원문 보기", count: 530, users: 290 },
       { event: "notice_bookmark", label: "관심 등록", count: 140, users: 120 },
     ],
+    popularNotices: [
+      { noticeId: "n1", views: 2900, users: 820 },
+      { noticeId: "n3", views: 1210, users: 400 },
+      { noticeId: "n2", views: 640, users: 260 },
+    ],
   },
   server: DAYS.map((date, i) => ({
     date,
@@ -216,4 +233,23 @@ export const botTrafficMock: BotTrafficData = {
       client: "TOOL",
     },
   ],
+};
+
+export const realtimeMock: RealtimeData = {
+  connected: true,
+  error: null,
+  fetchedAt: "2026-10-27T03:00:00Z",
+  last30Minutes: 23,
+  last5Minutes: 6,
+  devices: [
+    { name: "mobile", value: 17, users: 17 },
+    { name: "desktop", value: 6, users: 6 },
+  ],
+};
+
+/** 목업 공고 제목 (사용자 화면 /notices/n1 …) */
+export const noticeTitlesMock: Record<string, string> = {
+  n1: "○○ 행복주택 입주자 모집",
+  n2: "○○ 국민임대 예비입주자 모집",
+  n3: "○○ 장기전세",
 };

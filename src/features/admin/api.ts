@@ -5,7 +5,16 @@
  */
 import { api } from "@/lib/api/client";
 import { routes } from "@/lib/routes";
-import type { BotTrafficData, TrafficData } from "@/mocks/admin-traffic";
+import type { BotTrafficData, RealtimeData, TrafficData } from "@/mocks/admin-traffic";
+import { PERMISSION_INFO, type AdminPermission } from "@/features/admin/permissions";
+import type {
+  AdminChange,
+  AdminUser,
+  AdminUserFilter,
+  AdminUserName,
+  AdminUsersPage,
+} from "@/mocks/admin-users";
+import type { ActivityData, ActivityItem } from "@/mocks/admin-activity";
 import type {
   ChatReport,
   ChatReportGroup,
@@ -576,7 +585,7 @@ export async function decideReview(
 
 const REJECT: Record<string, string> = {
   "중복 공고": "DUPLICATE",
-  "원문과 다름 · 다시 추출": "SOURCE_MISMATCH",
+  "원문과 다름": "SOURCE_MISMATCH",
   "서비스 대상 아님": "OUT_OF_SCOPE",
   "마감된 공고": "CLOSED",
 };
@@ -590,7 +599,12 @@ type ReportList = {
     screen: string | null;
     targetType: string;
     noticeId: string | null;
+    /** 창업지원 사업 제보면 사업 ID (사업 지원 상세 /business/support/{id}) */
+    programId: string | null;
+    /** 혜택 제보의 원본 정책 ID (혜택 검수용) */
     benefitPolicyId: string | null;
+    /** 혜택 화면(/benefits/{id})용 혜택 ID. 원본 정책 ID와 달라요. 아직 저장 전이면 null */
+    benefitId: string | null;
     noticeTitle: string;
     field: string;
     currentValue: string | null;
@@ -631,11 +645,16 @@ export async function liveReports(): Promise<{
     summary: r.summary ?? r.field,
     age: ago(r.createdAt),
     groupCount: r.groupCount,
+    // 「원문 보기」: 공고 · 혜택(혜택 ID, 아직 없으면 혜택 목록) · 사업 지원 상세
     link: r.noticeId
       ? routes.notice(r.noticeId)
       : r.benefitPolicyId
-        ? routes.benefit(r.benefitPolicyId)
-        : routes.adminReports,
+        ? r.benefitId
+          ? routes.benefit(r.benefitId)
+          : routes.benefits
+        : r.programId
+          ? `${routes.bizSupport}/${r.programId}`
+          : routes.adminReports,
     notes: (details[i].notes ?? []).map((n) => ({
       text: n.text,
       meta: `사용자 · ${when(n.createdAt)}`,
@@ -755,42 +774,54 @@ export async function liveCounts(): Promise<AdminCounts> {
 }
 
 export async function liveOverview(base: AdminOverview): Promise<AdminOverview> {
-  const [n, b, r, urgent, stats] = await Promise.all([
-    api.get<{ reviewPending: number; oldestReceivedAt: string | null }>(
-      "/api/admin/reviews/counts",
-    ),
-    api.get<BenefitReviewList>("/api/admin/benefit-reviews"),
-    api.get<{ newCount: number; doing: number; done: number }>("/api/admin/reports/counts"),
-    api.get<{ id: string; title: string; applyEndsOn: string | null }[]>(
-      "/api/admin/reviews/urgent?days=3",
-    ),
-    api.get<{
-      recent: {
-        asIsRate: number | null;
-        editedRate: number | null;
-        rejectedRate: number | null;
-        medianMinutes: number | null;
-      };
-      today: { approved: number; editedApproved: number; rejected: number };
-    }>("/api/admin/reviews/stats?days=7"),
+  // 숫자마다 따로 받아요. 하나가 실패해도(서버 꺼짐·권한 없음) 나머지는 보이고, 실패한 카드만 「불러오지 못했어요」
+  const none = () => null;
+  const [n, b, r, urgent, stats, handled, ar, collected] = await Promise.all([
+    api
+      .get<{ reviewPending: number; oldestReceivedAt: string | null }>("/api/admin/reviews/counts")
+      .catch(none),
+    api.get<BenefitReviewList>("/api/admin/benefit-reviews").catch(none),
+    api
+      .get<{ newCount: number; doing: number; done: number }>("/api/admin/reports/counts")
+      .catch(none),
+    api
+      .get<{ id: string; title: string; applyEndsOn: string | null }[]>(
+        "/api/admin/reviews/urgent?days=3",
+      )
+      .catch(none),
+    api
+      .get<{
+        recent: {
+          asIsRate: number | null;
+          editedRate: number | null;
+          rejectedRate: number | null;
+          medianMinutes: number | null;
+        };
+        today: { approved: number; editedApproved: number; rejected: number };
+      }>("/api/admin/reviews/stats?days=7")
+      .catch(none),
+    // 「제보로 고친 값」은 최근 7일에 고침(FIXED)으로 끝낸 제보, 「오늘 제보 답변」은 오늘 끝낸 제보예요(그대로 둠 포함)
+    doneReports().catch(none),
+    // 생활권 제보도 제보 수에 더해요
+    api
+      .get<{ newCount: number; doing: number; done: number }>("/api/admin/area-reports/counts")
+      .catch(none),
+    collectedSummary(),
   ]);
+  const FAILED = "불러오지 못했어요";
   // 백엔드가 이미 0~100 정수로 줘요(예전에 100을 또 곱해 75%가 7500%로 보였음)
-  const pct = (v: number | null) => (v == null ? "-" : `${v}%`);
-  // 「제보로 고친 값」은 최근 7일에 고침(FIXED)으로 끝낸 제보, 「오늘 제보 답변」은 오늘 끝낸 제보예요(그대로 둠 포함).
-  // 예전에는 끝난 제보 전체 수를 둘 다에 써서 「그대로 둠」도 고친 값으로 셌어요
-  const handled = await doneReports();
-  // 생활권 제보도 제보 수에 더해요
-  const ar = await api
-    .get<{ newCount: number; doing: number; done: number }>("/api/admin/area-reports/counts")
-    .catch(() => ({ newCount: 0, doing: 0, done: 0 }));
-  r.newCount += ar.newCount;
-  r.doing += ar.doing;
-  r.done += ar.done;
-  const collected = await collectedSummary();
+  const pct = (v: number | null | undefined) => (v == null ? "-" : `${v}%`);
+  const reports = r
+    ? {
+        newCount: r.newCount + (ar?.newCount ?? 0),
+        doing: r.doing + (ar?.doing ?? 0),
+        done: r.done + (ar?.done ?? 0),
+      }
+    : null;
   const isPast = (d: string | null) => !!d && d < new Date().toLocaleDateString("en-CA");
   const todos: AdminTodo[] = [
     // 마감 전(3일 안)인 건을 먼저, 이미 마감된 대기 건은 뒤에
-    ...[...urgent]
+    ...[...(urgent ?? [])]
       .sort((a, c) => Number(isPast(a.applyEndsOn)) - Number(isPast(c.applyEndsOn)))
       .slice(0, 4)
       .map((u) => ({
@@ -800,12 +831,12 @@ export async function liveOverview(base: AdminOverview): Promise<AdminOverview> 
         // 백엔드는 마감이 이미 지난 대기 건도 함께 줘요(먼저 정리할 일). 지났으면 그렇게 표시해요
         desc: `${u.applyEndsOn && u.applyEndsOn < new Date().toLocaleDateString("en-CA") ? "마감 지남" : "마감"} ${u.applyEndsOn} · 검수 대기`,
       })),
-    ...(r.newCount
+    ...(reports?.newCount
       ? [
           {
             id: "reports",
             kind: "report" as const,
-            title: `새 제보 ${r.newCount}건`,
+            title: `새 제보 ${reports.newCount}건`,
             desc: "제보 화면에서 확인해요",
           },
         ]
@@ -821,33 +852,41 @@ export async function liveOverview(base: AdminOverview): Promise<AdminOverview> 
       hour: "2-digit",
       minute: "2-digit",
     }),
-    review: { count: n.reviewPending + b.items.length, oldest: span(n.oldestReceivedAt) },
-    reports: {
-      count: r.newCount + r.doing,
-      note: `새 ${r.newCount} · 처리 중 ${r.doing} · 끝 ${r.done}`,
-    },
-    collected: {
-      count: collected.today,
-      note: `최근 회차 새 글 ${collected.recent}건 · 누적 ${collected.total.toLocaleString("ko-KR")}건`,
-    },
-    issues: {
-      count: collected.fail + collected.late,
-      note: `실패 ${collected.fail} · 지연·중지 ${collected.late}`,
-    },
+    review: n
+      ? { count: n.reviewPending + (b?.items.length ?? 0), oldest: span(n.oldestReceivedAt) }
+      : { count: null, oldest: FAILED },
+    reports: reports
+      ? {
+          count: reports.newCount + reports.doing,
+          note: `새 ${reports.newCount} · 처리 중 ${reports.doing} · 끝 ${reports.done}`,
+        }
+      : { count: null, note: FAILED },
+    collected: collected
+      ? {
+          count: collected.today,
+          note: `최근 회차 새 글 ${collected.recent}건 · 누적 ${collected.total.toLocaleString("ko-KR")}건`,
+        }
+      : { count: null, note: `${FAILED} (수집기 연결 안 됨)` },
+    issues: collected
+      ? {
+          count: collected.fail + collected.late,
+          note: `실패 ${collected.fail} · 지연·중지 ${collected.late}`,
+        }
+      : { count: null, note: `${FAILED} (수집기 연결 안 됨)` },
     todos: todos.length ? todos : base.todos.slice(0, 0),
     quality: {
       ...base.quality,
-      asIs: pct(stats.recent.asIsRate),
-      edited: pct(stats.recent.editedRate),
-      rejected: pct(stats.recent.rejectedRate),
-      medianTime: stats.recent.medianMinutes == null ? "-" : `${stats.recent.medianMinutes}분`,
-      fixedByReport: `${handled.fixed7}건`,
+      asIs: pct(stats?.recent.asIsRate),
+      edited: pct(stats?.recent.editedRate),
+      rejected: pct(stats?.recent.rejectedRate),
+      medianTime: stats?.recent.medianMinutes == null ? "-" : `${stats.recent.medianMinutes}분`,
+      fixedByReport: handled ? `${handled.fixed7}건` : "-",
     },
     today: {
-      approved: stats.today.approved,
-      editedApproved: stats.today.editedApproved,
-      rejected: stats.today.rejected,
-      replied: handled.today,
+      approved: stats?.today.approved ?? null,
+      editedApproved: stats?.today.editedApproved ?? null,
+      rejected: stats?.today.rejected ?? null,
+      replied: handled?.today ?? null,
     },
   };
 }
@@ -1087,10 +1126,12 @@ export const scheduleMedianIncome = (
   });
 
 /** 개요의 수집 칸 */
+/** 수집 현황 요약. 수집기에 연결하지 못하거나 권한이 없으면 null (0으로 보이지 않게) */
 export async function collectedSummary() {
   const src = await api.get<CollectorStatus>("/api/admin/sources").catch(() => null);
+  if (!src) return null;
   const todayKst = new Date().toLocaleDateString("ko-KR", { timeZone: KST });
-  const sources = src?.sources ?? [];
+  const sources = src.sources;
   return {
     today: sources
       .flatMap((x) => x.recentRuns)
@@ -1100,14 +1141,18 @@ export async function collectedSummary() {
       .reduce((a, x) => a + (x.newCount ?? 0), 0),
     recent: sources.reduce((a, x) => a + (x.lastRun?.newCount ?? 0), 0),
     total: sources.reduce((a, x) => a + x.totalCollected, 0),
-    fail: src?.summary.fail ?? 0,
-    late: (src?.summary.late ?? 0) + (src?.summary.paused ?? 0),
+    fail: src.summary.fail,
+    late: src.summary.late + (src.summary.paused ?? 0),
   };
 }
 
 // ---------- 트래픽 (백엔드 traffic 모듈) ----------
 export function liveTraffic(days: number) {
   return api.get<TrafficData>(`/api/admin/traffic?days=${days}`);
+}
+
+export function liveRealtime() {
+  return api.get<RealtimeData>("/api/admin/traffic/realtime");
 }
 
 export function liveBotTraffic(days: number) {
@@ -1136,7 +1181,7 @@ async function allChatReports(status: ChatReviewStatus) {
 }
 
 /** 신고 응답에는 공고 ID만 있어요. 화면에 보일 공고 제목을 공고 상세에서 찾아요(못 찾으면 비움) */
-async function noticeTitles(ids: string[]) {
+export async function noticeTitles(ids: string[]) {
   const pairs = await Promise.all(
     ids.map((id) =>
       api
@@ -1184,3 +1229,134 @@ export async function liveChatReports(status: ChatReviewStatus) {
 /** 가림 유지(KEEP_HIDDEN) 또는 다시 보이기(RESTORE). 그 메시지의 검토 전 신고가 모두 처리돼요 */
 export const reviewChatMessage = (messageId: string, action: ChatReviewAction) =>
   api.patch(`/api/admin/chat/messages/${messageId}`, { action });
+
+// ---------- 회원 관리 (백엔드 user 모듈) ----------
+export function liveUsers(query: string, filter: AdminUserFilter, page: number) {
+  const q = new URLSearchParams({ page: String(page) });
+  if (query.trim()) q.set("query", query.trim());
+  if (filter) q.set("filter", filter);
+  return api.get<AdminUsersPage>(`/api/admin/users?${q}`);
+}
+
+/** 이름만 (처리 기록의 관리자 이름). 최대 100명, 관리자 누구나 */
+export function liveUserNames(ids: string[]) {
+  return api.get<AdminUserName[]>(`/api/admin/users/names?ids=${ids.slice(0, 100).join(",")}`);
+}
+
+/** 관리자 지정(ADMIN)·해제(USER) — 「관리자 지정」 */
+export const changeUserRole = (id: string, role: "USER" | "ADMIN") =>
+  api.patch<AdminUser>(`/api/admin/users/${id}/role`, { role });
+
+/** 일반 관리자의 권한을 이 목록으로 맞춰요 — 「권한 부여」, 내가 가진 권한만 */
+export const setUserPermissions = (id: string, permissions: AdminPermission[]) =>
+  api.put<AdminUser>(`/api/admin/users/${id}/permissions`, { permissions });
+
+/** 이용 정지 (until 비우면 해제할 때까지) — 「이용 정지」 */
+export const suspendUser = (id: string, reason: string, until: string | null) =>
+  api.put<AdminUser>(`/api/admin/users/${id}/suspension`, { reason, until });
+
+export const unsuspendUser = (id: string) =>
+  api.delete<AdminUser>(`/api/admin/users/${id}/suspension`);
+
+/** 최상위 관리자 넘기기 — 최상위만, 로그인한 지 10분 안에 */
+export const transferSuperAdmin = (userId: string) =>
+  api.post<AdminUser>("/api/admin/super/transfer", { userId });
+
+/** 관리자 긴급 정지·풀기 — 최상위만 */
+export const freezeAdmins = (reason: string) => api.put("/api/admin/super/freeze", { reason });
+export const unfreezeAdmins = () => api.delete("/api/admin/super/freeze");
+
+export function liveAdminChanges(days: number) {
+  return api.get<AdminChange[]>(`/api/admin/users/changes?days=${days}`);
+}
+
+// ---------- 처리 기록 ----------
+type CriteriaChanges = {
+  kind: string;
+  changes: {
+    year: number;
+    validFrom: string;
+    source: string | null;
+    replacedAt: string;
+    replacedBy: string | null;
+  }[];
+};
+
+const CRITERIA_KINDS: Record<string, string> = {
+  MEDIAN_INCOME: "기준중위소득",
+  URBAN_WORKER_INCOME: "도시근로자 월평균소득",
+  RANK_CRITERIA: "순위 요건",
+};
+
+/** 검수·제보 처리(notice) + 기준값 바꾼 기록(eligibility) + 권한 변경(user)을 최근 순으로 합쳐요. 하나가 실패해도 나머지는 보여요 */
+export async function liveActivity(days: number): Promise<ActivityData> {
+  const since = Date.now() - days * 86_400_000;
+  const [main, criteria, roles, chatKept, chatRestored] = await Promise.all([
+    api
+      .get<{ items: (ActivityItem & { targetId: string | null })[]; reviewsError: string | null }>(
+        `/api/admin/activity?days=${days}`,
+      )
+      .catch(() => null),
+    Promise.all(
+      Object.keys(CRITERIA_KINDS).map((k) =>
+        api.get<CriteriaChanges>(`/api/admin/criteria/${k}/history`).catch(() => null),
+      ),
+    ),
+    liveAdminChanges(days).catch(() => null),
+    // 채팅 신고 처리 (처리한 관리자는 reviewedBy). 권한이 없거나 채팅이 없으면 빈 목록
+    allChatReports("KEPT_HIDDEN").catch(() => [] as ChatReport[]),
+    allChatReports("RESTORED").catch(() => [] as ChatReport[]),
+  ]);
+  const items: ActivityItem[] = [...(main?.items ?? [])];
+  for (const h of criteria) {
+    for (const c of h?.changes ?? []) {
+      if (Date.parse(c.replacedAt) < since) continue;
+      items.push({
+        at: c.replacedAt,
+        kind: "CRITERIA",
+        action: "REPLACED",
+        title: `${CRITERIA_KINDS[h!.kind] ?? h!.kind} ${c.year}년`,
+        detail: c.source,
+        by: c.replacedBy,
+      });
+    }
+  }
+  for (const r of roles ?? []) {
+    items.push({
+      at: r.changedAt,
+      kind: "ROLE",
+      action: r.kind,
+      title:
+        r.kind === "FREEZE" || r.kind === "UNFREEZE"
+          ? "모든 관리자"
+          : (r.nickname ?? "탈퇴한 회원"),
+      detail: r.permission ? PERMISSION_INFO[r.permission].label : r.note,
+      by: r.changedBy,
+    });
+  }
+  // 같은 메시지의 신고는 한 번에 처리돼서 메시지마다 한 줄로 모아요
+  const chat = new Map<string, { r: ChatReport; count: number }>();
+  for (const r of [...chatKept, ...chatRestored]) {
+    if (!r.reviewedAt || Date.parse(r.reviewedAt) < since) continue;
+    const seen = chat.get(r.messageId);
+    chat.set(r.messageId, { r: seen?.r ?? r, count: (seen?.count ?? 0) + 1 });
+  }
+  for (const { r, count } of chat.values()) {
+    const text = (r.message.content ?? "").trim();
+    items.push({
+      at: r.reviewedAt!,
+      kind: "CHAT_REPORT",
+      action: r.reviewStatus,
+      title: text ? (text.length > 40 ? `${text.slice(0, 40)}…` : text) : "지운 메시지",
+      detail: `신고 ${count}건${r.message.authorNickname ? ` · 쓴 사람 ${r.message.authorNickname}` : ""}`,
+      by: r.reviewedBy ?? null,
+    });
+  }
+  items.sort((a, b) => b.at.localeCompare(a.at));
+  const failed = [main ? null : "검수·제보", roles ? null : "관리자 변경"].filter(Boolean);
+  return {
+    items,
+    reviewsError:
+      main?.reviewsError ?? (failed.length ? `${failed.join("·")} 기록을 불러오지 못했어요` : null),
+  };
+}

@@ -1,12 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
-import { useAdminBotTraffic, useAdminTraffic } from "@/features/admin/queries";
+import {
+  useAdminBotTraffic,
+  useAdminRealtime,
+  useAdminTraffic,
+  useNoticeTitles,
+} from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
+import { routes } from "@/lib/routes";
 import type {
   BotAccess,
   BotTrafficData,
+  NoticeView,
   ClientKind,
   TrafficData,
   TrafficItem,
@@ -156,7 +164,7 @@ function GaPanels({ tab, days }: { tab: Tab; days: number }) {
       {tab === "engagement" && <Engagement ga={data.ga} />}
       {data.ga.fetchedAt && (
         <span className="text-text-sub text-[13px]">
-          GA에서 가져온 시각 {when(data.ga.fetchedAt)} · GA 숫자는 한 시간쯤 다시 써요
+          GA에서 가져온 시각 {when(data.ga.fetchedAt)} · GA 숫자는 한 시간마다 새로 받아요
         </span>
       )}
     </>
@@ -174,6 +182,7 @@ function Overview({ data }: { data: TrafficData }) {
 
   return (
     <>
+      <Realtime />
       <section
         aria-label="요약"
         className="grid gap-[14px]"
@@ -272,7 +281,7 @@ function Acquisition({ ga }: { ga: TrafficData["ga"] }) {
           unit="세션"
         />
       </Card>
-      <Card title="캠페인" desc="알림·공유 링크에 붙인 utm_campaign">
+      <Card title="캠페인" desc="공유 링크 등에 붙인 캠페인 이름 (utm_campaign)">
         <BarList
           items={ga.campaigns.filter((c) => c.name !== "(not set)" && c.name !== "(direct)")}
           unit="세션"
@@ -308,6 +317,12 @@ function Engagement({ ga }: { ga: TrafficData["ga"] }) {
         </ol>
       </Card>
       <Grid>
+        <Card
+          title="많이 본 공고 TOP 10"
+          desc="공고 상세 페이지뷰 · 같은 공고의 하위 화면은 합쳐요"
+        >
+          <PopularNotices items={ga.popularNotices} />
+        </Card>
         <Card title="많이 본 페이지" desc="페이지뷰">
           <BarList items={ga.pages} unit="회" />
         </Card>
@@ -347,9 +362,8 @@ function Bots({ data }: { data: BotTrafficData }) {
   return (
     <>
       <span className="text-text-sub text-[13px]">
-        api 요청과 화면 요청(주소를 직접 연 것, 프론트 서버가 넘겨요)을 세요. 화면 요청은 응답
-        코드를 몰라 오류 숫자에는 안 들어가요. IP는 마지막 자리를 가려 보여 주고, 원본은 14일 뒤
-        지워요
+        서비스 요청과 화면 접속을 함께 세요. 화면 접속은 오류 숫자에는 들어가지 않아요. IP는 마지막
+        자리를 가려 보여 주고, 원본은 14일 뒤 지워요
       </span>
       <Card title="보낸 쪽별 요청" desc={`${data.days}일`}>
         <div className="flex flex-wrap gap-[12px] text-[13px]">
@@ -428,7 +442,7 @@ function Bots({ data }: { data: BotTrafficData }) {
           <AccessList items={data.loginFailures} />
         </Card>
       </Grid>
-      <Card title="관리자 접근 기록" desc="관리자 API 요청(누가 했는지는 저장하지 않아요)">
+      <Card title="관리자 접근 기록" desc="관리자 화면에서 보낸 요청 (누가 했는지는 남기지 않아요)">
         <AccessList items={data.adminAccess} />
       </Card>
     </>
@@ -469,6 +483,71 @@ function Segmented({
         );
       })}
     </div>
+  );
+}
+
+/** 지금 접속자 (GA 실시간: 동의한 사람만, 최근 30분) */
+function Realtime() {
+  const { data } = useAdminRealtime();
+  if (!data) return null;
+  if (!data.connected) {
+    return (
+      <div className="rounded-card bg-surface text-text-sub px-[24px] py-[16px] text-[14px]">
+        지금 접속자 · {data.error ?? "GA 실시간 숫자를 불러오지 못했어요"}
+      </div>
+    );
+  }
+  return (
+    <section
+      aria-label="지금 접속자"
+      className="rounded-card bg-surface flex flex-wrap items-center gap-x-[28px] gap-y-[12px] px-[24px] py-[20px]"
+    >
+      <div className="flex items-center gap-[10px]">
+        <span aria-hidden className="bg-ok-text size-[10px] animate-pulse rounded-full" />
+        <span className="text-text-sub text-[14px] font-semibold">지금 접속자</span>
+      </div>
+      <div className="flex items-baseline gap-[6px]">
+        <span className="tracking-h1 text-[32px] font-extrabold">{num(data.last30Minutes)}</span>
+        <span className="text-text-sub text-[14px]">명 · 최근 30분</span>
+      </div>
+      <span className="text-[15px] font-bold">최근 5분 {num(data.last5Minutes)}명</span>
+      <span className="text-text-sub text-[14px]">
+        {data.devices.map((d) => `${DEVICE_KO[d.name] ?? d.name} ${num(d.value)}`).join(" · ")}
+      </span>
+      <span className="text-text-sub ml-auto text-[13px]">
+        GA 실시간 · 동의한 사람만 · 30초마다 새로 고쳐요
+      </span>
+    </section>
+  );
+}
+
+/** 많이 본 공고: 공고 ID를 제목으로 바꿔 보여 줘요(못 찾으면 ID) */
+function PopularNotices({ items }: { items: NoticeView[] }) {
+  const { data: titles } = useNoticeTitles(items.map((i) => i.noticeId));
+  if (items.length === 0) return <span className="text-text-sub text-[14px]">아직 없어요</span>;
+  const max = Math.max(1, ...items.map((i) => i.views));
+  return (
+    <ol className="m-0 flex list-none flex-col gap-[10px] p-0">
+      {items.map((i, rank) => (
+        <li key={i.noticeId} className="flex flex-col gap-[4px]">
+          <div className="flex items-baseline justify-between gap-[12px] text-[14px]">
+            <Link
+              href={routes.notice(i.noticeId)}
+              target="_blank"
+              className="text-text hover:text-text min-w-0 truncate font-semibold no-underline"
+              title={titles?.[i.noticeId] ?? i.noticeId}
+            >
+              <span className="text-text-sub mr-[6px]">{rank + 1}</span>
+              {titles?.[i.noticeId] ?? `공고 ${i.noticeId.slice(0, 8)}`}
+            </Link>
+            <span className="text-text-sub flex-none">
+              {num(i.views)}회 · {num(i.users)}명
+            </span>
+          </div>
+          <Bar share={(i.views / max) * 100} />
+        </li>
+      ))}
+    </ol>
   );
 }
 

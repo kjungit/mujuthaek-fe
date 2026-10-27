@@ -27,10 +27,11 @@ export type AdminTodo = { id: string; kind: AdminTodoKind; title: string; desc: 
 
 export type AdminOverview = {
   asOf: string;
-  review: { count: number; oldest: string };
-  collected: { count: number; note: string };
-  issues: { count: number; note: string };
-  reports: { count: number; note: string };
+  /** count가 null이면 불러오지 못한 숫자예요 (화면은 「-」) */
+  review: { count: number | null; oldest: string };
+  collected: { count: number | null; note: string };
+  issues: { count: number | null; note: string };
+  reports: { count: number | null; note: string };
   todos: AdminTodo[];
   quality: {
     asIs: string;
@@ -39,7 +40,12 @@ export type AdminOverview = {
     medianTime: string;
     fixedByReport: string;
   };
-  today: { approved: number; editedApproved: number; rejected: number; replied: number };
+  today: {
+    approved: number | null;
+    editedApproved: number | null;
+    rejected: number | null;
+    replied: number | null;
+  };
 };
 
 export const adminOverview: AdminOverview = {
