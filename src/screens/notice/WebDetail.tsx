@@ -26,7 +26,9 @@ import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/not
 import { bySite, toUnit, useNoticeUnits } from "@/features/notice/units";
 import { UnitPrices } from "@/components/notice/UnitPrices";
 import { SitesMap } from "@/components/notice/SitesMap";
+import { noticeParams, useJudgmentViewed } from "@/features/notice/analytics";
 import { useNotice } from "@/features/notice/queries";
+import { track } from "@/lib/analytics";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { cn } from "@/lib/cn";
@@ -368,6 +370,7 @@ export function WebDetail({ id }: { id: string }) {
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
   const pdf = usePdfViewer();
+  useJudgmentViewed(id, n);
   const [lifeSite, setLifeSite] = useState<string>();
   if (!n) {
     return (
@@ -393,8 +396,11 @@ export function WebDetail({ id }: { id: string }) {
   const benefits = n.benefits ?? [];
   const pdfUrl = doc.source.pdfUrl;
   /** 원문 PDF가 있으면 옆에 열고, 없으면 기관 사이트로 */
-  const openOriginal = (page = 1, label?: string) =>
-    pdfUrl ? pdf.show(page, label) : window.open(doc.source.detailUrl, "_blank", "noreferrer");
+  const openOriginal = (page = 1, label?: string) => {
+    track("notice_source_open", { ...noticeParams(n), via: pdfUrl ? "pdf" : "site" });
+    if (pdfUrl) pdf.show(page, label);
+    else window.open(doc.source.detailUrl, "_blank", "noreferrer");
+  };
   /** 주택목록에서 고른 집 단지의 생활권으로 */
   const showLife = (siteId: string) => {
     setLifeSite(siteId);
@@ -488,7 +494,7 @@ export function WebDetail({ id }: { id: string }) {
               <NoticeSections
                 doc={doc}
                 variant="web"
-                onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
+                onOpenPage={pdfUrl ? openOriginal : undefined}
               />
 
               {benefits.length > 0 && (
@@ -564,6 +570,7 @@ export function WebDetail({ id }: { id: string }) {
 
               <button
                 type="button"
+                onClick={() => track("notice_bookmark", noticeParams(n))}
                 className="bg-brand rounded-tile flex min-h-[60px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[18px] font-extrabold text-white"
               >
                 <Heart size={20} strokeWidth={2.2} aria-hidden />

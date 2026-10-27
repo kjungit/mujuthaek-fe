@@ -16,6 +16,7 @@ import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
 import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
+import { track } from "@/lib/analytics";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -449,7 +450,10 @@ function WebSpaceDetailView({
               <button
                 type="button"
                 aria-pressed={fav}
-                onClick={() => setFav((v) => !v)}
+                onClick={() => {
+                  if (!fav) track("notice_bookmark", { notice_kind: "space" });
+                  setFav((v) => !v);
+                }}
                 className={cn(
                   "rounded-control flex min-h-[56px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[17px] font-extrabold",
                   fav ? "bg-brand-soft text-brand-strong" : "bg-brand text-white",
@@ -462,6 +466,7 @@ function WebSpaceDetailView({
                 href={data.sourceUrl ?? "#"}
                 target={data.sourceUrl ? "_blank" : undefined}
                 rel={data.sourceUrl ? "noreferrer" : undefined}
+                onClick={() => track("notice_source_open", { notice_kind: "space", via: "site" })}
                 className="rounded-control bg-fill text-text hover:text-text flex min-h-[52px] items-center justify-center gap-[6px] text-[16px] font-bold no-underline"
               >
                 공고 원문 보기

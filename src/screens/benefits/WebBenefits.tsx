@@ -7,6 +7,7 @@ import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
 import { useBenefit, useBenefits } from "@/features/benefits/queries";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import { benefitCategories, type Benefit, type BenefitCategory } from "@/mocks/benefits";
@@ -102,6 +103,7 @@ function BenefitDetail({ b }: { b: Benefit }) {
             <a
               href={b.sourceUrl}
               target="_blank"
+              onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
               rel="noreferrer"
               className="text-brand-strong hover:text-brand-strong inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
             >
@@ -164,6 +166,7 @@ function BenefitDetail({ b }: { b: Benefit }) {
               href={b.policyUrl}
               target="_blank"
               rel="noreferrer"
+              onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
               className="rounded-control bg-fill text-text hover:text-text inline-flex min-h-[52px] items-center px-[18px] text-[15px] font-bold no-underline"
             >
               정책 원문

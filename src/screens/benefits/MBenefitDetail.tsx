@@ -5,6 +5,7 @@ import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
 import { useBenefit } from "@/features/benefits/queries";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
@@ -74,6 +75,7 @@ export function MBenefitDetail({ id }: { id: string }) {
               <a
                 href={b.sourceUrl}
                 target="_blank"
+                onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
                 rel="noreferrer"
                 className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
               >
@@ -139,6 +141,7 @@ export function MBenefitDetail({ id }: { id: string }) {
         <a
           href={b.policyUrl || undefined}
           target="_blank"
+          onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
           rel="noreferrer"
           className="rounded-control bg-fill text-text hover:text-text flex min-h-[54px] min-w-0 flex-[1_1_0] items-center justify-center text-[15px] font-bold no-underline"
         >

@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { snapshotRegions } from "@/lib/regions";
 import type { ConditionsSnapshot, DeviceConditions, SessionConditions } from "./types";
+import { track } from "@/lib/analytics";
 
 const DEVICE_KEY = "mujuthaek:conditions:v1";
 const SAVE_PREF_KEY = "mujuthaek:save-on-device";
@@ -130,6 +131,7 @@ export function useConditions(): ConditionsSnapshot {
 }
 
 export function saveConditions(device: DeviceConditions, sessionValues: SessionConditions) {
+  track("conditions_complete"); // 방문 통계: 값은 보내지 않아요
   const saveOnDevice = read(local, SAVE_PREF_KEY) !== "false";
   if (saveOnDevice) {
     write(

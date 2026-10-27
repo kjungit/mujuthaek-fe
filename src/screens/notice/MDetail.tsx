@@ -17,8 +17,10 @@ import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/not
 import { bySite, toUnit, useNoticeUnits } from "@/features/notice/units";
 import { UnitPrices } from "@/components/notice/UnitPrices";
 import type { StandardNotice } from "@/mocks/notice";
+import { noticeParams, useJudgmentViewed } from "@/features/notice/analytics";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
@@ -136,6 +138,7 @@ export function MDetail({ id }: { id: string }) {
   const j = useNoticeJudgment(n);
   const [fav, setFav] = useState(false);
   const pdf = usePdfViewer();
+  useJudgmentViewed(id, n);
   if (!n) {
     return (
       <MPage>
@@ -158,8 +161,11 @@ export function MDetail({ id }: { id: string }) {
   const money = j.judgment?.money;
   const pdfUrl = doc.source.pdfUrl;
   /** 원문 PDF가 있으면 시트로 열고, 없으면 기관 사이트로 */
-  const openOriginal = (page = 1, label?: string) =>
-    pdfUrl ? pdf.show(page, label) : window.open(doc.source.detailUrl, "_blank", "noreferrer");
+  const openOriginal = (page = 1, label?: string) => {
+    track("notice_source_open", { ...noticeParams(n), via: pdfUrl ? "pdf" : "site" });
+    if (pdfUrl) pdf.show(page, label);
+    else window.open(doc.source.detailUrl, "_blank", "noreferrer");
+  };
 
   return (
     <MPage>
@@ -240,11 +246,7 @@ export function MDetail({ id }: { id: string }) {
         {n.ranking && <MRankCard ranking={n.ranking} />}
 
         <NoticeToc doc={doc} variant="mobile" />
-        <NoticeSections
-          doc={doc}
-          variant="mobile"
-          onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
-        />
+        <NoticeSections doc={doc} variant="mobile" onOpenPage={pdfUrl ? openOriginal : undefined} />
 
         {benefits.length > 0 && (
           <section aria-labelledby="bn-h" className={cn(card, "px-[20px] pt-[16px] pb-[6px]")}>
@@ -285,7 +287,10 @@ export function MDetail({ id }: { id: string }) {
           type="button"
           aria-pressed={fav}
           aria-label={fav ? "관심 해제" : "관심 등록하고 마감 알림 받기"}
-          onClick={() => setFav(!fav)}
+          onClick={() => {
+            if (!fav) track("notice_bookmark", noticeParams(n));
+            setFav(!fav);
+          }}
           className={cn(
             "rounded-control bg-fill flex min-h-[56px] w-[56px] flex-none cursor-pointer items-center justify-center border-0",
             fav ? "text-brand" : "text-text-sub",

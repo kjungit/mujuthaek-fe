@@ -22,6 +22,7 @@ import { HomesMap } from "@/components/homes/HomesMap";
 import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomeList } from "@/features/homes/list";
 import { useRegionFilter } from "@/features/homes/region";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { HomeListing } from "@/mocks/homes";
@@ -124,13 +125,19 @@ export function WebHomes() {
     () => new Set(visible.filter((l) => l.liked).map((l) => l.id)),
   );
 
-  const toggleLike = (id: string) =>
+  const toggleLike = (id: string) => {
+    if (!liked.has(id)) {
+      // 목록의 org는 「LH · 행복주택」처럼 유형이 붙어 있어요. 상세 화면과 같게 기관 이름만 보내요
+      const org = visible.find((l) => l.id === id)?.org.split(" · ")[0];
+      track("notice_bookmark", { notice_kind: "standard", agency: org || "-", via: "list" });
+    }
     setLiked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  };
 
   const resetFilters = () => {
     setMode(defaultMode);
