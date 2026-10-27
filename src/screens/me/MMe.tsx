@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronRight, Lock, User } from "lucide-react";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
@@ -10,6 +11,7 @@ import { clearConditions, setSaveOnDevice } from "@/features/conditions/store";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useMe } from "@/features/me/queries";
 import { cn } from "@/lib/cn";
+import { useLogout } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
 
 const row =
@@ -35,6 +37,8 @@ function RowInner({ label, value, accent }: { label: string; value: string; acce
 }
 
 export function MMe() {
+  const logout = useLogout();
+  const router = useRouter();
   const { data } = useMe();
   const conditions = useConditionSummary();
   const saveOnDevice = conditions.status === "ready" ? conditions.saveOnDevice : true;
@@ -146,12 +150,13 @@ export function MMe() {
         </nav>
 
         <div className="flex justify-between px-[8px]">
-          <Link
-            href={routes.main}
-            className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center text-[14px] font-semibold no-underline"
+          <button
+            type="button"
+            onClick={() => void logout().then(() => router.push(routes.main))}
+            className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-semibold"
           >
             로그아웃
-          </Link>
+          </button>
           <button
             type="button"
             className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-semibold"
