@@ -215,10 +215,9 @@ export function AdminWebReports() {
                   className="rounded-control border-line text-text resize-y border border-solid px-[14px] py-[12px] text-[15px] leading-[1.6] font-medium"
                 />
                 <span className="text-text-sub text-[13px] font-medium">
-                  {/* 답변 이벤트는 나가지만 알림 발송은 알림 담당 연결 뒤예요 */}
-                  {!USE_MOCKS
-                    ? `같은 제보를 보낸 ${cur.groupCount}명 모두에게 답변 이벤트가 나가요 · 알림 발송은 알림 기능 연결 뒤`
-                    : `알림으로 보내요 · 같은 제보를 보낸 ${cur.groupCount}명 모두에게 가요`}
+                  {/* 제보한 회원에게 「제보 답변」 알림: 알림함에는 이 답변까지, 푸시에는 결과만(개인정보 때문에) */}
+                  같은 제보를 보낸 {cur.groupCount}명 모두에게 알림이 가요 · 이 답변은 알림함에서만
+                  보이고, 푸시에는 결과만 나가요
                 </span>
               </label>
               <div className="flex flex-wrap gap-[8px]">
