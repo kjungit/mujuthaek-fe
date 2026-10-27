@@ -5,13 +5,14 @@ import { ChevronRight, MapPin } from "lucide-react";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
-import { useSupportList } from "@/features/business/queries";
+import { useRegionScope, useSupportList } from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { routes } from "@/lib/routes";
-import { SupportBadge, TypeFilters, supportFilters } from "./parts";
+import { RegionScopeChips, SupportBadge, TypeFilters, supportFilters } from "./parts";
 
 export function MBizSupport() {
-  const { data } = useSupportList();
+  const scope = useRegionScope();
+  const { data, loading } = useSupportList(scope);
   const { filter, setFilter, count, visible } = useTypeFilter(data.items);
 
   return (
@@ -26,6 +27,8 @@ export function MBizSupport() {
           </span>
         </div>
 
+        <RegionScopeChips scope={scope} className="px-[4px]" />
+
         <TypeFilters
           label="지원 종류"
           options={supportFilters(true)}
@@ -36,24 +39,35 @@ export function MBizSupport() {
           className="overflow-x-auto px-[4px] pb-[2px]"
         />
 
-        <Link
-          href={routes.bizOnboarding}
-          className="bg-surface text-text hover:text-text flex items-center gap-[12px] rounded-[22px] p-[16px] no-underline"
-        >
-          <span className="bg-check-bg text-check-text flex size-[40px] flex-none items-center justify-center rounded-sm">
-            <MapPin size={20} aria-hidden />
-          </span>
-          <span className="flex flex-1 flex-col gap-[2px]">
-            <span className="text-[15px] font-extrabold">사업장 소재지를 알려주세요</span>
-            <span className="text-text-sub text-[13px]">1개를 더 판정할 수 있어요</span>
-          </span>
-          <ChevronRight size={18} className="text-text-tertiary" aria-hidden />
-        </Link>
+        {Boolean(data.missingSiteCount) && (
+          <Link
+            href={routes.bizOnboarding}
+            className="bg-surface text-text hover:text-text flex items-center gap-[12px] rounded-[22px] p-[16px] no-underline"
+          >
+            <span className="bg-check-bg text-check-text flex size-[40px] flex-none items-center justify-center rounded-sm">
+              <MapPin size={20} aria-hidden />
+            </span>
+            <span className="flex flex-1 flex-col gap-[2px]">
+              <span className="text-[15px] font-extrabold">사업장 소재지를 알려주세요</span>
+              <span className="text-text-sub text-[13px]">
+                {data.missingSiteCount}개를 더 판정할 수 있어요
+              </span>
+            </span>
+            <ChevronRight size={18} className="text-text-tertiary" aria-hidden />
+          </Link>
+        )}
+
+        {visible.length === 0 && (
+          <p className="text-text-sub m-0 px-[20px] py-[40px] text-center text-[15px]">
+            {loading ? "사업 지원을 불러오는 중이에요" : "지금 받을 수 있는 사업 지원이 없어요"}
+          </p>
+        )}
 
         {visible.map((it) => (
-          <article
+          <Link
             key={it.id}
-            className="bg-surface flex flex-col gap-[8px] rounded-[22px] p-[18px]"
+            href={it.href ?? routes.bizSupport}
+            className="bg-surface text-text hover:text-text flex flex-col gap-[8px] rounded-[22px] p-[18px] no-underline"
           >
             <span className="flex items-center justify-between gap-[8px]">
               <SupportBadge status={it.status} size="xs" className="px-[8px] py-[3px]" />
@@ -65,7 +79,7 @@ export function MBizSupport() {
             <span className="border-line-soft text-text-sub border-t border-solid pt-[8px] text-[13px]">
               {it.mReason}
             </span>
-          </article>
+          </Link>
         ))}
 
         <span className="text-text-sub px-[4px] text-[13px] leading-[1.6]">

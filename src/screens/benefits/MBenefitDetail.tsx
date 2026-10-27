@@ -8,10 +8,24 @@ import { useBenefit } from "@/features/benefits/queries";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
-const eligLabel = { ok: "충족", check: "확인 필요" } as const;
+const eligLabel = { ok: "충족", check: "확인 필요", no: "해당 안 돼요" } as const;
+const eligTone = { ok: "ok", check: "check", no: "neutral" } as const;
 
 export function MBenefitDetail({ id }: { id: string }) {
-  const b = useBenefit(id);
+  const { data: b, loading, error } = useBenefit(id);
+  if (!b) {
+    return (
+      <MPage>
+        <MBackHeader title="혜택" backHref={routes.benefits} />
+        <p
+          role={error ? "alert" : undefined}
+          className="text-text-sub m-0 px-[20px] py-[64px] text-center text-[15px]"
+        >
+          {error ? "혜택을 불러오지 못했어요" : loading ? "혜택을 불러오는 중이에요" : ""}
+        </p>
+      </MPage>
+    );
+  }
 
   return (
     <MPage>
@@ -56,23 +70,36 @@ export function MBenefitDetail({ id }: { id: string }) {
             <h3 id="el-h" className="m-0 text-[17px] font-extrabold">
               내 자격
             </h3>
-            <a
-              href={b.sourceUrl}
-              className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
-            >
-              근거 원문
-            </a>
+            {b.sourceUrl && (
+              <a
+                href={b.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
+              >
+                근거 원문
+              </a>
+            )}
           </div>
+          {b.reason && <p className="text-text-sub m-0 pb-[4px] text-[13px]">{b.reason}</p>}
+          {b.elig.length === 0 && (
+            <p className="text-text-sub m-0 py-[12px] text-[15px]">
+              원문에 적힌 자격 조건이 없어요
+            </p>
+          )}
           {b.elig.map((e, i) => (
             <div
-              key={e.label}
+              key={`${i}-${e.label}`}
               className={cn(
                 "flex items-center justify-between gap-[10px] py-[12px] text-[15px]",
                 i < b.elig.length - 1 && "border-line-soft border-b border-solid",
               )}
             >
-              <span>{e.label}</span>
-              <Badge tone={e.result} size="md" className="flex-none py-[3px]">
+              <span className="flex min-w-0 flex-col gap-[2px]">
+                <span>{e.label}</span>
+                {e.reason && <span className="text-text-sub text-[13px]">{e.reason}</span>}
+              </span>
+              <Badge tone={eligTone[e.result]} size="md" className="flex-none py-[3px]">
                 {eligLabel[e.result]}
               </Badge>
             </div>
@@ -86,6 +113,9 @@ export function MBenefitDetail({ id }: { id: string }) {
           <h3 id="how-h" className="m-0 text-[17px] font-extrabold">
             신청 방법
           </h3>
+          {b.how.length === 0 && (
+            <p className="text-text-sub m-0 text-[15px]">정책 원문의 신청 방법을 확인해 주세요</p>
+          )}
           <ol className="m-0 flex list-none flex-col gap-[10px] p-0">
             {b.how.map((text, i) => (
               <li key={text} className="flex items-center gap-[10px] text-[15px]">
@@ -107,13 +137,17 @@ export function MBenefitDetail({ id }: { id: string }) {
       </main>
       <MBottomActions>
         <a
-          href={b.policyUrl}
+          href={b.policyUrl || undefined}
+          target="_blank"
+          rel="noreferrer"
           className="rounded-control bg-fill text-text hover:text-text flex min-h-[54px] min-w-0 flex-[1_1_0] items-center justify-center text-[15px] font-bold no-underline"
         >
           정책 원문
         </a>
         <a
-          href={b.applyUrl}
+          href={b.applyUrl || undefined}
+          target="_blank"
+          rel="noreferrer"
           className="rounded-control bg-brand flex min-h-[54px] min-w-0 flex-[2_1_0] items-center justify-center text-[16px] font-extrabold text-white no-underline hover:text-white"
         >
           신청하러 가기

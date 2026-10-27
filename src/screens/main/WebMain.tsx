@@ -14,7 +14,6 @@ import {
   Landmark,
   ListChecks,
   Lock,
-  MapPin,
   MessageSquareWarning,
   Scale,
   Sparkles,
@@ -27,6 +26,7 @@ import { Logo } from "@/components/brand/Logo";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { useMainLanding } from "@/features/main/queries";
 import { cn } from "@/lib/cn";
+import { useSession } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
 import type { MainSourceGroup } from "@/mocks/main";
 
@@ -52,13 +52,6 @@ const features: { href: string; icon: LucideIcon; title: string; desc: string; c
     title: "청약·공공임대 공고",
     desc: "LH와 지방 공사, 청약홈 공고 중 내가 지원할 수 있는 곳과 준비할 돈",
     cta: "내 집 보기",
-  },
-  {
-    href: routes.life,
-    icon: MapPin,
-    title: "생활권",
-    desc: "직장까지 걸리는 시간과 역세권·학세권 같은 주변 생활을 내 우선순위로 점수화",
-    cta: "생활권 보기",
   },
   {
     href: routes.business,
@@ -169,6 +162,8 @@ function StatCard({
 }
 
 export function WebMain() {
+  // 로그인했으면 로그인 대신 이름 · 내 홈 (불러오는 동안은 둘 다 숨겨요)
+  const { data: session } = useSession();
   const { data } = useMainLanding();
   const { example, judgeExample } = data;
 
@@ -206,14 +201,22 @@ export function WebMain() {
             </nav>
           </div>
           <div className="flex items-center gap-[8px]">
-            <Link href={routes.login} className={navLink}>
-              로그인
-            </Link>
+            {session ? (
+              <Link href={routes.me} className={navLink}>
+                {session.nickname}님
+              </Link>
+            ) : (
+              session === null && (
+                <Link href={routes.login} className={navLink}>
+                  로그인
+                </Link>
+              )
+            )}
             <Link
-              href={routes.signup}
+              href={session ? routes.home : routes.profile}
               className="bg-brand inline-flex min-h-[44px] items-center rounded-sm px-[18px] text-[15px] font-bold text-white no-underline hover:text-white"
             >
-              시작하기
+              {session ? "내 홈" : "시작하기"}
             </Link>
           </div>
         </div>

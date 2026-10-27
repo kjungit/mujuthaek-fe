@@ -1,42 +1,37 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   Building,
   ChevronRight,
-  CircleAlert,
-  CircleCheck,
-  Clock4,
   FileText,
   Heart,
   MapPin,
   MessageSquareWarning,
-  TrainFront,
-  Trees,
-  type LucideIcon,
 } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
+import { EligibilityCard } from "@/components/notice/EligibilityCard";
+import { LifeCard } from "@/components/notice/LifeCard";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { WebUnitFilter } from "@/components/notice/UnitFilter";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { WebRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
-import { formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
+import { dueText, formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
+import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/notice/judgment";
+import { bySite, toUnit, useNoticeUnits } from "@/features/notice/units";
+import { UnitPrices } from "@/components/notice/UnitPrices";
+import { SitesMap } from "@/components/notice/SitesMap";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { NoticeLifeItem, NoticeUnit } from "@/mocks/notice";
-
-const lifeIcon: Record<NoticeLifeItem["kind"], LucideIcon> = {
-  commute: Clock4,
-  station: TrainFront,
-  park: Trees,
-};
+import type { NoticeUnit, StandardNotice } from "@/mocks/notice";
 
 const sectionTitle = "tracking-title m-0 text-[21px] font-extrabold";
 
@@ -47,7 +42,19 @@ const mapBlocks = [
   { label: "B-1블록", box: "left-[24%] top-[58%] w-[40%] h-[30%]", text: "left-[26%] top-[60%]" },
 ];
 
-function BlockUnits({ units }: { units: NoticeUnit[] }) {
+type BlockUnitsProps = {
+  units: NoticeUnit[];
+  /** 실제 API: 그림 지도 대신 넣을 지도 (고른 집 · 고르기) */
+  map?: (selected: NoticeUnit | null, select: (id: string) => void) => React.ReactNode;
+  /** 백엔드에 더 있으면 */
+  more?: { onClick: () => void; loading: boolean };
+  /** 원본 엑셀 버튼 (목업만) */
+  excel?: boolean;
+  /** 고른 집 단지의 생활권 카드로 (실제 API) */
+  onShowLife?: (siteId: string) => void;
+};
+
+function BlockUnits({ units, map, more, excel = true, onShowLife }: BlockUnitsProps) {
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
 
   return (
@@ -60,7 +67,11 @@ function BlockUnits({ units }: { units: NoticeUnit[] }) {
           <h2 className={sectionTitle}>
             공급 주택 목록 <span className="text-brand">{countAll}곳</span>
           </h2>
-          <span className="text-text-sub text-[14px]">집을 고르면 지도에서 위치를 보여드려요</span>
+          <span className="text-text-sub text-[14px]">
+            {map
+              ? "집을 고르면 지도에서 단지 위치를 보여드려요"
+              : "집을 고르면 지도에서 위치를 보여드려요"}
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-[6px]">
           <WebUnitFilter
@@ -69,13 +80,15 @@ function BlockUnits({ units }: { units: NoticeUnit[] }) {
             countAll={countAll}
             countOk={countOk}
           />
-          <button
-            type="button"
-            className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent px-[6px] text-[14px] font-bold"
-          >
-            <FileText size={16} aria-hidden />
-            원본 엑셀
-          </button>
+          {excel && (
+            <button
+              type="button"
+              className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent px-[6px] text-[14px] font-bold"
+            >
+              <FileText size={16} aria-hidden />
+              원본 엑셀
+            </button>
+          )}
         </div>
       </div>
 
@@ -86,130 +99,161 @@ function BlockUnits({ units }: { units: NoticeUnit[] }) {
           className="box-content flex max-h-[400px] min-w-0 flex-col gap-[8px] overflow-y-auto pr-[2px]"
           style={{ flex: "1 1 270px" }}
         >
-          {shown.map((u) => {
-            const on = u.id === selected?.id;
-            return (
-              <button
-                key={u.id}
-                type="button"
-                aria-pressed={on}
-                onClick={() => select(u.id)}
-                className={cn(
-                  "text-text rounded-tile flex cursor-pointer flex-col gap-[4px] border-2 border-solid px-[14px] py-[12px] text-left",
-                  on ? "bg-row-selected border-brand" : "bg-surface border-line-soft",
-                )}
-              >
-                <span className="flex w-full items-center justify-between gap-[8px]">
-                  <span className="text-[15px] font-bold">{u.name}</span>
-                  <span
+          {bySite(shown).map((g) => (
+            <div key={g.key} role="group" aria-label={g.name} className="flex flex-col gap-[8px]">
+              {g.name && (
+                <h3 className="text-text-sub bg-surface sticky top-0 z-[1] m-0 py-[4px] text-[14px] font-extrabold">
+                  {g.name} <span className="text-brand">{g.count}호</span>
+                  {g.lifeScore !== undefined && (
+                    <span className="text-text-tertiary font-bold"> · 생활권 {g.lifeScore}점</span>
+                  )}
+                </h3>
+              )}
+              {g.units.map((u) => {
+                const on = u.id === selected?.id;
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => select(u.id)}
                     className={cn(
-                      "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
-                      u.ok ? "bg-ok-bg text-ok-text" : "bg-fill text-text-sub",
+                      "text-text rounded-tile flex cursor-pointer flex-col gap-[4px] border-2 border-solid px-[14px] py-[12px] text-left",
+                      on ? "bg-row-selected border-brand" : "bg-surface border-line-soft",
                     )}
                   >
-                    {unitStatus(u)}
+                    <span className="flex w-full items-center justify-between gap-[8px]">
+                      <span className="text-[15px] font-bold">
+                        {g.name ? (u.label ?? u.name) : u.name}
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
+                          u.ok ? "bg-ok-bg text-ok-text" : "bg-fill text-text-sub",
+                        )}
+                      >
+                        {unitStatus(u)}
+                      </span>
+                    </span>
+                    <span className="text-text-sub text-[13px]">
+                      {u.type} · {u.area} · {u.floor}
+                    </span>
+                    <UnitPrices unit={u} />
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+          {more && (
+            <button
+              type="button"
+              onClick={more.onClick}
+              disabled={more.loading}
+              className="bg-fill text-text min-h-[44px] flex-none cursor-pointer rounded-sm border-0 text-[14px] font-bold disabled:opacity-60"
+            >
+              {more.loading ? "불러오는 중" : "더 보기"}
+            </button>
+          )}
+        </div>
+
+        {map ? (
+          <div className="flex min-w-0" style={{ flex: "999 1 360px" }}>
+            {map(selected, select)}
+          </div>
+        ) : (
+          <div
+            aria-label="주택 위치 지도"
+            role="group"
+            className="bg-map-road relative h-[400px] min-w-0 overflow-hidden rounded-[20px]"
+            style={{ flex: "999 1 360px" }}
+          >
+            {mapBlocks.map((b) => (
+              <span
+                key={b.label}
+                aria-hidden
+                className={cn("bg-map-road-2 absolute rounded-[18px]", b.box)}
+              />
+            ))}
+            <span
+              aria-hidden
+              className="bg-map-park absolute top-[56%] left-[70%] h-[26%] w-[22%] rounded-[45%_55%_50%_50%]"
+            />
+            <span aria-hidden className="absolute top-1/2 right-0 left-0 h-[10px] bg-white" />
+            <span aria-hidden className="absolute top-0 bottom-0 left-[49%] w-[9px] bg-white" />
+            {mapBlocks.map((b) => (
+              <span
+                key={b.label}
+                aria-hidden
+                className={cn("text-text-tertiary absolute text-[12px] font-bold", b.text)}
+              >
+                {b.label}
+              </span>
+            ))}
+            <span
+              aria-hidden
+              className="text-brand-strong absolute top-[66%] left-[73%] text-[12px]"
+            >
+              근린공원
+            </span>
+            <span
+              aria-hidden
+              className="rounded-tag text-text-sub absolute top-[52%] left-[51%] bg-white px-[6px] py-[2px] text-[12px] font-bold"
+            >
+              ○○역
+            </span>
+
+            {shown
+              .filter((u) => u.id !== selected?.id)
+              .map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  aria-label={`${u.name}, ${unitStatus(u)} 위치 보기`}
+                  onClick={() => select(u.id)}
+                  className="absolute mt-[-15px] ml-[-15px] flex size-[30px] cursor-pointer items-center justify-center border-0 bg-transparent p-0"
+                  style={{ left: `${u.x}%`, top: `${u.y}%` }}
+                >
+                  <span
+                    className={cn(
+                      "rounded-pill box-content size-[16px] border-[3px] border-solid border-white shadow-[0_2px_6px_rgba(25,31,40,0.25)]",
+                      u.ok ? "bg-brand" : "bg-placeholder-icon",
+                    )}
+                  />
+                </button>
+              ))}
+
+            {selected && (
+              <div
+                className="pointer-events-none absolute flex -translate-x-1/2 -translate-y-full flex-col items-center"
+                style={{ left: `${selected.x}%`, top: `${selected.y}%` }}
+              >
+                <span className="flex flex-col gap-[2px] rounded-sm bg-white px-[11px] py-[7px] whitespace-nowrap shadow-[0_6px_18px_rgba(25,31,40,0.18)]">
+                  <span className="text-[13px] font-extrabold">{selected.name}</span>
+                  <span className="text-text-sub text-[12px]">
+                    {selected.deposit} · {selected.rent}
                   </span>
                 </span>
-                <span className="text-text-sub text-[13px]">
-                  {u.type} · {u.area} · {u.floor}
-                </span>
-                <span className="text-[14px] font-bold">
-                  보증금 {u.deposit} · {u.rent}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div
-          aria-label="주택 위치 지도"
-          role="group"
-          className="bg-map-road relative h-[400px] min-w-0 overflow-hidden rounded-[20px]"
-          style={{ flex: "999 1 360px" }}
-        >
-          {mapBlocks.map((b) => (
-            <span
-              key={b.label}
-              aria-hidden
-              className={cn("bg-map-road-2 absolute rounded-[18px]", b.box)}
-            />
-          ))}
-          <span
-            aria-hidden
-            className="bg-map-park absolute top-[56%] left-[70%] h-[26%] w-[22%] rounded-[45%_55%_50%_50%]"
-          />
-          <span aria-hidden className="absolute top-1/2 right-0 left-0 h-[10px] bg-white" />
-          <span aria-hidden className="absolute top-0 bottom-0 left-[49%] w-[9px] bg-white" />
-          {mapBlocks.map((b) => (
-            <span
-              key={b.label}
-              aria-hidden
-              className={cn("text-text-tertiary absolute text-[12px] font-bold", b.text)}
-            >
-              {b.label}
-            </span>
-          ))}
-          <span aria-hidden className="text-brand-strong absolute top-[66%] left-[73%] text-[12px]">
-            근린공원
-          </span>
-          <span
-            aria-hidden
-            className="rounded-tag text-text-sub absolute top-[52%] left-[51%] bg-white px-[6px] py-[2px] text-[12px] font-bold"
-          >
-            ○○역
-          </span>
-
-          {shown
-            .filter((u) => u.id !== selected?.id)
-            .map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                aria-label={`${u.name}, ${unitStatus(u)} 위치 보기`}
-                onClick={() => select(u.id)}
-                className="absolute mt-[-15px] ml-[-15px] flex size-[30px] cursor-pointer items-center justify-center border-0 bg-transparent p-0"
-                style={{ left: `${u.x}%`, top: `${u.y}%` }}
-              >
-                <span
-                  className={cn(
-                    "rounded-pill box-content size-[16px] border-[3px] border-solid border-white shadow-[0_2px_6px_rgba(25,31,40,0.25)]",
-                    u.ok ? "bg-brand" : "bg-placeholder-icon",
-                  )}
+                <MapPin
+                  size={36}
+                  strokeWidth={1.5}
+                  aria-hidden
+                  className="fill-brand mt-[2px] text-white drop-shadow-[0_3px_4px_rgba(25,31,40,0.3)]"
                 />
-              </button>
-            ))}
+              </div>
+            )}
 
-          {selected && (
-            <div
-              className="pointer-events-none absolute flex -translate-x-1/2 -translate-y-full flex-col items-center"
-              style={{ left: `${selected.x}%`, top: `${selected.y}%` }}
-            >
-              <span className="flex flex-col gap-[2px] rounded-sm bg-white px-[11px] py-[7px] whitespace-nowrap shadow-[0_6px_18px_rgba(25,31,40,0.18)]">
-                <span className="text-[13px] font-extrabold">{selected.name}</span>
-                <span className="text-text-sub text-[12px]">
-                  {selected.deposit} · {selected.rent}
-                </span>
+            <div className="text-text-sub absolute bottom-[12px] left-[12px] flex gap-[10px] rounded-[10px] bg-white px-[10px] py-[6px] text-[12px]">
+              <span className="inline-flex items-center gap-[5px]">
+                <span className="rounded-pill bg-brand size-[10px]" />
+                신청 가능
               </span>
-              <MapPin
-                size={36}
-                strokeWidth={1.5}
-                aria-hidden
-                className="fill-brand mt-[2px] text-white drop-shadow-[0_3px_4px_rgba(25,31,40,0.3)]"
-              />
+              <span className="inline-flex items-center gap-[5px]">
+                <span className="rounded-pill bg-placeholder-icon size-[10px]" />
+                다른 대상
+              </span>
             </div>
-          )}
-
-          <div className="text-text-sub absolute bottom-[12px] left-[12px] flex gap-[10px] rounded-[10px] bg-white px-[10px] py-[6px] text-[12px]">
-            <span className="inline-flex items-center gap-[5px]">
-              <span className="rounded-pill bg-brand size-[10px]" />
-              신청 가능
-            </span>
-            <span className="inline-flex items-center gap-[5px]">
-              <span className="rounded-pill bg-placeholder-icon size-[10px]" />
-              다른 대상
-            </span>
           </div>
-        </div>
+        )}
       </div>
 
       {selected && (
@@ -230,20 +274,39 @@ function BlockUnits({ units }: { units: NoticeUnit[] }) {
               </span>
             </span>
             <span className="text-text-sub text-[14px]">
-              {selected.type} {selected.area} · {selected.floor} · {selected.station}
+              {[`${selected.type} ${selected.area}`, selected.floor, selected.station]
+                .filter(Boolean)
+                .join(" · ")}
             </span>
-            <span className="text-[15px]">
-              보증금 <strong>{selected.deposit}</strong> · <strong>{selected.rent}</strong> · 준비할
-              돈 <strong className="text-brand-strong">{selected.prep}</strong>
-            </span>
+            {selected.prices ? (
+              <>
+                {selected.prices.map((p) => (
+                  <span key={p.target} className="text-[15px]">
+                    <span className="text-text-sub mr-[6px] text-[14px]">{p.target}</span>
+                    보증금 <strong>{p.deposit}</strong> · <strong>{p.rent}</strong>
+                  </span>
+                ))}
+                <span className="text-[15px]">
+                  준비할 돈 <strong className="text-brand-strong">{selected.prep}</strong>
+                </span>
+              </>
+            ) : (
+              <span className="text-[15px]">
+                보증금 <strong>{selected.deposit}</strong> · <strong>{selected.rent}</strong> ·
+                준비할 돈 <strong className="text-brand-strong">{selected.prep}</strong>
+              </span>
+            )}
           </div>
           <div className="flex gap-[8px]">
-            <Link
-              href={routes.life}
-              className="text-text hover:text-text inline-flex min-h-[46px] items-center gap-[6px] rounded-sm bg-white px-[14px] text-[14px] font-bold no-underline"
-            >
-              <MapPin size={17} aria-hidden />이 집 생활권
-            </Link>
+            {onShowLife && selected.siteId && selected.lifeScore !== undefined && (
+              <button
+                type="button"
+                onClick={() => onShowLife(selected.siteId!)}
+                className="text-text inline-flex min-h-[46px] cursor-pointer items-center gap-[6px] rounded-sm border-0 bg-white px-[14px] text-[14px] font-bold"
+              >
+                <MapPin size={17} aria-hidden />이 집 생활권 {selected.lifeScore}점
+              </button>
+            )}
             <button
               type="button"
               className="bg-brand inline-flex min-h-[46px] cursor-pointer items-center gap-[6px] rounded-sm border-0 px-[14px] text-[14px] font-bold text-white"
@@ -258,15 +321,85 @@ function BlockUnits({ units }: { units: NoticeUnit[] }) {
   );
 }
 
+/** 실제 API 주택목록: 호별 목록 + 단지 위치 지도 */
+function ApiBlockUnits({
+  notice,
+  judgment,
+  onShowLife,
+}: {
+  notice: StandardNotice;
+  judgment: NoticeJudgment | null;
+  onShowLife: (siteId: string) => void;
+}) {
+  const q = useNoticeUnits(notice.id, true);
+  const sites = useMemo(() => notice.sites ?? [], [notice.sites]);
+  const units = useMemo(
+    () => (q.data?.pages ?? []).flatMap((p) => p.items.map((u) => toUnit(u, sites, judgment))),
+    [q.data, sites, judgment],
+  );
+  if (q.isPending || units.length === 0) return null;
+  return (
+    <BlockUnits
+      units={units}
+      excel={false}
+      onShowLife={onShowLife}
+      more={
+        q.hasNextPage
+          ? { onClick: () => void q.fetchNextPage(), loading: q.isFetchingNextPage }
+          : undefined
+      }
+      map={(selected, select) => (
+        <SitesMap
+          sites={sites}
+          selectedSiteId={selected?.siteId}
+          onSelectSite={(siteId) => {
+            const first = units.find((u) => u.siteId === siteId);
+            if (first) select(first.id);
+          }}
+          className="h-[400px] w-full"
+        />
+      )}
+    />
+  );
+}
+
 export function WebDetail({ id }: { id: string }) {
-  const { data: n } = useNotice(id);
+  const { data, loading, error } = useNotice(id);
+  const n = data?.kind === "standard" ? data : undefined;
+  const j = useNoticeJudgment(n);
   const pdf = usePdfViewer();
-  if (n.kind !== "standard") return null;
-  const { doc } = n;
+  const [lifeSite, setLifeSite] = useState<string>();
+  if (!n) {
+    return (
+      <WebPage>
+        <WebHeader mode="home" current={routes.homes} unread={3} />
+        <WebMain className="pt-[24px] pb-[80px]">
+          {(loading || error) && (
+            <div
+              role={error ? "alert" : undefined}
+              className="rounded-card-lg bg-surface text-text-sub px-[24px] py-[64px] text-center text-[15px]"
+            >
+              {error
+                ? "공고를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요"
+                : "공고를 불러오는 중이에요"}
+            </div>
+          )}
+        </WebMain>
+      </WebPage>
+    );
+  }
+  const doc = withMine(n.doc, j.judgment?.mineTypes ?? []);
+  const money = j.judgment?.money;
+  const benefits = n.benefits ?? [];
   const pdfUrl = doc.source.pdfUrl;
   /** 원문 PDF가 있으면 옆에 열고, 없으면 기관 사이트로 */
   const openOriginal = (page = 1, label?: string) =>
     pdfUrl ? pdf.show(page, label) : window.open(doc.source.detailUrl, "_blank", "noreferrer");
+  /** 주택목록에서 고른 집 단지의 생활권으로 */
+  const showLife = (siteId: string) => {
+    setLifeSite(siteId);
+    document.getElementById("life")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
     <WebPage>
@@ -299,15 +432,15 @@ export function WebDetail({ id }: { id: string }) {
                 <div className="flex flex-col gap-[20px] px-[30px] pt-[28px] pb-[30px]">
                   <div className="flex flex-col gap-[10px]">
                     <NoticeTags
-                      verdict={n.verdict}
+                      verdict={j.judgment?.verdict ?? "check"}
                       rank={n.ranking?.myRank}
-                      dday={n.dday}
+                      due={dueText(n)}
                       tags={n.tags}
                       size="lg"
                     />
                     <h1 className="tracking-h1 m-0 text-[34px] font-extrabold">{n.title}</h1>
                     <span className="text-text-sub text-[16px]">{n.meta}</span>
-                    <p className="m-0 text-[16px] leading-[1.6]">{doc.summary}</p>
+                    {doc.summary && <p className="m-0 text-[16px] leading-[1.6]">{doc.summary}</p>}
                   </div>
                   <dl
                     className="m-0 grid gap-[10px]"
@@ -337,6 +470,20 @@ export function WebDetail({ id }: { id: string }) {
                 </div>
               </section>
 
+              {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
+              {n.hasUnits && (
+                <ApiBlockUnits notice={n} judgment={j.judgment} onShowLife={showLife} />
+              )}
+
+              {n.life && (
+                <LifeCard
+                  life={n.life}
+                  variant="web"
+                  siteId={lifeSite}
+                  onSiteChange={setLifeSite}
+                />
+              )}
+
               <NoticeToc doc={doc} variant="web" />
               <NoticeSections
                 doc={doc}
@@ -344,147 +491,76 @@ export function WebDetail({ id }: { id: string }) {
                 onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
               />
 
-              {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
-
-              <section
-                aria-label="생활권"
-                className="rounded-card-lg bg-surface flex flex-col gap-[18px] px-[30px] py-[28px]"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className={sectionTitle}>
-                    생활권 <span className="text-brand">{n.life.score}점</span>
-                  </h2>
-                  <Link
-                    href={routes.life}
-                    className="text-brand-strong inline-flex min-h-[44px] items-center gap-[2px] text-[15px] font-bold no-underline"
-                  >
-                    자세히
-                    <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
-                  </Link>
-                </div>
-                <div
-                  className="grid gap-[16px]"
-                  style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}
+              {benefits.length > 0 && (
+                <section
+                  aria-label="이 지역 정책"
+                  className="rounded-card-lg bg-surface flex flex-col px-[30px] pt-[24px] pb-[14px]"
                 >
-                  {n.life.items.map((it) => {
-                    const Icon = lifeIcon[it.kind];
-                    return (
-                      <div key={it.kind} className="flex flex-col gap-[8px]">
-                        <span className="flex justify-between text-[15px]">
-                          <span className="inline-flex items-center gap-[6px]">
-                            <Icon size={18} className="text-text-sub" aria-hidden />
-                            {it.label}
-                          </span>
-                          <strong>{it.value}</strong>
-                        </span>
-                        <span className="bg-fill h-[8px] overflow-hidden rounded-[4px]">
-                          <span
-                            className="bg-brand block h-full rounded-[4px]"
-                            style={{ width: `${it.pct}%` }}
-                          />
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section
-                aria-label="이 지역 정책"
-                className="rounded-card-lg bg-surface flex flex-col px-[30px] pt-[24px] pb-[14px]"
-              >
-                <div className="mb-[8px] flex items-baseline justify-between">
-                  <h2 className={sectionTitle}>입주하면 받을 수 있는 혜택</h2>
-                  <span className="text-text-tertiary text-[13px]">
-                    {n.benefitArea} · 내 조건 판정
-                  </span>
-                </div>
-                {n.benefits.map((b, i) => (
-                  <Link
-                    key={b.id}
-                    href={routes.benefit(b.id)}
-                    className={cn(
-                      "text-text hover:text-text flex items-center gap-[14px] py-[14px] no-underline",
-                      i < n.benefits.length - 1 && "border-line-soft border-b border-solid",
-                    )}
-                  >
-                    <span className="flex flex-1 flex-col gap-[2px]">
-                      <span className="text-[16px] font-bold">{b.title}</span>
-                      <span className="text-text-sub text-[14px]">{b.desc}</span>
+                  <div className="mb-[8px] flex items-baseline justify-between">
+                    <h2 className={sectionTitle}>입주하면 받을 수 있는 혜택</h2>
+                    <span className="text-text-tertiary text-[13px]">
+                      {n.benefitArea} · 내 조건 판정
                     </span>
-                    <VerdictBadge verdict={b.verdict} />
-                    <ChevronRight size={18} className="text-text-tertiary" aria-hidden />
-                  </Link>
-                ))}
-              </section>
+                  </div>
+                  {benefits.map((b, i) => (
+                    <Link
+                      key={b.id}
+                      href={routes.benefit(b.id)}
+                      className={cn(
+                        "text-text hover:text-text flex items-center gap-[14px] py-[14px] no-underline",
+                        i < benefits.length - 1 && "border-line-soft border-b border-solid",
+                      )}
+                    >
+                      <span className="flex flex-1 flex-col gap-[2px]">
+                        <span className="text-[16px] font-bold">{b.title}</span>
+                        <span className="text-text-sub text-[14px]">{b.desc}</span>
+                      </span>
+                      <VerdictBadge verdict={b.verdict} />
+                      <ChevronRight size={18} className="text-text-tertiary" aria-hidden />
+                    </Link>
+                  ))}
+                </section>
+              )}
             </div>
 
             <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 360px" }}>
-              <section
-                aria-label="내 자격"
-                className="rounded-card-lg bg-surface flex flex-col px-[26px] pt-[26px] pb-[18px]"
-              >
-                <div className="mb-[6px] flex items-center justify-between">
-                  <h2 className="tracking-title m-0 text-[20px] font-extrabold">내 자격</h2>
-                  <button
-                    type="button"
-                    onClick={() => openOriginal(doc.pages.eligibility ?? 1, "신청 자격")}
-                    className="text-brand-strong inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[14px] font-bold"
-                  >
-                    <FileText size={16} aria-hidden />
-                    근거 원문
-                  </button>
-                </div>
-                {n.eligibility.map((e, i) => (
-                  <div
-                    key={e.label}
-                    className={cn(
-                      "flex items-center justify-between gap-[10px] py-[12px]",
-                      i < n.eligibility.length - 1 && "border-line-soft border-b border-solid",
-                    )}
-                  >
-                    <span className="text-[15px]">{e.label}</span>
-                    {e.status === "met" ? (
-                      <span className="text-brand-strong inline-flex items-center gap-[5px] text-[15px] font-bold">
-                        <CircleCheck size={19} aria-hidden />
-                        충족
-                      </span>
-                    ) : (
-                      <Link
-                        href={routes.profile}
-                        className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center gap-[5px] rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-                      >
-                        <CircleAlert size={17} aria-hidden />
-                        입력하고 확인
-                      </Link>
-                    )}
-                  </div>
-                ))}
-              </section>
+              <EligibilityCard
+                judgment={j.judgment}
+                loading={j.loading}
+                error={j.error}
+                variant="web"
+                onOpenOriginal={(page) =>
+                  openOriginal(page ?? doc.pages.eligibility ?? 1, "신청 자격")
+                }
+              />
 
               {n.ranking && <WebRankCard ranking={n.ranking} />}
 
-              <section
-                aria-label="내가 준비할 돈"
-                className="rounded-card-lg bg-surface flex flex-col gap-[10px] p-[26px]"
-              >
-                <h2 className="tracking-title mx-0 mt-0 mb-[4px] text-[20px] font-extrabold">
-                  내가 준비할 돈 · {n.money.type}
-                </h2>
-                <div className="text-text-sub flex justify-between text-[15px]">
-                  <span>임대보증금</span>
-                  <span>{n.money.deposit}</span>
-                </div>
-                <div className="text-text-sub flex justify-between text-[15px]">
-                  <span>{n.money.loanName}</span>
-                  <span>− {n.money.loan}</span>
-                </div>
-                <div className="border-line mt-[4px] flex items-baseline justify-between border-t border-solid pt-[14px]">
-                  <span className="text-[16px] font-bold">준비할 돈</span>
-                  <span className="tracking-h1 text-[30px] font-extrabold">{n.money.prep}</span>
-                </div>
-                <span className="text-text-sub text-[14px]">{n.money.note}</span>
-              </section>
+              {money && (
+                <section
+                  aria-label="내가 준비할 돈"
+                  className="rounded-card-lg bg-surface flex flex-col gap-[10px] p-[26px]"
+                >
+                  <h2 className="tracking-title mx-0 mt-0 mb-[4px] text-[20px] font-extrabold">
+                    내가 준비할 돈 · {money.type}
+                  </h2>
+                  <div className="text-text-sub flex justify-between text-[15px]">
+                    <span>임대보증금</span>
+                    <span>{money.deposit}</span>
+                  </div>
+                  {money.loan && (
+                    <div className="text-text-sub flex justify-between text-[15px]">
+                      <span>{money.loanName}</span>
+                      <span>− {money.loan}</span>
+                    </div>
+                  )}
+                  <div className="border-line mt-[4px] flex items-baseline justify-between border-t border-solid pt-[14px]">
+                    <span className="text-[16px] font-bold">준비할 돈</span>
+                    <span className="tracking-h1 text-[30px] font-extrabold">{money.prep}</span>
+                  </div>
+                  {money.note && <span className="text-text-sub text-[14px]">{money.note}</span>}
+                </section>
+              )}
 
               <button
                 type="button"

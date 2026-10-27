@@ -12,10 +12,10 @@ import {
   UnitInput,
   DeviceSaveCard,
   SelectOptions,
-  pInput,
   pLabel,
   pSelect,
 } from "@/components/profile/parts";
+import { BirthField } from "@/components/profile/BirthField";
 import { SearchRegionsField, ResidenceField } from "@/components/profile/RegionFields";
 import { headOptions, marryOptions, useProfileForm } from "@/features/profile/useProfileForm";
 import { cn } from "@/lib/cn";
@@ -23,7 +23,6 @@ import { routes } from "@/lib/routes";
 
 const titles = ["기본 정보를 알려주세요", "가족 · 소득 · 자산", "주택 · 생활권"];
 
-const mInput = cn(pInput, "min-h-[54px]");
 const mSelect = cn(pSelect, "min-h-[54px] px-[12px] text-[16px]");
 
 // 모바일은 선택지 일부만 보여줘요
@@ -64,16 +63,11 @@ export function MProfile() {
 
         {form.step === 1 && (
           <div className="flex flex-col gap-[20px]">
-            <label className={pLabel}>
-              생년월일
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="예: 1997.03.15"
-                className={mInput}
-                {...form.field("birth")}
-              />
-            </label>
+            <BirthField
+              value={form.field("birth").value}
+              onChange={(birth) => form.field("birth").onChange({ target: { value: birth } })}
+              selectClassName={mSelect}
+            />
             <SearchRegionsField form={form} selectClassName={mSelect} />
             <ResidenceField form={form} selectClassName={mSelect} />
             <div className="flex flex-col gap-[8px]">
@@ -154,10 +148,19 @@ export function MProfile() {
               청약통장 가입 기간
               <select className={cn(mSelect, "font-medium")} {...form.field("bankbookPeriod")}>
                 <SelectOptions
-                  items={options.bankbookPeriod.slice(0, 3)}
+                  items={options.bankbookPeriod}
                   value={form.field("bankbookPeriod").value}
                 />
               </select>
+            </label>
+            <label className={pLabel}>
+              납입 횟수
+              <UnitInput
+                unit="회"
+                placeholder="26"
+                className="min-h-[54px]"
+                {...form.field("paymentCount")}
+              />
             </label>
             <label className={pLabel}>
               지금 쓸 수 있는 돈
@@ -166,15 +169,6 @@ export function MProfile() {
                 placeholder="1,500"
                 className="min-h-[54px]"
                 {...form.sessionField("available")}
-              />
-            </label>
-            <label className={pLabel}>
-              직장 · 학교 위치
-              <input
-                type="search"
-                placeholder="회사 주소나 역 이름"
-                className={mInput}
-                {...form.field("workplace")}
               />
             </label>
             <div className="flex flex-col gap-[8px]">

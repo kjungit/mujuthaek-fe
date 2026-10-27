@@ -6,7 +6,7 @@ import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { MRankCard } from "@/components/notice/RankCard";
-import { pdfSections } from "@/features/notice/format";
+import { pdfSections, dueText } from "@/features/notice/format";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
@@ -25,10 +25,10 @@ const pos = (u: NoticeUnit) => {
 
 export function MDetailUnits({ id }: { id: string }) {
   const { data: n } = useNotice(id);
-  const units = n.kind === "units" ? n.units.slice(0, MOBILE_UNIT_COUNT) : [];
+  const units = n?.kind === "units" ? n.units.slice(0, MOBILE_UNIT_COUNT) : [];
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
   const pdf = usePdfViewer();
-  if (n.kind !== "units") return null;
+  if (n?.kind !== "units") return null;
   const { doc } = n;
   const pdfUrl = doc.source.pdfUrl;
 
@@ -46,7 +46,7 @@ export function MDetailUnits({ id }: { id: string }) {
           <NoticeTags
             verdict={n.verdict}
             rank={n.ranking?.myRank}
-            dday={n.dday}
+            due={dueText(n)}
             tags={n.tags}
             size="md"
           />

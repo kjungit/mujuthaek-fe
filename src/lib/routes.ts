@@ -2,8 +2,10 @@
 export const routes = {
   main: "/",
   login: "/login",
+  /** 처음 간편 로그인한 뒤 약관 동의 (가입 마무리) */
   signup: "/signup",
-  findPassword: "/find-password",
+  /** 간편 로그인 뒤 돌아오는 곳 (백엔드가 보내요) */
+  authCallback: "/auth/callback",
   welcome: "/welcome",
   profile: "/profile",
   home: "/home",
@@ -12,7 +14,6 @@ export const routes = {
   homes: "/homes",
   notice: (id: string) => `/notices/${id}`,
   score: "/score",
-  life: "/life",
   alerts: "/alerts",
   me: "/me",
   search: "/search",

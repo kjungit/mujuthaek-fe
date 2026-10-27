@@ -19,7 +19,8 @@ const newsHref = (item: HomeNewsItem) =>
 const MOBILE_NEWS_COUNT = 3;
 
 export function MHome() {
-  const { data } = useHomeSummary();
+  const { data, loading, error } = useHomeSummary();
+  const n = (v: number, unit: string) => (loading ? "…" : `${v}${unit}`);
   const conditions = useConditionSummary();
 
   return (
@@ -60,9 +61,13 @@ export function MHome() {
                 <span className="text-brand-deep-text text-[14px] font-semibold">
                   지원 가능한 청약·공공임대
                 </span>
-                <span className="tracking-h1 text-[36px] font-extrabold">{data.homes.count}곳</span>
+                <span className="tracking-h1 text-[36px] font-extrabold">
+                  {error ? "–" : n(data.homes.count, "곳")}
+                </span>
                 <span className="text-brand-deep-text text-[13px]">
-                  이번 주 새로 {data.homes.newThisWeek}곳 · 마감 임박 {data.homes.closingSoon}곳
+                  {error
+                    ? "공고를 불러오지 못했어요"
+                    : `이번 주 새로 ${n(data.homes.newThisWeek, "곳")} · 마감 임박 ${n(data.homes.closingSoon, "곳")}`}
                 </span>
               </span>
               <span className="rounded-pill flex size-[40px] flex-none items-center justify-center bg-white/12">
@@ -70,32 +75,20 @@ export function MHome() {
               </span>
             </Link>
 
-            <div className="grid grid-cols-2 gap-[10px]">
-              <Link
-                href={routes.benefits}
-                className="bg-surface text-text hover:text-text flex flex-col gap-[6px] rounded-[22px] p-[18px] no-underline"
-              >
-                <span className="text-text-sub text-[13px] font-semibold">받을 수 있는 혜택</span>
-                <span className="tracking-title text-[22px] font-extrabold">
-                  연 {data.benefits.yearlyAmount}
-                </span>
-                <span className="text-text-sub text-[13px]">
-                  {data.benefits.count}개 · 확인 필요 {data.benefits.needCheck}개
-                </span>
-              </Link>
-              <Link
-                href={routes.life}
-                className="bg-surface text-text hover:text-text flex flex-col gap-[6px] rounded-[22px] p-[18px] no-underline"
-              >
-                <span className="text-text-sub text-[13px] font-semibold">내 생활권 점수</span>
-                <span className="tracking-title text-[22px] font-extrabold">
-                  {data.life.score}점
-                </span>
-                <span className="text-text-sub text-[13px]">
-                  직장까지 평균 {data.life.commuteMinutes}분
-                </span>
-              </Link>
-            </div>
+            <Link
+              href={routes.benefits}
+              className="bg-surface text-text hover:text-text flex flex-col gap-[6px] rounded-[22px] p-[18px] no-underline"
+            >
+              <span className="text-text-sub text-[13px] font-semibold">받을 수 있는 혜택</span>
+              <span className="tracking-title text-[22px] font-extrabold">
+                {data.benefits ? `연 ${data.benefits.yearlyAmount}` : loading ? "…" : "–"}
+              </span>
+              <span className="text-text-sub text-[13px]">
+                {data.benefits
+                  ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
+                  : "받을 수 있는 혜택을 판정하고 있어요"}
+              </span>
+            </Link>
 
             <section
               aria-labelledby="due-h"
@@ -103,15 +96,20 @@ export function MHome() {
             >
               <div className="flex items-center justify-between">
                 <h2 id="due-h" className="m-0 text-[17px] font-extrabold">
-                  마감 임박 관심 공고
+                  마감 임박 공고
                 </h2>
                 <Link
-                  href={routes.me}
+                  href={routes.homes}
                   className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
                 >
                   전체
                 </Link>
               </div>
+              {!loading && data.deadlines.length === 0 && (
+                <span className="text-text-sub py-[12px] text-[14px]">
+                  2주 안에 마감하는 공고가 없어요
+                </span>
+              )}
               {data.deadlines.map((d, i) => (
                 <Link
                   key={d.id}
@@ -131,7 +129,7 @@ export function MHome() {
                       d.dday <= 3 ? "bg-text text-white" : "bg-fill text-text",
                     )}
                   >
-                    D-{d.dday}
+                    {d.dday === 0 ? "오늘" : `D-${d.dday}`}
                   </span>
                 </Link>
               ))}
@@ -152,6 +150,11 @@ export function MHome() {
                   전체
                 </Link>
               </div>
+              {!loading && data.news.length === 0 && (
+                <span className="text-text-sub py-[12px] text-[14px]">
+                  이번 주에 새로 올라온 공고가 없어요
+                </span>
+              )}
               {data.news.slice(0, MOBILE_NEWS_COUNT).map((item, i, list) => (
                 <Link
                   key={item.id}
@@ -170,19 +173,23 @@ export function MHome() {
               ))}
             </section>
 
-            <Link
-              href={routes.benefit(data.suggestedBenefit.id)}
-              className="bg-brand-soft text-text hover:text-text flex items-center gap-[12px] rounded-[22px] p-[18px] no-underline"
-            >
-              <span className="flex flex-1 flex-col gap-[4px]">
-                <span className="text-brand-strong text-[13px] font-bold">이런 혜택도 있어요</span>
-                <span className="text-[16px] font-extrabold">{data.suggestedBenefit.title}</span>
-                <span className="text-brand-strong text-[13px]">
-                  받을 수 있는데 아직 안 본 혜택이에요
+            {data.suggestedBenefit && (
+              <Link
+                href={routes.benefit(data.suggestedBenefit.id)}
+                className="bg-brand-soft text-text hover:text-text flex items-center gap-[12px] rounded-[22px] p-[18px] no-underline"
+              >
+                <span className="flex flex-1 flex-col gap-[4px]">
+                  <span className="text-brand-strong text-[13px] font-bold">
+                    이런 혜택도 있어요
+                  </span>
+                  <span className="text-[16px] font-extrabold">{data.suggestedBenefit.title}</span>
+                  <span className="text-brand-strong text-[13px]">
+                    받을 수 있는데 아직 안 본 혜택이에요
+                  </span>
                 </span>
-              </span>
-              <ChevronRight size={20} className="text-brand-strong" aria-hidden />
-            </Link>
+                <ChevronRight size={20} className="text-brand-strong" aria-hidden />
+              </Link>
+            )}
           </>
         )}
       </main>

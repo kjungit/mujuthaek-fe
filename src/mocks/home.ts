@@ -16,17 +16,16 @@ export type HomeDeadline = { id: string; title: string; meta: string; dday: numb
 
 export type HomeSummary = {
   homes: { count: number; newThisWeek: number; closingSoon: number };
-  benefits: { yearlyAmount: string; count: number; needCheck: number };
-  life: { score: number; area: string; commuteMinutes: number };
+  /** 혜택 요약. 받기 전이면 null */
+  benefits: { yearlyAmount: string; count: number; needCheck: number } | null;
   news: HomeNewsItem[];
   deadlines: HomeDeadline[];
-  suggestedBenefit: { id: string; title: string };
+  suggestedBenefit: { id: string; title: string } | null;
 };
 
 export const homeSummary: HomeSummary = {
   homes: { count: 7, newThisWeek: 2, closingSoon: 1 },
   benefits: { yearlyAmount: "480만 원", count: 5, needCheck: 1 },
-  life: { score: 82, area: "마포구", commuteMinutes: 28 },
   news: [
     {
       id: "n1",

@@ -28,17 +28,26 @@ export function Badge({ tone, size = "lg", className, children }: BadgeProps) {
   return <span className={cn("font-bold", tones[tone], sizes[size], className)}>{children}</span>;
 }
 
-/** 판정 배지는 두 가지뿐: 지원 가능 / 확인 필요 */
+/** 판정 배지는 두 가지: 지원 가능 / 확인 필요 */
 export type Verdict = "ok" | "check";
 
-export const verdictLabel: Record<Verdict, string> = { ok: "지원 가능", check: "확인 필요" };
+/** 공고 목록은 '지원 불가까지 보기'를 켜면 지원 불가도 보여요 */
+export type ListingVerdict = Verdict | "no";
+
+export const verdictLabel: Record<ListingVerdict, string> = {
+  ok: "지원 가능",
+  check: "확인 필요",
+  no: "지원 불가",
+};
+
+const verdictTone: Record<ListingVerdict, BadgeTone> = { ok: "ok", check: "check", no: "neutral" };
 
 export function VerdictBadge({
   verdict,
   ...rest
-}: { verdict: Verdict } & Omit<BadgeProps, "tone" | "children">) {
+}: { verdict: ListingVerdict } & Omit<BadgeProps, "tone" | "children">) {
   return (
-    <Badge tone={verdict} {...rest}>
+    <Badge tone={verdictTone[verdict]} {...rest}>
       {verdictLabel[verdict]}
     </Badge>
   );

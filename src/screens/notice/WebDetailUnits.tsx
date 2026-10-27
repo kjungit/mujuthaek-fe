@@ -9,7 +9,7 @@ import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { WebRankCard } from "@/components/notice/RankCard";
 import { WebUnitFilter } from "@/components/notice/UnitFilter";
-import { pdfSections } from "@/features/notice/format";
+import { pdfSections, dueText } from "@/features/notice/format";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
@@ -27,10 +27,10 @@ const stations = [
 
 export function WebDetailUnits({ id }: { id: string }) {
   const { data: n } = useNotice(id);
-  const units = n.kind === "units" ? n.units : [];
+  const units = n?.kind === "units" ? n.units : [];
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
   const pdf = usePdfViewer();
-  if (n.kind !== "units") return null;
+  if (n?.kind !== "units") return null;
   const { doc } = n;
   const pdfUrl = doc.source.pdfUrl;
   /** 원문 PDF가 있으면 옆에 열고, 없으면 기관 사이트로 */
@@ -64,7 +64,7 @@ export function WebDetailUnits({ id }: { id: string }) {
               <NoticeTags
                 verdict={n.verdict}
                 rank={n.ranking?.myRank}
-                dday={n.dday}
+                due={dueText(n)}
                 tags={n.tags}
                 size="lg"
               />
@@ -299,12 +299,6 @@ export function WebDetailUnits({ id }: { id: string }) {
                       </span>
                     </div>
                     <div className="flex gap-[8px]">
-                      <Link
-                        href={routes.life}
-                        className="bg-fill text-text hover:text-text inline-flex min-h-[48px] items-center gap-[6px] rounded-sm px-[16px] text-[15px] font-bold no-underline"
-                      >
-                        <MapPin size={18} aria-hidden />이 집 생활권
-                      </Link>
                       <button
                         type="button"
                         className="bg-brand inline-flex min-h-[48px] cursor-pointer items-center gap-[6px] rounded-sm border-0 px-[16px] text-[15px] font-bold text-white"
