@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MBackHeader } from "@/components/layout/MBackHeader";
-import { industryGroups, needOptions } from "@/features/business/profile";
+import {
+  industryGroups,
+  needOptions,
+  restrictionOptions,
+  statusOptions,
+  validIndustryCode,
+} from "@/features/business/profile";
 import { useBizOnboardingForm } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -119,6 +125,23 @@ export function MBizOnboarding() {
           </select>
         </label>
 
+        <label className="flex flex-col gap-[8px] text-[15px] font-bold">
+          업종 코드 (선택)
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={5}
+            placeholder="예: 58222"
+            value={draft.industryCode ?? ""}
+            onChange={(e) => f.set({ industryCode: e.target.value.replace(/\D/g, "") })}
+            className={cn(control, "bg-surface box-content min-w-0 px-[14px] font-normal")}
+          />
+          <span className="text-text-sub text-[13px] font-medium">
+            사업자등록증의 5자리 코드를 넣으면 이 코드로 판정해요
+            {draft.industryCode && !validIndustryCode(draft.industryCode) && " · 5자리 숫자로"}
+          </span>
+        </label>
+
         {!pre && (
           <div className="flex flex-col gap-[8px]">
             <span className="text-[15px] font-bold">사업자 형태</span>
@@ -225,6 +248,70 @@ export function MBizOnboarding() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[15px] font-bold">해당 유형</span>
+          <div role="group" aria-label="해당 유형" className="flex flex-wrap gap-[8px]">
+            <button
+              type="button"
+              aria-pressed={f.statuses?.length === 0}
+              onClick={f.toggleNoStatus}
+              className={cn(
+                "rounded-pill min-h-[44px] cursor-pointer border-2 border-solid px-[16px] text-[15px] font-bold",
+                pickTone(f.statuses?.length === 0),
+              )}
+            >
+              해당 없음
+            </button>
+            {statusOptions.map((o) => (
+              <button
+                key={o.code}
+                type="button"
+                aria-pressed={Boolean(f.statuses?.includes(o.code))}
+                onClick={() => f.toggleStatus(o.code)}
+                className={cn(
+                  "rounded-pill min-h-[44px] cursor-pointer border-2 border-solid px-[14px] text-[14px] font-semibold",
+                  pickTone(Boolean(f.statuses?.includes(o.code))),
+                )}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[15px] font-bold">신청 제한 사유</span>
+          <div role="group" aria-label="신청 제한 사유" className="flex flex-wrap gap-[8px]">
+            <button
+              type="button"
+              aria-pressed={f.restrictions?.length === 0}
+              onClick={f.toggleNoRestriction}
+              className={cn(
+                "rounded-pill min-h-[44px] cursor-pointer border-2 border-solid px-[16px] text-[15px] font-bold",
+                pickTone(f.restrictions?.length === 0),
+              )}
+            >
+              해당 없음
+            </button>
+            {restrictionOptions.map((r) => (
+              <button
+                key={r.code}
+                type="button"
+                aria-pressed={Boolean(f.restrictions?.includes(r.code))}
+                onClick={() => f.toggleRestriction(r.code)}
+                className={cn(
+                  "rounded-pill min-h-[44px] cursor-pointer border-2 border-solid px-[14px] text-[14px] font-semibold",
+                  pickTone(Boolean(f.restrictions?.includes(r.code))),
+                )}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-text-sub text-[13px]">
+            해당하면 신청할 수 없는 조건에 써요 · 이번 탭에서만 쓰고 저장하지 않아요
+          </span>
         </div>
       </main>
       <div className="border-line bg-surface sticky bottom-0 flex flex-col gap-[4px] border-t border-solid px-[16px] pt-[10px] pb-[28px]">

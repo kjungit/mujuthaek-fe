@@ -4,12 +4,13 @@
 // 사업 지원: POST /api/v1/supports/search · POST /api/v1/supports/{id}/evaluate (창업지원 사업, 상세 API 없이 판정 응답으로)
 // 공간 상세: 공고면 공고 상세(GET /notices/{id}) + 판정, 모집 정책(K-Startup·기업마당)은 판정 응답(기간·지역·자격 조건)만으로
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import type { ListingVerdict } from "@/components/ui/Badge";
 import {
   toBusinessApplicant,
   useBizProfileInput,
   type BizProfileInput,
+  type BizSession,
   type BusinessApplicant,
 } from "@/features/business/profile";
 import { birthMonthOf } from "@/features/conditions/applicant";
@@ -25,6 +26,7 @@ import {
   type BusinessSummary,
   type SpaceDetail,
   type SpaceItem,
+  type SpaceRule,
   type SpaceType,
   type SupportItem,
   type SupportList,
@@ -45,6 +47,8 @@ type ApiSpaceItem = {
   title: string;
   provider: string | null;
   regionName: string | null;
+  /** 모집 정책의 운영 기관 (출처 칸) */
+  organization: string | null;
   /** 법정동코드 10자리. 전국은 빈 목록, 모르면 null */
   regionCodes: string[] | null;
   status: "UPCOMING" | "APPLYING" | "ALWAYS";
@@ -82,6 +86,8 @@ type ApiCriterion = {
   summary: string | null;
   /** 근거 원문 문장 */
   quote: string | null;
+  /** "다음 중 하나"(ANY_OF)일 때 길마다의 결과 */
+  options?: { label: string; result: Verdict3; criteria: ApiCriterion[] }[];
 };
 
 /** POST /api/v1/spaces/{id}/evaluate (백엔드 SpaceEvaluationResponse) */
@@ -96,6 +102,8 @@ type ApiSpaceEvaluation = {
   dday: number | null;
   status: ApiSpaceItem["status"];
   regionCodes: string[] | null;
+  /** 모집 정책 · 사업의 출처 안내. 공고 · 없으면 null */
+  info: ApiPolicyInfo | null;
   /** 판정 틀이 아직 없으면 null */
   judgment: {
     result: Overall;
@@ -108,11 +116,27 @@ type ApiSpaceEvaluation = {
 type ApiSubField = "FUND" | "LOAN" | "TAX";
 
 /** POST /api/v1/supports/search 한 줄 (백엔드 SupportSearchResponse.Item) */
+/** 출처 안내 (K-Startup · 기업마당 API 칸을 옮긴 것, AI 값 아님) */
+type ApiPolicyInfo = {
+  supportArea: string | null;
+  summary: string | null;
+  organization: string | null;
+  contact: string | null;
+  applyMethod: string | null;
+  applyUrl: string | null;
+  guideUrl: string | null;
+  amountText: string | null;
+};
+
 type ApiSupportItem = {
   id: string;
   source: PolicySource | null;
-  /** 이름으로 정한 지원 종류 */
+  /** 출처 지원 분야(없으면 이름)로 정한 지원 종류 */
   subField: ApiSubField;
+  supportArea: string | null;
+  organization: string | null;
+  /** 요약 글의 「최대 · 한도 N원」 구절 */
+  amountText: string | null;
   title: string;
   regionCodes: string[] | null;
   status: ApiSpaceItem["status"];
@@ -142,6 +166,10 @@ type SpaceApplicant = {
   birthMonth?: string;
   residenceRegionCode?: string;
   business?: BusinessApplicant;
+  /** 신청 제한 사유 코드. 해당 없음이면 빈 목록, 안 골랐으면 보내지 않아요 */
+  restrictions?: string[];
+  /** 해당 유형 코드. 해당 없음이면 빈 목록, 안 골랐으면 보내지 않아요 */
+  statuses?: string[];
 };
 
 /** 질문 id → 예 · 아니요 */
@@ -207,7 +235,10 @@ export function toSpaceItem(it: ApiSpaceItem): SpaceItem {
     type: typeOf[it.spaceType],
     verdict: it.overall === "ELIGIBLE" ? "ok" : "check",
     org: it.policy
-      ? [it.source ? sourceLabel[it.source] : "입주기업 모집", regionLabelOf(it.regionCodes)]
+      ? [
+          it.organization ?? (it.source ? sourceLabel[it.source] : "입주기업 모집"),
+          regionLabelOf(it.regionCodes),
+        ]
           .filter(Boolean)
           .join(" · ")
       : [providerName(it.provider), it.regionName].filter(Boolean).join(" · "),
@@ -227,12 +258,14 @@ export function toSpaceItem(it: ApiSpaceItem): SpaceItem {
 function applicantOf(
   device: DeviceConditions | null,
   profile: BizProfileInput | null,
-  revenue: string,
+  session: BizSession,
 ): SpaceApplicant {
   return {
     birthMonth: device ? birthMonthOf(device.birth) : undefined,
     residenceRegionCode: device?.regionCode || undefined,
-    business: profile ? toBusinessApplicant(profile, revenue) : undefined,
+    business: profile ? toBusinessApplicant(profile, session.revenue) : undefined,
+    restrictions: session.restrictions ?? undefined,
+    statuses: profile?.statuses ?? undefined,
   };
 }
 
@@ -262,7 +295,7 @@ function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
       stored.status === "ready" && biz.status === "ready"
         ? {
             ready: true,
-            applicant: applicantOf(stored.device, biz.profile, biz.revenue),
+            applicant: applicantOf(stored.device, biz.profile, biz.session),
           }
         : { ready: false, applicant: {} },
     [stored, biz],
@@ -270,11 +303,11 @@ function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
 }
 
 /** 사업 정보 입력 화면의 "지금 조건으로": 고치는 중인 값으로 공간 · 지원 개수를 바로 세요 */
-export function useApiBusinessPreview(draft: BizProfileInput, revenue: string) {
+export function useApiBusinessPreview(draft: BizProfileInput, session: BizSession) {
   const stored = useConditions();
   const applicant = useMemo(
-    () => applicantOf(stored.status === "ready" ? stored.device : null, draft, revenue),
-    [stored, draft, revenue],
+    () => applicantOf(stored.status === "ready" ? stored.device : null, draft, session),
+    [stored, draft, session],
   );
   const regionCodes = draft.regionCode ? [draft.regionCode] : undefined;
   const body = { filters: { regionCodes }, applicant, size: 1 };
@@ -307,12 +340,14 @@ export function useApiBusinessSummary(scope?: RegionScope) {
   const { ready, applicant } = useSpaceApplicant();
   const supports = useApiSupportSearch(scope);
   const regionCodes = scope?.regionCodes;
+  const answers = useAllAnswers();
   const q = useQuery({
-    queryKey: ["spaces", "search", applicant, regionCodes] as const,
+    queryKey: ["spaces", "search", applicant, regionCodes, answers] as const,
     queryFn: () =>
       api.post<ApiSpaceSearch>(endpoints.spacesSearch, {
         filters: { regionCodes },
         applicant,
+        answers,
         size: PAGE_SIZE,
       }),
     enabled: ready,
@@ -340,12 +375,14 @@ export function useApiBusinessSummary(scope?: RegionScope) {
 function useApiSupportSearch(scope?: RegionScope) {
   const { ready, applicant } = useSpaceApplicant();
   const regionCodes = scope?.regionCodes;
+  const answers = useAllAnswers();
   return useQuery({
-    queryKey: ["supports", "search", applicant, regionCodes] as const,
+    queryKey: ["supports", "search", applicant, regionCodes, answers] as const,
     queryFn: () =>
       api.post<ApiSupportSearch>(endpoints.supportsSearch, {
         filters: { regionCodes },
         applicant,
+        answers,
         size: PAGE_SIZE,
       }),
     enabled: ready,
@@ -366,9 +403,12 @@ function supportReason(it: ApiSupportItem) {
     : "원문에서 조건을 확인해 주세요";
 }
 
-/** 응답 한 줄 → 사업 지원 줄. 지원 금액은 판정 틀에 없어서 원문에서 */
+/** 응답 한 줄 → 사업 지원 줄. 금액은 출처 요약 글에 「최대 N원」이 있을 때만, 없으면 원문에서 */
 export function toSupportItem(it: ApiSupportItem): SupportItem {
-  const org = [it.source ? sourceLabel[it.source] : null, regionLabelOf(it.regionCodes)]
+  const org = [
+    it.organization ?? (it.source ? sourceLabel[it.source] : null),
+    regionLabelOf(it.regionCodes),
+  ]
     .filter(Boolean)
     .join(" · ");
   const period = formatPeriod(it.applyStart, it.applyEnd);
@@ -380,9 +420,12 @@ export function toSupportItem(it: ApiSupportItem): SupportItem {
     title: it.title,
     org,
     mOrg: org,
-    body: "지원 내용은 원문에서 확인",
+    body:
+      [it.supportArea, it.amountText].filter(Boolean).join(" · ") || "지원 내용은 원문에서 확인",
     note: period ? `${statusLabel[it.status]} · ${period}` : statusLabel[it.status],
-    mBody: period ?? statusLabel[it.status],
+    mBody:
+      [it.supportArea, it.amountText ?? period].filter(Boolean).join(" · ") ||
+      statusLabel[it.status],
     reason,
     mReason: reason,
     summary: [org, period].filter(Boolean).join(" · "),
@@ -447,51 +490,88 @@ const supportKindLabel: Record<ApiSubField, string> = {
 const withRegionNames = (text: string) =>
   text.replace(/\b\d{10}\b/g, (code) => regionLabelOf([code]) ?? code);
 
-const answersKey = (id: string) => `mujuthaek:business:answers:${id}`;
-
 /**
- * 공간 · 사업 하나의 질문 답. 체납 · 제재처럼 민감한 답이라 이 탭(sessionStorage)에만 두고 서버에 저장하지 않아요.
- * 같은 질문을 다시 누르면 답을 지워요
+ * 질문 답: 공간 · 사업 id → 질문 id → 예 · 아니요. 체납 · 제재처럼 민감한 답이라 이 탭(sessionStorage)에만 두고 서버에 저장하지 않아요.
+ * 상세에서 답하면 목록 판정에도 같이 보내요
  */
-function useAnswers(id: string): [Answers, (questionId: string, value: "YES" | "NO") => void] {
-  const [answers, setAnswers] = useState<Answers>(() => {
+type AllAnswers = Record<string, Answers>;
+
+const ANSWERS_KEY = "mujuthaek:business:answers";
+const NO_ANSWERS: Answers = {};
+const NO_ALL_ANSWERS: AllAnswers = {};
+let allAnswers: AllAnswers | null = null;
+const answerListeners = new Set<() => void>();
+
+function getAllAnswers(): AllAnswers {
+  if (!allAnswers) {
     try {
-      return JSON.parse(window.sessionStorage.getItem(answersKey(id)) ?? "{}") as Answers;
+      allAnswers = JSON.parse(window.sessionStorage.getItem(ANSWERS_KEY) ?? "{}") as AllAnswers;
     } catch {
-      return {};
+      allAnswers = {};
     }
-  });
-  const answer = (questionId: string, value: "YES" | "NO") =>
-    setAnswers((cur) => {
-      const next = { ...cur };
-      if (next[questionId] === value) delete next[questionId];
-      else next[questionId] = value;
-      try {
-        window.sessionStorage.setItem(answersKey(id), JSON.stringify(next));
-      } catch {
-        // 저장소를 못 쓰면 이번 화면에서만 써요
-      }
-      return next;
-    });
-  return [answers, answer];
+  }
+  return allAnswers;
+}
+
+function subscribeAnswers(listener: () => void) {
+  answerListeners.add(listener);
+  return () => {
+    answerListeners.delete(listener);
+  };
+}
+
+/** 같은 질문을 다시 누르면 답을 지워요 */
+function setAnswer(id: string, questionId: string, value: "YES" | "NO") {
+  const mine = { ...(getAllAnswers()[id] ?? {}) };
+  if (mine[questionId] === value) delete mine[questionId];
+  else mine[questionId] = value;
+  const next = { ...getAllAnswers(), [id]: mine };
+  if (Object.keys(mine).length === 0) delete next[id];
+  allAnswers = next;
+  try {
+    window.sessionStorage.setItem(ANSWERS_KEY, JSON.stringify(next));
+  } catch {
+    // 저장소를 못 쓰면 이번 화면에서만 써요
+  }
+  answerListeners.forEach((l) => l());
+}
+
+function useAllAnswers(): AllAnswers {
+  return useSyncExternalStore(subscribeAnswers, getAllAnswers, () => NO_ALL_ANSWERS);
+}
+
+function useAnswers(id: string): [Answers, (questionId: string, value: "YES" | "NO") => void] {
+  const all = useAllAnswers();
+  return [all[id] ?? NO_ANSWERS, (questionId, value) => setAnswer(id, questionId, value)];
 }
 
 /** 판정 조건 → 내 자격 줄. 근거 문장이 있으면 같이, 질문이면 내 답도 */
 function rulesOf(j: ApiSpaceEvaluation["judgment"]): SpaceDetail["rules"] {
   const criteria = j ? [...j.common, ...j.groups.flatMap((g) => g.criteria)] : [];
   const answerOf = new Map((j?.questions ?? []).map((q) => [q.id, q.answer]));
-  return criteria
-    .filter((c) => c.kind !== "RULE" && (c.summary || c.quote))
-    .map((c) => ({
+  const toRule = (c: ApiCriterion): SpaceRule => {
+    const anyOf = c.kind === "ANY_OF" && c.options?.length;
+    return {
       questionId: c.kind === "ASK" ? c.id : undefined,
       answer: c.kind === "ASK" ? (answerOf.get(c.id) ?? undefined) : undefined,
-      label: criterionLabel[c.kind] ?? "조건",
-      rule: withRegionNames(c.summary ?? c.quote ?? ""),
-      mRule: withRegionNames(c.summary ?? c.quote ?? ""),
+      label: anyOf ? "다음 중 하나만 맞으면 돼요" : (criterionLabel[c.kind] ?? "조건"),
+      rule: anyOf ? "" : withRegionNames(c.summary ?? c.quote ?? ""),
+      mRule: anyOf ? "" : withRegionNames(c.summary ?? c.quote ?? ""),
       quote: c.summary && c.quote ? c.quote : undefined,
       met: c.result === "MET",
       notMet: c.result === "NOT_MET",
-    }));
+      // 길 안의 질문도 같은 질문 id로 답해요 (판정 엔진이 묶음 안 질문도 questions에 넣어줘요)
+      options: anyOf
+        ? c.options!.map((o, i) => ({
+            label: o.label.replace(/^\d+번째 길:\s*/, "") || `${i + 1}번째`,
+            met: o.result === "MET",
+            notMet: o.result === "NOT_MET",
+            rules: o.criteria.filter((x) => x.kind !== "RULE").map(toRule),
+          }))
+        : undefined,
+    };
+  };
+  return criteria.filter((c) => c.kind !== "RULE" && (c.summary || c.quote)).map(toRule);
 }
 
 /** 모집 정책·사업 지원 상세: 공고 상세가 없어서 판정 응답(기간 · 지역 · 자격 조건)과 원문으로 */
@@ -518,6 +598,12 @@ function policyDetail(
       { label: "접수 기간", value: period ?? "원문 확인", mValue: period ?? "원문 확인" },
       { label: "지역", value: region ?? "원문 확인", mValue: region ?? "원문 확인" },
       { label: "출처", value: source, mValue: source },
+      ...(e.info?.supportArea
+        ? [{ label: "지원 분야", value: e.info.supportArea, mValue: e.info.supportArea }]
+        : []),
+      ...(e.info?.amountText
+        ? [{ label: "지원 금액", value: e.info.amountText, mValue: e.info.amountText }]
+        : []),
     ],
     conditions: [],
     docs: [],
@@ -527,7 +613,21 @@ function policyDetail(
     sourceUrl: e.detailUrl ?? undefined,
     notReady: !e.judgment,
     summaryNote: text.note,
+    about: aboutOf(e.info),
   };
+}
+
+/** 출처 안내 → 상세 "공고 안내" (요약 · 기관 · 문의처 · 접수 방법 · 링크). 칸이 하나도 없으면 없음 */
+function aboutOf(info: ApiPolicyInfo | null): SpaceDetail["about"] {
+  if (!info) return undefined;
+  const rows = [
+    info.organization && { label: "운영 기관", value: info.organization },
+    info.contact && { label: "문의처", value: info.contact },
+    info.applyMethod && { label: "접수 방법", value: info.applyMethod },
+    info.applyUrl && { label: "신청 주소", value: "신청하러 가기", href: info.applyUrl },
+    info.guideUrl && { label: "사업 안내", value: "안내 페이지 열기", href: info.guideUrl },
+  ].filter((r): r is { label: string; value: string; href?: string } => Boolean(r));
+  return info.summary || rows.length ? { summary: info.summary ?? undefined, rows } : undefined;
 }
 
 /** 공간 상세: 판정을 먼저 받고, 공고면 공고 상세를 더 받아요 (모집 정책은 공고 상세가 없어요) */

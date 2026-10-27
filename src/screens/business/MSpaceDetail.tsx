@@ -11,7 +11,7 @@ import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { SpaceDetail } from "@/mocks/business";
-import { AnswerButtons } from "./parts";
+import { AboutSection, AnswerButtons } from "./parts";
 
 const card = "bg-surface mx-[16px] flex flex-col rounded-card px-[20px] py-[16px]";
 const h3 = "m-0 text-[17px] font-extrabold";
@@ -131,6 +131,8 @@ function MSpaceDetailView({
           </div>
         </section>
 
+        {data.about && <AboutSection about={data.about} />}
+
         <section aria-labelledby="me-h" className={cn(card, "gap-[6px]")}>
           <h3 id="me-h" className={h3}>
             내 자격
@@ -141,7 +143,49 @@ function MSpaceDetailView({
               : `${data.rules.length}개 중 ${met}개 충족 · ${unmet}개 확인 필요${no ? ` · ${no}개 해당 안 됨` : ""}`}
           </span>
           {data.rules.map((r, i) =>
-            r.questionId && onAnswer ? (
+            r.options ? (
+              <div
+                key={`${i}-${r.label}`}
+                className={cn(
+                  row(i === data.rules.length - 1),
+                  "flex-col items-stretch gap-[8px] py-[10px]",
+                )}
+              >
+                <span className="flex items-center justify-between gap-[8px]">
+                  <span className="font-bold">{r.label}</span>
+                  <span
+                    className={cn(
+                      "flex-none text-[13px] font-bold",
+                      r.met ? "text-ok-text" : r.notMet ? "text-text-sub" : "text-check-text",
+                    )}
+                  >
+                    {r.met ? "충족" : r.notMet ? "해당 안 돼요" : "확인 필요"}
+                  </span>
+                </span>
+                {r.options.map((o, k) => (
+                  <div
+                    key={k}
+                    className="bg-bg rounded-control flex flex-col gap-[8px] px-[12px] py-[10px]"
+                  >
+                    <span className="text-text-sub text-[12px] font-bold">
+                      {k + 1}번째 길 {o.met ? "· 충족" : o.notMet ? "· 해당 안 됨" : ""}
+                    </span>
+                    {o.rules.map((x, m) => (
+                      <div key={m} className="flex flex-col gap-[6px]">
+                        <span className="text-[14px] leading-[1.5]">{x.mRule || o.label}</span>
+                        {x.questionId && onAnswer && (
+                          <AnswerButtons
+                            questionId={x.questionId}
+                            answer={x.answer}
+                            onAnswer={onAnswer}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : r.questionId && onAnswer ? (
               <div
                 key={`${i}-${r.label}`}
                 className={cn(
