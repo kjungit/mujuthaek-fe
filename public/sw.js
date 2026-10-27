@@ -74,6 +74,8 @@ self.addEventListener("push", (event) => {
       badge: "/icons/badge-96.png",
       // 같은 화면 알림은 기기에서 최신 것 하나로 바꿔 보여요
       tag: data.tag,
+      // 같은 화면 알림이 다시 오면 조용히 바꿔치기하지 않고 새로 알려요
+      renotify: Boolean(data.tag),
       data: { url: data.linkPath ?? data.url ?? "/" },
     }),
   );
