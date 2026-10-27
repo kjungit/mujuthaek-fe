@@ -14,6 +14,7 @@ import {
   unsuspendUser,
 } from "@/features/admin/api";
 import {
+  MANAGING,
   PERMISSION_GROUPS,
   PERMISSION_INFO,
   PERMISSION_PRESETS,
@@ -89,12 +90,12 @@ const labels = (ps: AdminPermission[]) => ps.map((p) => PERMISSION_INFO[p].label
 
 /**
  * 그 관리자의 권한을 모두 멈추는 일(해제·정지)을 내가 할 수 있는지. 안 되면 이유. 서버와 같은 규칙이에요:
- * 「권한 부여」를 가진 관리자는 최상위만, 그 사람의 권한을 내가 모두 가져야 해요.
+ * 「권한 부여」·「권한 박탈」을 가진 관리자는 최상위만, 그 사람의 권한을 내가 모두 가져야 해요.
  */
 function wholeBlock(me: AdminMe | undefined, u: AdminUser, what: string) {
   if (isSuper(me) || u.role !== "ADMIN") return null;
-  if (u.permissions.includes("PERMISSION_GRANT"))
-    return `「권한 부여」를 가진 관리자는 최상위 관리자만 ${what}할 수 있어요`;
+  if (u.permissions.some((p) => MANAGING.includes(p)))
+    return `「권한 부여」·「권한 박탈」을 가진 관리자는 최상위 관리자만 ${what}할 수 있어요`;
   const missing = u.permissions.filter((p) => !me?.permissions.includes(p));
   return missing.length ? `내가 가지지 않은 권한(${labels(missing)})을 가진 관리자예요` : null;
 }
@@ -111,6 +112,7 @@ export function AdminWebUsers() {
     has(me, "ACTIVITY") ||
     has(me, "ADMIN_APPOINT") ||
     has(me, "PERMISSION_GRANT") ||
+    has(me, "PERMISSION_REVOKE") ||
     has(me, "USERS_SUSPEND");
   const changes = useAdminChanges(30, seesChanges);
   const queryClient = useQueryClient();
@@ -464,19 +466,25 @@ function UserPanel({
     );
   }
 
-  // 권한 칸: 「권한 부여」가 있어야 하고, 내가 가진 권한만, 「권한 부여」 자체와 그 보유자는 최상위만
-  const grantLock = !has(me, "PERMISSION_GRANT")
-    ? "「권한 부여」 권한이 없어요"
-    : !isSuper(me) && u.permissions.includes("PERMISSION_GRANT")
-      ? "「권한 부여」를 가진 관리자의 권한은 최상위 관리자만 바꿀 수 있어요"
-      : null;
+  // 권한 칸 (서버와 같은 규칙): 주기는 「권한 부여」, 빼기는 「권한 박탈」, 내가 가진 권한만,
+  // 「권한 부여」·「권한 박탈」 자체와 그 보유자는 최상위만
+  const grantLock =
+    !has(me, "PERMISSION_GRANT") && !has(me, "PERMISSION_REVOKE")
+      ? "「권한 부여」나 「권한 박탈」 권한이 없어요"
+      : !isSuper(me) && u.permissions.some((p) => MANAGING.includes(p))
+        ? "「권한 부여」·「권한 박탈」을 가진 관리자의 권한은 최상위 관리자만 바꿀 수 있어요"
+        : null;
   const lockOf = (p: AdminPermission) =>
     grantLock ??
-    (p === "PERMISSION_GRANT" && !isSuper(me)
+    (MANAGING.includes(p) && !isSuper(me)
       ? "최상위 관리자만 주고 뺄 수 있어요"
       : !me?.permissions.includes(p)
         ? "내가 가지지 않은 권한이에요"
-        : null);
+        : !u.permissions.includes(p) && !has(me, "PERMISSION_GRANT")
+          ? "주려면 「권한 부여」가 필요해요"
+          : u.permissions.includes(p) && !has(me, "PERMISSION_REVOKE")
+            ? "빼려면 「권한 박탈」이 필요해요"
+            : null);
   const changed =
     picked.length !== u.permissions.length || picked.some((p) => !u.permissions.includes(p));
   const toggle = (p: AdminPermission) =>

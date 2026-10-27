@@ -13,6 +13,7 @@ export type AdminPermission =
   | "USERS_SUSPEND"
   | "ADMIN_APPOINT"
   | "PERMISSION_GRANT"
+  | "PERMISSION_REVOKE"
   | "TRAFFIC"
   | "ACTIVITY";
 
@@ -28,7 +29,11 @@ export const PERMISSION_INFO: Record<AdminPermission, { label: string; desc: str
   ADMIN_APPOINT: { label: "관리자 지정", desc: "일반 회원을 일반 관리자로 지정·해제" },
   PERMISSION_GRANT: {
     label: "권한 부여",
-    desc: "내가 가진 권한을 다른 관리자에게 주고 빼기 · 이 권한은 최상위만 주고 빼요",
+    desc: "내가 가진 권한을 다른 관리자에게 주기 · 이 권한은 최상위만 주고 빼요",
+  },
+  PERMISSION_REVOKE: {
+    label: "권한 박탈",
+    desc: "내가 가진 권한을 다른 관리자에게서 빼기 · 이 권한은 최상위만 주고 빼요",
   },
   TRAFFIC: { label: "트래픽 보기", desc: "GA·서버 방문 통계, 봇" },
   ACTIVITY: { label: "처리 기록 보기", desc: "모든 관리자의 처리 기록" },
@@ -37,18 +42,33 @@ export const PERMISSION_INFO: Record<AdminPermission, { label: string; desc: str
 export const PERMISSION_GROUPS: { label: string; items: AdminPermission[] }[] = [
   { label: "공고", items: ["NOTICE_REVIEW", "BENEFIT_REVIEW", "SOURCES", "CRITERIA"] },
   { label: "신고", items: ["REPORTS", "CHAT"] },
-  { label: "회원", items: ["USERS_VIEW", "USERS_SUSPEND", "ADMIN_APPOINT", "PERMISSION_GRANT"] },
+  {
+    label: "회원",
+    items: [
+      "USERS_VIEW",
+      "USERS_SUSPEND",
+      "ADMIN_APPOINT",
+      "PERMISSION_GRANT",
+      "PERMISSION_REVOKE",
+    ],
+  },
   { label: "기록", items: ["TRAFFIC", "ACTIVITY"] },
 ];
 
 export const ALL_PERMISSIONS = PERMISSION_GROUPS.flatMap((g) => g.items);
+
+/** 권한을 다루는 권한: 이 둘을 주고 빼는 일과 이 둘을 가진 관리자를 바꾸는 일은 최상위만 */
+export const MANAGING: AdminPermission[] = ["PERMISSION_GRANT", "PERMISSION_REVOKE"];
 
 /** 자주 쓰는 묶음 (누르면 체크만 바뀌고, 저장은 권한 하나하나로 해요) */
 export const PERMISSION_PRESETS: { label: string; items: AdminPermission[] }[] = [
   { label: "공고 관리자", items: ["NOTICE_REVIEW", "BENEFIT_REVIEW", "SOURCES"] },
   { label: "신고 관리자", items: ["REPORTS", "CHAT"] },
   { label: "회원 관리자", items: ["USERS_VIEW", "USERS_SUSPEND", "ADMIN_APPOINT"] },
-  { label: "권한 부여 빼고 전부", items: ALL_PERMISSIONS.filter((p) => p !== "PERMISSION_GRANT") },
+  {
+    label: "부여·박탈 빼고 전부",
+    items: ALL_PERMISSIONS.filter((p) => !MANAGING.includes(p)),
+  },
 ];
 
 /** 관리자 화면 경로별로 필요한 권한 (하나라도 있으면). 없는 경로(개요)는 관리자 누구나 */
@@ -59,7 +79,13 @@ export const ROUTE_PERMISSIONS: Record<string, AdminPermission[]> = {
   [routes.adminReports]: ["REPORTS"],
   [routes.adminTraffic]: ["TRAFFIC"],
   [routes.adminChat]: ["CHAT"],
-  [routes.adminUsers]: ["USERS_VIEW", "USERS_SUSPEND", "ADMIN_APPOINT", "PERMISSION_GRANT"],
+  [routes.adminUsers]: [
+    "USERS_VIEW",
+    "USERS_SUSPEND",
+    "ADMIN_APPOINT",
+    "PERMISSION_GRANT",
+    "PERMISSION_REVOKE",
+  ],
   [routes.adminActivity]: ["ACTIVITY"],
 };
 
