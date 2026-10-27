@@ -51,12 +51,19 @@ function parse<T>(raw: string | null): T | null {
 }
 
 type LegacyPlace = { sido: string; sigungu: string };
-type LegacyDevice = Partial<{ sido: string; sigungu: string; searchRegions: LegacyPlace[] }>;
+type LegacyDevice = Partial<{
+  sido: string;
+  sigungu: string;
+  searchRegions: LegacyPlace[];
+  /** 예전 조건 입력의 직장 · 학교 위치 (지금은 받지 않아요) */
+  workplace: string;
+}>;
 
-/** 지역을 이름으로 저장하던 예전 조건 → 코드 */
+/** 예전 조건 정리: 이름으로 저장한 지역 → 코드, 지금은 받지 않는 칸(직장 위치)은 버려요 */
 function migrateDevice(raw: DeviceConditions & LegacyDevice): DeviceConditions {
-  if (typeof raw.regionCode === "string" && Array.isArray(raw.searchRegionCodes)) return raw;
   const { sido, sigungu, searchRegions, ...rest } = raw;
+  delete rest.workplace;
+  if (typeof rest.regionCode === "string" && Array.isArray(rest.searchRegionCodes)) return rest;
   const toCode = (p: LegacyPlace) => snapshotRegions.codeByNames(p.sido, p.sigungu);
   return {
     ...rest,

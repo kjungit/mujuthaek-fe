@@ -6,27 +6,35 @@ import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { InfoTag } from "@/components/ui/Chip";
-import { useBizProfile, useBusinessSummary, useSupportList } from "@/features/business/queries";
+import {
+  useBizProfileChips,
+  useBusinessSummary,
+  useInitialSpaceType,
+  useRegionScope,
+  useSupportList,
+} from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import { SupportBadge, TypeFilters, spaceFilters, spaceIcon, spaceThumb } from "./parts";
+import {
+  RegionScopeChips,
+  SupportBadge,
+  TypeFilters,
+  spaceFilters,
+  spaceIcon,
+  spaceLink,
+  spaceThumb,
+} from "./parts";
 
 const ASIDE_SUPPORT_COUNT = 3;
 
 export function WebBusiness() {
-  const { data } = useBusinessSummary();
-  const { data: profile } = useBizProfile();
-  const { data: support } = useSupportList();
-  const { filter, setFilter, count, visible } = useTypeFilter(data.list);
+  const scope = useRegionScope();
+  const { data, loading } = useBusinessSummary(scope);
+  const profileChips = useBizProfileChips();
+  const { data: support } = useSupportList(scope);
+  const { filter, setFilter, count, visible } = useTypeFilter(data.list, useInitialSpaceType());
   const asideItems = support.items.slice(0, ASIDE_SUPPORT_COUNT);
-
-  const profileChips = [
-    profile.stageLabel,
-    profile.industry,
-    profile.staff,
-    `희망 지역 ${profile.region}`,
-  ];
 
   return (
     <WebPage>
@@ -47,6 +55,11 @@ export function WebBusiness() {
           <span className="mr-[6px] inline-flex items-center gap-[8px] text-[15px] font-extrabold">
             <Briefcase size={20} className="text-brand" aria-hidden />내 사업 정보
           </span>
+          {profileChips.length === 0 && (
+            <span className="text-text-sub text-[14px]">
+              사업 정보를 넣으면 공간 · 지원을 내 조건으로 판정해요
+            </span>
+          )}
           {profileChips.map((c) => (
             <span
               key={c}
@@ -60,7 +73,7 @@ export function WebBusiness() {
             href={routes.bizOnboarding}
             className="text-brand-strong hover:text-brand-strong inline-flex min-h-[44px] items-center px-[8px] text-[14px] font-bold no-underline"
           >
-            수정
+            {profileChips.length ? "수정" : "입력하기"}
           </Link>
         </section>
 
@@ -79,8 +92,9 @@ export function WebBusiness() {
               </span>
               <span className="tracking-h1 text-[40px] font-extrabold">{data.spaces.count}곳</span>
               <span className="text-brand-deep-text text-[14px]">
-                마감 임박 {data.spaces.closingSoon}곳 · 이번 주 새로 올라온 공간{" "}
-                {data.spaces.newThisWeek}곳
+                마감 임박 {data.spaces.closingSoon}곳
+                {data.spaces.newThisWeek !== undefined &&
+                  ` · 이번 주 새로 올라온 공간 ${data.spaces.newThisWeek}곳`}
               </span>
             </span>
             <span className="rounded-pill flex size-[44px] flex-none items-center justify-center bg-white/12">
@@ -97,8 +111,13 @@ export function WebBusiness() {
               </span>
               <span className="tracking-h1 text-[40px] font-extrabold">{data.support.count}개</span>
               <span className="text-text-sub text-[14px]">
-                지원금 최대 <strong className="text-brand-strong">{data.support.maxAmount}</strong>{" "}
-                · 확인 필요 {data.support.needCheck}개
+                {data.support.maxAmount && (
+                  <>
+                    지원금 최대{" "}
+                    <strong className="text-brand-strong">{data.support.maxAmount}</strong> ·{" "}
+                  </>
+                )}
+                확인 필요 {data.support.needCheck}개
               </span>
             </span>
             <span className="rounded-pill bg-fill text-text flex size-[44px] flex-none items-center justify-center">
@@ -115,7 +134,10 @@ export function WebBusiness() {
             style={{ flex: "999 1 560px" }}
           >
             <div className="flex flex-wrap items-center justify-between gap-[12px]">
-              <h2 className="tracking-title m-0 text-[22px] font-extrabold">공간</h2>
+              <span className="flex flex-wrap items-center gap-[12px]">
+                <h2 className="tracking-title m-0 text-[22px] font-extrabold">공간</h2>
+                <RegionScopeChips scope={scope} />
+              </span>
               <TypeFilters
                 label="공간 종류"
                 options={spaceFilters(false)}
@@ -126,6 +148,11 @@ export function WebBusiness() {
               />
             </div>
 
+            {visible.length === 0 && (
+              <p className="rounded-card bg-surface text-text-sub m-0 px-[24px] py-[48px] text-center text-[15px]">
+                {loading ? "공간을 불러오는 중이에요" : "지금 지원할 수 있는 공간이 없어요"}
+              </p>
+            )}
             <div
               className="grid gap-[16px]"
               style={{ gridTemplateColumns: "repeat(auto-fill, minmax(262px, 1fr))" }}
@@ -152,7 +179,7 @@ export function WebBusiness() {
                       )}
                     </div>
                     <Link
-                      href={routes.space(it.id)}
+                      {...spaceLink(it)}
                       className="text-text hover:text-text flex flex-1 flex-col gap-[8px] px-[20px] pt-[18px] pb-[20px] no-underline"
                     >
                       <span className="text-text-tertiary text-[13px]">{it.org}</span>
@@ -197,7 +224,7 @@ export function WebBusiness() {
               return (
                 <Link
                   key={s.id}
-                  href={routes.bizSupport}
+                  href={s.href ?? routes.bizSupport}
                   className={cn(
                     "text-text hover:text-text flex flex-col gap-[6px] no-underline",
                     last

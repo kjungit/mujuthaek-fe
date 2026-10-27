@@ -17,6 +17,16 @@ export function formatWon(won: number): string {
     : `${man.toLocaleString("ko-KR")}만 원`;
 }
 
+/** 원문에 금액이 없으면 "원문 확인" */
+export const formatWonOr = (won: number | null) => (won === null ? "원문 확인" : formatWon(won));
+
+/** 호마다 다르면 범위: "15만 4,990원 ~ 16만 7,670원" */
+export const formatWonRange = (won: number | null, max?: number) =>
+  won === null || max === undefined ? formatWonOr(won) : `${formatWon(won)} ~ ${formatWon(max)}`;
+
+/** 공고 상세 맨 위 마감 표시 */
+export const dueText = (n: { dday: number; dueLabel?: string }) => n.dueLabel ?? `마감 D-${n.dday}`;
+
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 
 /** "2026-10-12" → "10월 12일 (월)" · 해가 다르면 연도도 붙여요 */
@@ -84,15 +94,17 @@ export const selectionLabel: Record<NoticeSelectionKind, string> = {
 export const documentGroupLabel: Record<NoticeDocumentGroup, string> = {
   COMMON: "모두 내요",
   CONDITIONAL: "해당하면 더 내요",
+  DIRECT: "본인이 방문해서 신청할 때",
   PROXY_SPOUSE: "배우자가 대신 신청할 때",
   PROXY_OTHER: "다른 사람이 대신 신청할 때",
 };
 
-export const channelLabel: Record<NoticeDoc["apply"]["channel"], string> = {
+export const channelLabel: Record<NonNullable<NoticeDoc["apply"]["channel"]>, string> = {
   ONLINE: "온라인 신청",
   ONSITE: "현장 방문",
   EMAIL: "이메일 접수",
   MAIL: "우편 접수",
+  FAX: "팩스 접수",
 };
 
 export const statusLabel: Record<NoticeDoc["status"], string> = {

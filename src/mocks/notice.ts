@@ -35,6 +35,11 @@ export type MapPoint = { x: number; y: number };
 export type NoticeUnit = MapPoint & {
   id: string;
   name: string;
+  /** 호 표기 (예: A동 214호). 단지별로 묶어 보여줄 때 */
+  label?: string;
+  siteName?: string;
+  /** 가격 대상이 여럿이면 대상별 보증금·월세 */
+  prices?: { target: string; deposit: string; rent: string }[];
   /** 모바일 지도 말풍선용 짧은 이름 */
   short?: string;
   addr?: string;
@@ -51,20 +56,28 @@ export type NoticeUnit = MapPoint & {
   mobilePos?: MapPoint;
   /** true: 내 조건으로 신청 가능 · false: 다른 대상 */
   ok: boolean;
+  /** 단지·건물 (sites[].id). 실제 API에서만 */
+  siteId?: string;
+  /** 단지 생활권 총점. 실제 API에서만 */
+  lifeScore?: number;
   otherTarget: string;
   prep: string;
 };
 
 type NoticeBase = {
   id: string;
+  /** 목업 판정 (실제 판정은 POST /eligibility/notices/{id}/evaluate) */
   verdict: Verdict;
   dday: number;
+  /** 마감 표시를 바꿀 때 (상시 · 접수 예정 · 마감). 없으면 "마감 D-n" */
+  dueLabel?: string;
   tags: string[];
   title: string;
   meta: string;
   /** 공고 원문을 낸 기관(버튼 문구에 써요) */
   agency: string;
   facts: NoticeFact[];
+  /** 목업 판정 */
   eligibility: NoticeEligibility[];
   /** 순위로 뽑는 공고만 (선착순 · 추첨만 하는 공고는 없어요) */
   ranking?: NoticeRanking;
@@ -72,12 +85,16 @@ type NoticeBase = {
   doc: NoticeDoc;
 };
 
-export type NoticeLifeItem = {
-  kind: "commute" | "station" | "park";
-  label: string;
-  value: string;
-  /** 막대 길이(%) */
-  pct: number;
+/** 단지 하나의 생활권 총점. 항목 점수·가까운 시설은 areaId로 따로 불러와요 (GET /areas/sites/{areaId}) */
+export type NoticeLifeSite = {
+  /** sites[].id */
+  id: string;
+  /** area 위치 ID. 아직 위치를 못 찾았으면 null */
+  areaId: string | null;
+  name: string;
+  score: number;
+  /** 세권 태그 이름 (역세권 · 숲세권 …) */
+  tags: string[];
 };
 
 export type NoticeBenefit = {
@@ -87,23 +104,42 @@ export type NoticeBenefit = {
   verdict: Verdict;
 };
 
+export type NoticeMoney = {
+  type: string;
+  deposit: string;
+  /** 받을 수 있는 대출이 없으면 대출 줄을 숨겨요 */
+  loanName?: string;
+  loanShortName?: string;
+  loan?: string;
+  prep: string;
+  note: string;
+};
+
 /** 일반 공고: 주택형별 임대 조건(doc.housing) + (있으면) 블록별 공급 주택 */
 export type StandardNotice = NoticeBase & {
   kind: "standard";
   /** 단지 안 블록별 공급 주택. 없으면 목록·지도 칸을 숨겨요 */
   units?: NoticeUnit[];
-  money: {
-    type: string;
-    deposit: string;
-    loanName: string;
-    loanShortName: string;
-    loan: string;
-    prep: string;
-    note: string;
-  };
-  life: { score: number; items: NoticeLifeItem[] };
-  benefitArea: string;
-  benefits: NoticeBenefit[];
+  /** 목업 준비할 돈 (실제는 판정 응답의 주택형별 준비할 돈) */
+  money?: NoticeMoney;
+  /** 생활권 점수가 아직 없으면 칸을 숨겨요. 단지가 여럿이면 score는 가장 높은 단지, min은 가장 낮은 단지 (높은 순 sites) */
+  life?: { score: number; min: number; sites: NoticeLifeSite[] };
+  benefitArea?: string;
+  /** 혜택 판정이 아직 없으면 칸을 숨겨요 */
+  benefits?: NoticeBenefit[];
+  /** 단지·건물 위치 (실제 API). 좌표를 모르면 lat·lng가 null */
+  sites?: NoticeSite[];
+  /** 호별 주택목록이 있는지 (실제 API: GET /notices/{id}/units로 받아요) */
+  hasUnits?: boolean;
+};
+
+export type NoticeSite = {
+  id: string;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  /** 생활권 총점 (아직 없으면 없음) */
+  lifeScore?: number;
 };
 
 /** 주택목록(엑셀)이 붙은 공고 */
@@ -157,10 +193,15 @@ const happyHousing: Omit<StandardNotice, "id"> = {
   },
   life: {
     score: 82,
-    items: [
-      { kind: "commute", label: "통근", value: "32분", pct: 78 },
-      { kind: "station", label: "역까지", value: "도보 6분", pct: 90 },
-      { kind: "park", label: "공원까지", value: "도보 12분", pct: 55 },
+    min: 82,
+    sites: [
+      {
+        id: "main",
+        areaId: "mock-area-1",
+        name: "마포 행복주택",
+        score: 82,
+        tags: ["역세권", "숲세권"],
+      },
     ],
   },
   benefitArea: "서울 마포구",
@@ -435,10 +476,10 @@ const parkville: Omit<StandardNotice, "id"> = {
   },
   life: {
     score: 64,
-    items: [
-      { kind: "commute", label: "통근", value: "48분", pct: 45 },
-      { kind: "station", label: "역까지", value: "버스 12분", pct: 50 },
-      { kind: "park", label: "공원까지", value: "도보 8분", pct: 70 },
+    min: 52,
+    sites: [
+      { id: "a", areaId: "mock-area-2", name: "사송 A-2블록", score: 64, tags: ["숲세권"] },
+      { id: "b", areaId: "mock-area-3", name: "사송 B-1블록", score: 52, tags: [] },
     ],
   },
   benefitArea: "경남 양산시",

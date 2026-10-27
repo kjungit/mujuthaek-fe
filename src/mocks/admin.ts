@@ -86,7 +86,15 @@ export type ReviewItem = {
   received: string;
   age: string;
   paras: { head: string; parts: { t: string; kind: SourcePartKind }[] }[];
-  fields: { label: string; value: string; conf: number }[];
+  fields: {
+    label: string;
+    value: string;
+    conf: number;
+    /** 백엔드 칸 상태: HELD(확인 전까지 안 보임)·CHECK(확인 필요)·EMPTY(값 없음). 없으면 문제 없음 */
+    status?: "HELD" | "CHECK" | "EMPTY";
+    /** 그 칸을 보는 이유 */
+    why?: string;
+  }[];
   impact: string;
   log: { at: string; who: string; text: string }[];
 };
@@ -596,7 +604,7 @@ export const adminReports: {
       summary: "역까지 더 멀어요",
       age: "2일 전",
       groupCount: 1,
-      link: routes.life,
+      link: routes.homes,
       notes: [{ text: "단지 정문 기준이면 15분 넘게 걸려요", meta: "사용자 · 10월 18일" }],
       reply: "알려주셔서 고마워요. 단지 정문 기준으로 다시 계산하고 있어요.",
     },

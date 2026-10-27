@@ -1,38 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Building, SlidersHorizontal } from "lucide-react";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
 import { RankChip, VerdictBadge } from "@/components/ui/Badge";
-import { activeFilterGroupCount, defaultMode, defaultSort } from "@/features/homes/filters";
+import {
+  activeFilterGroupCount,
+  defaultMode,
+  defaultSort,
+  tenureParam,
+} from "@/features/homes/filters";
+import { useHomeList } from "@/features/homes/list";
+import { HomesMap } from "@/components/homes/HomesMap";
 import { RegionSelect } from "@/components/homes/RegionSelect";
-import { useHomes } from "@/features/homes/queries";
 import { useRegionFilter } from "@/features/homes/region";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { HomeMapPin } from "@/mocks/homes";
-
-const pinTone: Record<HomeMapPin["tone"], string> = {
-  brand: "bg-brand text-white",
-  plain: "bg-surface text-text",
-  check: "bg-surface text-check-text",
-};
 
 /** 지도 모드에서 목록에 남기는 개수 */
 const MAP_LIST_COUNT = 2;
 
 export function MHomes() {
-  const { data } = useHomes();
   const [view, setView] = useState<"list" | "map">("list");
+  const [includeIneligible, setIncludeIneligible] = useState(false);
   const isMap = view === "map";
   const region = useRegionFilter();
-  const visible = data.listings.filter(region.matches);
-  const visibleIds = new Set(visible.map((l) => l.id));
+  const list = useHomeList({
+    region,
+    mode: defaultMode,
+    sort: defaultSort,
+    includeIneligible,
+    showOk: true,
+    showCheck: true,
+  });
+  const visible = list.listings;
+  const verdicts = useMemo(() => new Map(visible.map((l) => [l.id, l.verdict])), [visible]);
+  const verdictOf = useCallback((id: string) => verdicts.get(id), [verdicts]);
   const items = isMap ? visible.slice(0, MAP_LIST_COUNT) : visible;
-  const count = region.isAll ? data.total : visible.length;
 
   const viewButton = (v: "list" | "map", label: string) => (
     <button
@@ -56,7 +63,8 @@ export function MHomes() {
           <div className="flex flex-col gap-[4px]">
             <h1 className="tracking-h1 m-0 text-[26px] font-extrabold">내 집</h1>
             <span className="text-text-sub text-[15px]">
-              지원할 수 있는 곳 <strong className="text-brand-strong">{count}곳</strong>
+              지원할 수 있는 곳{" "}
+              <strong className="text-brand-strong">{list.eligibleCount}곳</strong>
             </span>
           </div>
           <div role="group" aria-label="보기 방식" className="bg-surface flex rounded-sm p-[3px]">
@@ -92,37 +100,28 @@ export function MHomes() {
         </div>
 
         {isMap && (
-          <div
-            aria-label="공고 위치 지도"
-            role="img"
-            className="rounded-card bg-placeholder-bg relative h-[340px] overflow-hidden"
-          >
-            <span
-              aria-hidden
-              className="bg-map-water absolute top-[150px] left-[-20px] h-[26px] w-[460px] rotate-[-8deg]"
-            />
-            <span
-              aria-hidden
-              className="bg-map-park-2 absolute top-[40px] left-[30px] h-[70px] w-[90px] rounded-[18px]"
-            />
-            {data.mapPins
-              .filter((p) => visibleIds.has(p.id))
-              .map((p) => (
-                <span
-                  key={p.id}
-                  className={cn(
-                    "rounded-pill absolute px-[10px] py-[6px] text-[13px] font-extrabold shadow-[0_4px_10px_rgba(25,31,40,0.2)]",
-                    pinTone[p.tone],
-                  )}
-                  style={{ left: p.left, top: p.top }}
-                >
-                  {p.label}
-                </span>
-              ))}
-          </div>
+          <HomesMap
+            regionCodes={region.codes}
+            tenure={tenureParam[defaultMode]}
+            verdictOf={verdictOf}
+            className="h-[340px]"
+          />
         )}
 
-        {visible.length === 0 && (
+        {list.loading && (
+          <div className="rounded-card bg-surface text-text-sub px-[20px] py-[36px] text-center text-[15px]">
+            내 조건으로 공고를 판정하는 중이에요
+          </div>
+        )}
+        {list.error && (
+          <div
+            role="alert"
+            className="rounded-card bg-surface text-text-sub px-[20px] py-[36px] text-center text-[15px]"
+          >
+            공고를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요
+          </div>
+        )}
+        {!list.loading && !list.error && visible.length === 0 && (
           <div className="rounded-card bg-surface text-text-sub flex flex-col items-center gap-[12px] px-[20px] py-[36px] text-center text-[15px]">
             고른 지역에는 지금 지원할 수 있는 공고가 없어요
             <button
@@ -154,21 +153,35 @@ export function MHomes() {
               </span>
               <span className="text-[16px] font-extrabold tracking-[-0.02em]">{h.title}</span>
               <span className="text-text-tertiary text-[12px]">
-                {h.org} · {region.regionLabelOf(h)}
+                {[h.org, region.regionLabelOf(h), h.life].filter(Boolean).join(" · ")}
               </span>
-              <span className="text-[14px] font-semibold">{h.price}</span>
+              {h.price && <span className="text-[14px] font-semibold">{h.price}</span>}
               <span className="text-text-sub text-[13px]">
                 {h.prepAmount ? `준비할 돈 ${h.prepAmount}` : h.prepNote}
               </span>
             </span>
           </Link>
         ))}
-        <a
-          href="#"
-          className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center self-center text-[14px] font-semibold no-underline"
-        >
-          지원 불가 공고까지 모두 보기
-        </a>
+        {list.hasMore && (
+          <button
+            type="button"
+            onClick={list.loadMore}
+            disabled={list.loadingMore}
+            className="rounded-control bg-surface text-text min-h-[52px] cursor-pointer self-stretch border-0 text-[15px] font-bold disabled:cursor-default disabled:opacity-60"
+          >
+            {list.loadingMore ? "불러오는 중" : "더 보기"}
+          </button>
+        )}
+        {!includeIneligible && (
+          <button
+            type="button"
+            onClick={() => setIncludeIneligible(true)}
+            className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center self-center border-0 bg-transparent p-0 text-[14px] font-semibold"
+          >
+            지원 불가 공고까지 모두 보기
+            {list.ineligibleCount ? ` (${list.ineligibleCount}곳)` : ""}
+          </button>
+        )}
       </main>
       <MTabBar mode="home" current={routes.homes} />
     </MPage>

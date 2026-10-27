@@ -6,7 +6,7 @@ import { ArrowRight, MessageSquareWarning } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
-import { useBenefits } from "@/features/benefits/queries";
+import { useBenefit, useBenefits } from "@/features/benefits/queries";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -14,7 +14,47 @@ import { benefitCategories, type Benefit, type BenefitCategory } from "@/mocks/b
 
 type CatFilter = "전체" | BenefitCategory;
 
-const eligLabel = { ok: "충족", check: "확인 필요" } as const;
+/** 목록에 없는 혜택을 열 때 상세가 오기 전 자리 값 */
+const placeholder: Benefit = {
+  id: "",
+  cat: "주거",
+  org: "",
+  orgShort: "",
+  title: "",
+  amount: "",
+  amountShort: "",
+  dday: "",
+  deadline: "",
+  verdict: "check",
+  budget: false,
+  overlap: "",
+  elig: [],
+  how: [],
+  docs: "",
+  sourceUrl: "",
+  policyUrl: "",
+  applyUrl: "",
+};
+
+const eligLabel = { ok: "충족", check: "확인 필요", no: "해당 안 돼요" } as const;
+const eligTone = { ok: "ok", check: "check", no: "neutral" } as const;
+
+/** 고른 혜택: 목록 값으로 먼저 그리고, 상세·판정을 받으면 채워요 */
+function SelectedBenefit({ base }: { base: Benefit }) {
+  const { data, loading, error } = useBenefit(base.id, base);
+  if (!data) {
+    return (
+      <section
+        aria-label="혜택 상세"
+        className="rounded-card-lg bg-surface text-text-sub flex min-w-0 items-center justify-center p-[30px] text-[15px]"
+        style={{ flex: "999 1 520px" }}
+      >
+        {error ? "혜택 내용을 불러오지 못했어요" : loading ? "혜택 내용을 불러오는 중이에요" : ""}
+      </section>
+    );
+  }
+  return <BenefitDetail b={data} />;
+}
 
 function BenefitDetail({ b }: { b: Benefit }) {
   return (
@@ -59,22 +99,33 @@ function BenefitDetail({ b }: { b: Benefit }) {
       <div className="flex flex-col">
         <div className="mb-[4px] flex items-center justify-between">
           <h3 className="tracking-title m-0 text-[19px] font-extrabold">내 자격</h3>
-          <a
-            href={b.sourceUrl}
-            onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
-            className="text-brand-strong hover:text-brand-strong inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
-          >
-            근거 원문
-          </a>
+          {b.sourceUrl && (
+            <a
+              href={b.sourceUrl}
+              target="_blank"
+              onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
+              rel="noreferrer"
+              className="text-brand-strong hover:text-brand-strong inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
+            >
+              근거 원문
+            </a>
+          )}
         </div>
-        {b.elig.map((e) => (
+        {b.reason && <p className="text-text-sub m-0 pb-[4px] text-[14px]">{b.reason}</p>}
+        {b.elig.length === 0 && (
+          <p className="text-text-sub m-0 py-[12px] text-[15px]">원문에 적힌 자격 조건이 없어요</p>
+        )}
+        {b.elig.map((e, i) => (
           <div
-            key={e.label}
+            key={`${i}-${e.label}`}
             className="border-line-soft flex items-center justify-between gap-[12px] border-b border-solid py-[12px]"
           >
-            <span className="text-[15px]">{e.label}</span>
+            <span className="flex min-w-0 flex-col gap-[2px]">
+              <span className="text-[15px]">{e.label}</span>
+              {e.reason && <span className="text-text-sub text-[13px]">{e.reason}</span>}
+            </span>
             <Badge
-              tone={e.result}
+              tone={eligTone[e.result]}
               className="inline-flex flex-none items-center gap-[5px] px-[10px] py-[4px] text-[14px]"
             >
               {eligLabel[e.result]}
@@ -85,6 +136,9 @@ function BenefitDetail({ b }: { b: Benefit }) {
 
       <div className="flex flex-col gap-[12px]">
         <h3 className="tracking-title m-0 text-[19px] font-extrabold">신청 방법</h3>
+        {b.how.length === 0 && (
+          <p className="text-text-sub m-0 text-[15px]">정책 원문의 신청 방법을 확인해 주세요</p>
+        )}
         <ol className="m-0 flex list-none flex-col gap-[10px] p-0">
           {b.how.map((text, i) => (
             <li key={text} className="flex items-center gap-[12px]">
@@ -107,15 +161,21 @@ function BenefitDetail({ b }: { b: Benefit }) {
           정보가 틀렸어요
         </Link>
         <div className="flex gap-[8px]">
+          {b.policyUrl && (
+            <a
+              href={b.policyUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
+              className="rounded-control bg-fill text-text hover:text-text inline-flex min-h-[52px] items-center px-[18px] text-[15px] font-bold no-underline"
+            >
+              정책 원문
+            </a>
+          )}
           <a
-            href={b.policyUrl}
-            onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
-            className="rounded-control bg-fill text-text hover:text-text inline-flex min-h-[52px] items-center px-[18px] text-[15px] font-bold no-underline"
-          >
-            정책 원문
-          </a>
-          <a
-            href={b.applyUrl}
+            href={b.applyUrl || undefined}
+            target="_blank"
+            rel="noreferrer"
             className="rounded-control bg-brand inline-flex min-h-[52px] items-center gap-[6px] px-[20px] text-[16px] font-extrabold text-white no-underline hover:text-white"
           >
             신청하러 가기
@@ -128,12 +188,17 @@ function BenefitDetail({ b }: { b: Benefit }) {
 }
 
 export function WebBenefits({ initialId }: { initialId?: string }) {
-  const { data } = useBenefits();
+  const data = useBenefits();
   const [cat, setCat] = useState<CatFilter>("전체");
   const [selId, setSelId] = useState(initialId ?? data.items[0]?.id);
 
   const shown = cat === "전체" ? data.items : data.items.filter((b) => b.cat === cat);
   const sel = shown.find((b) => b.id === selId) ?? shown[0];
+  // 다른 화면에서 혜택 하나를 열었는데 목록에 없으면(지역 밖 등) 그 혜택만 보여줘요
+  const opened =
+    initialId && !data.items.some((b) => b.id === initialId) && !data.loading
+      ? initialId
+      : undefined;
   const cats: CatFilter[] = ["전체", ...benefitCategories];
 
   return (
@@ -145,14 +210,14 @@ export function WebBenefits({ initialId }: { initialId?: string }) {
             <h1 className="tracking-h1 m-0 text-[32px] font-extrabold">내 혜택</h1>
             <span className="text-text-sub text-[16px]">
               내 조건으로 받을 수 있는 혜택{" "}
-              <strong className="text-brand-strong">{data.items.length}개</strong> · {data.asOf}{" "}
-              기준
+              <strong className="text-brand-strong">{data.total}개</strong>
+              {data.asOf && ` · ${data.asOf} 기준`}
+              {data.yearlyAmount !== "–" && ` · 1년에 ${data.yearlyAmount}`}
             </span>
           </div>
           <div role="group" aria-label="분야" className="flex flex-wrap gap-[6px]">
             {cats.map((c) => {
-              const count =
-                c === "전체" ? data.items.length : data.items.filter((b) => b.cat === c).length;
+              const count = c === "전체" ? data.total : data.counts[c];
               const on = c === cat;
               return (
                 <button
@@ -178,8 +243,26 @@ export function WebBenefits({ initialId }: { initialId?: string }) {
             className="flex min-w-0 flex-col gap-[10px]"
             style={{ flex: "1 1 360px" }}
           >
+            {data.loading && (
+              <p className="rounded-card bg-surface text-text-sub m-0 px-[20px] py-[36px] text-center text-[15px]">
+                내 조건으로 혜택을 판정하는 중이에요
+              </p>
+            )}
+            {data.error && (
+              <p
+                role="alert"
+                className="rounded-card bg-surface text-text-sub m-0 px-[20px] py-[36px] text-center text-[15px]"
+              >
+                혜택을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요
+              </p>
+            )}
+            {!data.loading && !data.error && shown.length === 0 && (
+              <p className="rounded-card bg-surface text-text-sub m-0 px-[20px] py-[36px] text-center text-[15px]">
+                지금 받을 수 있는 혜택이 없어요
+              </p>
+            )}
             {shown.map((b) => {
-              const on = b.id === sel?.id;
+              const on = !opened && b.id === sel?.id;
               return (
                 <button
                   key={b.id}
@@ -205,9 +288,23 @@ export function WebBenefits({ initialId }: { initialId?: string }) {
                 </button>
               );
             })}
+            {data.hasMore && (
+              <button
+                type="button"
+                onClick={data.loadMore}
+                disabled={data.loadingMore}
+                className="bg-surface text-text min-h-[48px] cursor-pointer rounded-[18px] border-0 text-[15px] font-bold disabled:opacity-60"
+              >
+                {data.loadingMore ? "불러오는 중" : "더 보기"}
+              </button>
+            )}
           </section>
 
-          {sel && <BenefitDetail b={sel} />}
+          {opened ? (
+            <SelectedBenefit key={opened} base={{ ...placeholder, id: opened }} />
+          ) : (
+            sel && <SelectedBenefit key={sel.id} base={sel} />
+          )}
         </div>
         <span className="text-text-sub text-[13px]">
           혜택 정보는 각 기관 공고를 정리한 거예요. 신청 전에 정책 원문을 꼭 확인해 주세요

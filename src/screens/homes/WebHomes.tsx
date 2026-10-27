@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Building, Heart, House } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
@@ -14,11 +14,13 @@ import {
   filterGroups,
   moveInModes,
   sortOptions,
+  tenureParam,
   type FilterKey,
   type SortOption,
 } from "@/features/homes/filters";
+import { HomesMap } from "@/components/homes/HomesMap";
 import { RegionSelect } from "@/components/homes/RegionSelect";
-import { useHomes } from "@/features/homes/queries";
+import { useHomeList } from "@/features/homes/list";
 import { useRegionFilter } from "@/features/homes/region";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
@@ -77,8 +79,9 @@ function ListingCard({
           {item.org} · {regionLabel}
         </span>
         <span className="tracking-title text-[18px] font-extrabold">{item.title}</span>
-        <span className="text-[15px] font-semibold">{item.price}</span>
+        {item.price && <span className="text-[15px] font-semibold">{item.price}</span>}
         <span className="flex flex-wrap gap-[4px]">
+          {item.life && <InfoTag>{item.life}</InfoTag>}
           {item.tags.map((t) => (
             <InfoTag key={t}>{t}</InfoTag>
           ))}
@@ -101,20 +104,31 @@ function ListingCard({
 }
 
 export function WebHomes() {
-  const { data } = useHomes();
   const [mode, setMode] = useState(defaultMode);
   const [sort, setSort] = useState<SortOption>(defaultSort);
   const [checked, setChecked] = useState(defaultChecked);
   const region = useRegionFilter();
-  const visible = data.listings.filter(region.matches);
+  const list = useHomeList({
+    region,
+    mode,
+    sort,
+    includeIneligible: checked.ineligible,
+    showOk: checked.ok,
+    showCheck: checked.check,
+  });
+  const visible = list.listings;
+  const [view, setView] = useState<"list" | "map">("list");
+  const verdicts = useMemo(() => new Map(visible.map((l) => [l.id, l.verdict])), [visible]);
+  const verdictOf = useCallback((id: string) => verdicts.get(id), [verdicts]);
+  // 관심 공고는 로그인 연결 때 서버 값으로 바꿔요 (지금은 이 화면 안에서만)
   const [liked, setLiked] = useState(
-    () => new Set(data.listings.filter((l) => l.liked).map((l) => l.id)),
+    () => new Set(visible.filter((l) => l.liked).map((l) => l.id)),
   );
 
   const toggleLike = (id: string) => {
     if (!liked.has(id)) {
       // 목록의 org는 「LH · 행복주택」처럼 유형이 붙어 있어요. 상세 화면과 같게 기관 이름만 보내요
-      const org = data.listings.find((l) => l.id === id)?.org.split(" · ")[0];
+      const org = visible.find((l) => l.id === id)?.org.split(" · ")[0];
       track("notice_bookmark", { notice_kind: "standard", agency: org || "-", via: "list" });
     }
     setLiked((prev) => {
@@ -131,10 +145,6 @@ export function WebHomes() {
     region.reset();
   };
 
-  // 지역을 고르면 고른 지역의 공고만 세요 (목업은 첫 페이지 기준)
-  const count = region.isAll ? data.total : visible.length;
-  const more = region.isAll ? data.total - data.listings.length : 0;
-
   return (
     <WebPage>
       <WebHeader mode="home" current={routes.homes} unread={3} />
@@ -143,25 +153,29 @@ export function WebHomes() {
           <div className="flex flex-col gap-[6px]">
             <h1 className="tracking-h1 m-0 text-[32px] font-extrabold">내 집</h1>
             <span className="text-text-sub text-[16px]">
-              내 조건으로 지원할 수 있는 곳 <strong className="text-brand-strong">{count}곳</strong>
+              내 조건으로 지원할 수 있는 곳{" "}
+              <strong className="text-brand-strong">{list.eligibleCount}곳</strong>
+              {list.needsInputCount ? ` · 확인 필요 ${list.needsInputCount}곳` : ""}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-[10px]">
             <div role="group" aria-label="보기 방식" className="bg-surface flex rounded-sm p-[4px]">
-              <button
-                type="button"
-                aria-pressed="true"
-                className="bg-text min-h-[36px] cursor-pointer rounded-[9px] border-0 px-[14px] text-[14px] font-bold text-white"
-              >
-                목록
-              </button>
-              <button
-                type="button"
-                aria-pressed="false"
-                className="text-text-sub min-h-[36px] cursor-pointer rounded-[9px] border-0 bg-transparent px-[14px] text-[14px] font-semibold"
-              >
-                지도
-              </button>
+              {(["list", "map"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={view === v}
+                  onClick={() => setView(v)}
+                  className={cn(
+                    "min-h-[36px] cursor-pointer rounded-[9px] border-0 px-[14px] text-[14px]",
+                    view === v
+                      ? "bg-text font-bold text-white"
+                      : "text-text-sub bg-transparent font-semibold",
+                  )}
+                >
+                  {v === "list" ? "목록" : "지도"}
+                </button>
+              ))}
             </div>
             <label className="text-text-sub inline-flex items-center gap-[8px] text-[14px]">
               정렬
@@ -248,11 +262,32 @@ export function WebHomes() {
             className="flex min-w-0 flex-col gap-[20px]"
             style={{ flex: "999 1 560px" }}
           >
+            {view === "map" && (
+              <HomesMap
+                regionCodes={region.codes}
+                tenure={tenureParam[mode]}
+                verdictOf={verdictOf}
+                className="h-[520px]"
+              />
+            )}
             <div
               className="grid gap-[16px]"
               style={{ gridTemplateColumns: "repeat(auto-fill, minmax(262px, 1fr))" }}
             >
-              {visible.length === 0 && (
+              {list.loading && (
+                <div className="rounded-card bg-surface text-text-sub col-span-full px-[24px] py-[48px] text-center text-[15px]">
+                  내 조건으로 공고를 판정하는 중이에요
+                </div>
+              )}
+              {list.error && (
+                <div
+                  role="alert"
+                  className="rounded-card bg-surface text-text-sub col-span-full px-[24px] py-[48px] text-center text-[15px]"
+                >
+                  공고를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요
+                </div>
+              )}
+              {!list.loading && !list.error && visible.length === 0 && (
                 <div className="rounded-card bg-surface text-text-sub col-span-full flex flex-col items-center gap-[12px] px-[24px] py-[48px] text-center text-[15px]">
                   {region.label}에는 지금 지원할 수 있는 공고가 없어요
                   <button
@@ -275,21 +310,30 @@ export function WebHomes() {
               ))}
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-[20px] gap-y-[12px]">
-              {more > 0 && (
+              {list.hasMore && (
                 <button
                   type="button"
-                  className="rounded-control bg-surface text-text min-h-[52px] cursor-pointer border-0 px-[28px] text-[15px] font-bold"
+                  onClick={list.loadMore}
+                  disabled={list.loadingMore}
+                  className="rounded-control bg-surface text-text min-h-[52px] cursor-pointer border-0 px-[28px] text-[15px] font-bold disabled:cursor-default disabled:opacity-60"
                 >
-                  {more}곳 더 보기
+                  {list.loadingMore
+                    ? "불러오는 중"
+                    : list.remaining
+                      ? `${list.remaining}곳 더 보기`
+                      : "더 보기"}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setChecked((prev) => ({ ...prev, ineligible: true }))}
-                className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-semibold"
-              >
-                지원 불가 공고까지 모두 보기
-              </button>
+              {!checked.ineligible && (
+                <button
+                  type="button"
+                  onClick={() => setChecked((prev) => ({ ...prev, ineligible: true }))}
+                  className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-semibold"
+                >
+                  지원 불가 공고까지 모두 보기
+                  {list.ineligibleCount ? ` (${list.ineligibleCount}곳)` : ""}
+                </button>
+              )}
             </div>
           </section>
         </div>

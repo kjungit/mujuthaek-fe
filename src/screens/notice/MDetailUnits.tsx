@@ -6,7 +6,7 @@ import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { MRankCard } from "@/components/notice/RankCard";
-import { pdfSections } from "@/features/notice/format";
+import { pdfSections, dueText } from "@/features/notice/format";
 import { noticeParams, useJudgmentViewed } from "@/features/notice/analytics";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
@@ -27,11 +27,11 @@ const pos = (u: NoticeUnit) => {
 
 export function MDetailUnits({ id }: { id: string }) {
   const { data: n } = useNotice(id);
-  const units = n.kind === "units" ? n.units.slice(0, MOBILE_UNIT_COUNT) : [];
+  const units = n?.kind === "units" ? n.units.slice(0, MOBILE_UNIT_COUNT) : [];
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
   const pdf = usePdfViewer();
   useJudgmentViewed(id, n);
-  if (n.kind !== "units") return null;
+  if (n?.kind !== "units") return null;
   const { doc } = n;
   const pdfUrl = doc.source.pdfUrl;
   /** 원문 PDF가 있으면 시트로 열고, 없으면 기관 사이트로 */
@@ -55,7 +55,7 @@ export function MDetailUnits({ id }: { id: string }) {
           <NoticeTags
             verdict={n.verdict}
             rank={n.ranking?.myRank}
-            dday={n.dday}
+            due={dueText(n)}
             tags={n.tags}
             size="md"
           />

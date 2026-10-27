@@ -11,7 +11,7 @@ export function noticeParams(n: Notice): Record<string, string> {
   return {
     notice_kind: n.kind,
     agency: n.agency || "-",
-    region: n.benefitArea.split(" ")[0] || "-",
+    region: (n.benefitArea ?? "").split(" ")[0] || "-",
   };
 }
 
@@ -19,18 +19,18 @@ export function noticeParams(n: Notice): Record<string, string> {
 const sentAt = new Map<string, number>();
 const ONCE_MS = 3000;
 
-/** 조건을 넣은 사람이 공고 상세(판정 결과)를 열면 「판정 실행」을 한 번 보내요 */
-export function useJudgmentViewed(id: string, n: Notice) {
+/** 조건을 넣은 사람이 공고 상세(판정 결과)를 열면 「판정 실행」을 한 번 보내요. 공고를 불러오는 중(undefined)이면 기다려요 */
+export function useJudgmentViewed(id: string, n: Notice | undefined) {
   const conditions = useConditions();
   const ready = conditions.status === "ready";
   const hasConditions = ready && Boolean(conditions.device || conditions.session);
   useEffect(() => {
-    if (!hasConditions) return;
+    if (!hasConditions || !n) return;
     const now = Date.now();
     if (now - (sentAt.get(id) ?? 0) < ONCE_MS) return;
     sentAt.set(id, now);
     track("judgment_run", noticeParams(n));
     // 공고가 바뀔 때만 다시 보내요
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, hasConditions]);
+  }, [id, hasConditions, Boolean(n)]);
 }

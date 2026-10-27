@@ -1,9 +1,11 @@
 "use client";
 
-import { MapPin } from "lucide-react";
+import Link from "next/link";
+import { House, MapPin, Plus } from "lucide-react";
 import type { RegionFilter } from "@/features/homes/region";
 import { useRegions } from "@/features/regions/queries";
 import { cn } from "@/lib/cn";
+import { routes } from "@/lib/routes";
 
 const select =
   "border-line bg-surface text-text min-h-[44px] min-w-0 rounded-sm border border-solid px-[12px] text-[15px] font-semibold disabled:text-text-sub disabled:bg-fill";
@@ -11,42 +13,62 @@ const select =
 const chip =
   "rounded-pill inline-flex min-h-[36px] min-w-0 cursor-pointer items-center gap-[4px] border-0 px-[12px] text-[13px] font-bold";
 
-/** 지역 필터: 내 지역(찾아볼 지역 · 사는 곳) / 전체, 또는 시·도 → 시·군·구 */
+/** 지역 필터: 찾아볼 지역 / 전체, 또는 시·도 → 시·군·구. 사는 곳은 배지로만 보여줘요 */
 export function RegionSelect({ filter, compact }: { filter: RegionFilter; compact?: boolean }) {
   const regions = useRegions();
-  const { code, mine } = filter;
+  const { code, mine, residence } = filter;
   const sidoCode = code.slice(0, 2);
   const sigungu = sidoCode ? (regions.sido(sidoCode)?.sigungus ?? []) : [];
   const mineLabel = mine.map(regions.label).join(" · ");
 
   return (
     <div className="flex flex-col gap-[8px]">
-      {mine.length > 0 && (
-        <div className="flex flex-wrap gap-[6px]">
-          <button
-            type="button"
-            aria-pressed={filter.isMine}
-            onClick={filter.pickMine}
+      <div className="flex flex-wrap gap-[6px]">
+        {mine.length > 0 ? (
+          <>
+            <button
+              type="button"
+              aria-pressed={filter.isMine}
+              onClick={filter.pickMine}
+              className={cn(
+                chip,
+                filter.isMine ? "bg-brand text-white" : "bg-brand-soft text-brand-strong",
+              )}
+            >
+              <MapPin size={14} aria-hidden className="flex-none" />
+              <span className="truncate">찾아볼 지역 · {mineLabel}</span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={filter.isAll}
+              onClick={filter.reset}
+              className={cn(chip, filter.isAll ? "bg-brand text-white" : "bg-fill text-text")}
+            >
+              전체
+            </button>
+          </>
+        ) : (
+          <Link
+            href={routes.profile}
             className={cn(
               chip,
-              filter.isMine ? "bg-brand text-white" : "bg-brand-soft text-brand-strong",
+              "bg-brand-soft text-brand-strong hover:text-brand-strong no-underline",
             )}
           >
-            <MapPin size={14} aria-hidden className="flex-none" />
-            <span className="truncate">
-              {filter.mineKind === "search" ? "찾아볼 지역" : "사는 곳"} · {mineLabel}
-            </span>
-          </button>
-          <button
-            type="button"
-            aria-pressed={filter.isAll}
-            onClick={filter.reset}
-            className={cn(chip, filter.isAll ? "bg-brand text-white" : "bg-fill text-text")}
+            <Plus size={14} aria-hidden className="flex-none" />
+            찾아볼 지역 정하기
+          </Link>
+        )}
+        {residence && (
+          <span
+            className="rounded-pill bg-fill text-text-sub inline-flex min-h-[36px] min-w-0 items-center gap-[4px] px-[12px] text-[13px] font-semibold"
+            title="사는 곳은 거주 요건 판정에만 써요"
           >
-            전체
-          </button>
-        </div>
-      )}
+            <House size={14} aria-hidden className="flex-none" />
+            <span className="truncate">사는 곳 · {regions.label(residence)}</span>
+          </span>
+        )}
+      </div>
       <div className={cn("grid grid-cols-2", compact ? "gap-[6px]" : "gap-[8px]")}>
         <select
           aria-label="시·도"

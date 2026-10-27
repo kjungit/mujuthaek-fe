@@ -86,7 +86,7 @@ export function conditionRows(c: DeviceConditions, regions: Regions): ConditionR
       k: "찾아볼 지역",
       v: c.searchRegionCodes.length
         ? c.searchRegionCodes.map(regions.label).join(" · ")
-        : "사는 곳과 같아요",
+        : "전체 지역",
       muted: !c.searchRegionCodes.length,
     },
     { k: "사는 곳", v: place(c, regions) || MISSING, muted: !c.regionCode },
@@ -108,7 +108,6 @@ export function conditionRows(c: DeviceConditions, regions: Regions): ConditionR
       k: "청약통장",
       v: c.paymentCount ? `${c.bankbookPeriod} · ${c.paymentCount}회` : c.bankbookPeriod,
     },
-    { k: "직장 위치", v: c.workplace || MISSING, muted: !c.workplace },
     {
       k: "중요한 것",
       v: c.priorities.length ? c.priorities.join(" · ") : MISSING,
