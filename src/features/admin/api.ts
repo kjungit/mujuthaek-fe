@@ -599,7 +599,12 @@ type ReportList = {
     screen: string | null;
     targetType: string;
     noticeId: string | null;
+    /** 창업지원 사업 제보면 사업 ID (사업 지원 상세 /business/support/{id}) */
+    programId: string | null;
+    /** 혜택 제보의 원본 정책 ID (혜택 검수용) */
     benefitPolicyId: string | null;
+    /** 혜택 화면(/benefits/{id})용 혜택 ID. 원본 정책 ID와 달라요. 아직 저장 전이면 null */
+    benefitId: string | null;
     noticeTitle: string;
     field: string;
     currentValue: string | null;
@@ -640,11 +645,16 @@ export async function liveReports(): Promise<{
     summary: r.summary ?? r.field,
     age: ago(r.createdAt),
     groupCount: r.groupCount,
+    // 「원문 보기」: 공고 · 혜택(혜택 ID, 아직 없으면 혜택 목록) · 사업 지원 상세
     link: r.noticeId
       ? routes.notice(r.noticeId)
       : r.benefitPolicyId
-        ? routes.benefit(r.benefitPolicyId)
-        : routes.adminReports,
+        ? r.benefitId
+          ? routes.benefit(r.benefitId)
+          : routes.benefits
+        : r.programId
+          ? `${routes.bizSupport}/${r.programId}`
+          : routes.adminReports,
     notes: (details[i].notes ?? []).map((n) => ({
       text: n.text,
       meta: `사용자 · ${when(n.createdAt)}`,
