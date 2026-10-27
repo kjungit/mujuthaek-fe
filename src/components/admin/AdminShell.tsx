@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Flag,
   MessageSquareWarning,
+  Users,
   LayoutDashboard,
   SlidersHorizontal,
   type LucideIcon,
@@ -55,6 +56,7 @@ const menu: MenuItem[] = [
     icon: MessageSquareWarning,
     count: { key: "chatReports", tone: "wait" },
   },
+  { href: routes.adminUsers, label: "회원", icon: Users },
 ];
 
 /** 관리자 화면 틀: 왼쪽 232px 어두운 사이드바 + 본문 */

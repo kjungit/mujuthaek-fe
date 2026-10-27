@@ -20,6 +20,9 @@ import {
   liveSources,
   liveBotTraffic,
   liveRealtime,
+  liveRoleChanges,
+  liveUsers,
+  liveUsersByIds,
   liveTraffic,
   noticeTitles,
   groupChatReports,
@@ -28,6 +31,7 @@ import {
 import { USE_MOCKS } from "@/lib/api/config";
 import { botTrafficMock, noticeTitlesMock, realtimeMock, trafficMock } from "@/mocks/admin-traffic";
 import { chatReportTitlesMock, chatReportsMock, type ChatReviewStatus } from "@/mocks/admin-chat";
+import { adminUsersMock, roleChangesMock, type AdminUserRole } from "@/mocks/admin-users";
 
 export const adminKeys = {
   counts: ["admin", "counts"] as const,
@@ -229,5 +233,44 @@ export function useNoticeTitles(ids: string[]) {
     queryFn: () => (LIVE ? noticeTitles(ids) : Promise.resolve(noticeTitlesMock)),
     enabled: ids.length > 0,
     staleTime: 10 * 60_000,
+  });
+}
+
+/** 회원 찾기 (한 쪽 30명) */
+export function useAdminUsers(query: string, role: AdminUserRole | "", page: number) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "users", query, role, page],
+    queryFn: () => {
+      if (LIVE) return liveUsers(query, role, page);
+      const items = adminUsersMock.filter(
+        (u) =>
+          (!role || u.role === role) &&
+          (!query.trim() || (u.nickname ?? "").includes(query.trim()) || u.id === query.trim()),
+      );
+      return Promise.resolve({ items, total: items.length });
+    },
+    staleTime: 0,
+  });
+}
+
+/** 회원 ID → 회원 (처리 기록의 관리자 이름) */
+export function useAdminUsersByIds(ids: string[]) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "users-by-id", ...ids],
+    queryFn: () =>
+      LIVE
+        ? liveUsersByIds(ids)
+        : Promise.resolve(adminUsersMock.filter((u) => ids.includes(u.id))),
+    enabled: ids.length > 0,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** 권한 변경 기록 */
+export function useRoleChanges(days: number) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "role-changes", days],
+    queryFn: () => (LIVE ? liveRoleChanges(days) : Promise.resolve(roleChangesMock)),
+    staleTime: 0,
   });
 }
