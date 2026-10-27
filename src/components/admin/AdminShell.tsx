@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { useAdminMe } from "@/components/admin/AdminGuard";
+import { canOpen, PERMISSION_INFO, ROUTE_PERMISSIONS } from "@/features/admin/permissions";
 import { useAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -65,7 +66,10 @@ const menu: MenuItem[] = [
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: counts } = useAdminCounts();
-  const me = useAdminMe(); // 실제 연결이면 로그인한 관리자 닉네임
+  const me = useAdminMe(); // AdminGuard가 먼저 받아 둬요
+  const permissions = me.data?.permissions ?? [];
+  const allowed = menu.filter((m) => canOpen(permissions, m.href));
+  const pageAllowed = canOpen(permissions, pathname);
 
   return (
     <div className="bg-bg text-text box-border flex min-h-screen w-full flex-wrap">
@@ -85,7 +89,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
         <nav aria-label="관리자 메뉴" className="flex flex-col gap-[4px]">
-          {menu.map(({ href, label, icon: Icon, count }) => {
+          {allowed.map(({ href, label, icon: Icon, count }) => {
             const current = pathname === href;
             return (
               <Link
@@ -127,7 +131,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             서비스 화면 보기
           </Link>
           <span className="text-brand-deep-text px-[12px] text-[13px]">
-            운영자 {me.data?.nickname ?? adminOperator}
+            {me.data?.role === "SUPER_ADMIN" ? "최상위 관리자" : "운영자"}{" "}
+            {me.data?.nickname ?? adminOperator}
           </span>
         </div>
       </aside>
@@ -137,7 +142,23 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         className="box-border flex min-w-0 flex-col gap-[20px] px-[40px] pt-[36px] pb-[56px] [&_button,&_input,&_select,&_textarea]:tracking-normal"
         style={{ flex: "999 1 640px" }}
       >
-        {children}
+        {pageAllowed ? (
+          children
+        ) : (
+          <section
+            role="alert"
+            className="rounded-card bg-surface flex flex-col gap-[8px] px-[24px] py-[28px]"
+          >
+            <h1 className="m-0 text-[20px] font-extrabold">이 화면의 권한이 없어요</h1>
+            <p className="text-text-sub m-0 text-[15px]">
+              필요한 권한:{" "}
+              {(ROUTE_PERMISSIONS[pathname] ?? [])
+                .map((p) => PERMISSION_INFO[p].label)
+                .join(" 또는 ")}{" "}
+              · 「권한 부여」를 가진 관리자에게 요청해 주세요.
+            </p>
+          </section>
+        )}
       </main>
     </div>
   );

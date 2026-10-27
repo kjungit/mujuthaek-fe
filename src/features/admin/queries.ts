@@ -21,9 +21,9 @@ import {
   liveBotTraffic,
   liveActivity,
   liveRealtime,
-  liveRoleChanges,
+  liveAdminChanges,
   liveUsers,
-  liveUsersByIds,
+  liveUserNames,
   liveTraffic,
   noticeTitles,
   groupChatReports,
@@ -32,7 +32,7 @@ import {
 import { USE_MOCKS } from "@/lib/api/config";
 import { botTrafficMock, noticeTitlesMock, realtimeMock, trafficMock } from "@/mocks/admin-traffic";
 import { chatReportTitlesMock, chatReportsMock, type ChatReviewStatus } from "@/mocks/admin-chat";
-import { adminUsersMock, roleChangesMock, type AdminUserRole } from "@/mocks/admin-users";
+import { adminChangesMock, adminUsersMock, type AdminUserFilter } from "@/mocks/admin-users";
 import { activityMock } from "@/mocks/admin-activity";
 
 export const adminKeys = {
@@ -239,14 +239,17 @@ export function useNoticeTitles(ids: string[]) {
 }
 
 /** 회원 찾기 (한 쪽 30명) */
-export function useAdminUsers(query: string, role: AdminUserRole | "", page: number) {
+export function useAdminUsers(query: string, filter: AdminUserFilter, page: number) {
   return useQuery({
-    queryKey: ["admin", LIVE ? "live" : "mock", "users", query, role, page],
+    queryKey: ["admin", LIVE ? "live" : "mock", "users", query, filter, page],
     queryFn: () => {
-      if (LIVE) return liveUsers(query, role, page);
+      if (LIVE) return liveUsers(query, filter, page);
       const items = adminUsersMock.filter(
         (u) =>
-          (!role || u.role === role) &&
+          (!filter ||
+            (filter === "ADMIN" && u.role !== "USER") ||
+            (filter === "USER" && u.role === "USER") ||
+            (filter === "SUSPENDED" && u.suspension)) &&
           (!query.trim() || (u.nickname ?? "").includes(query.trim()) || u.id === query.trim()),
       );
       return Promise.resolve({ items, total: items.length });
@@ -255,24 +258,23 @@ export function useAdminUsers(query: string, role: AdminUserRole | "", page: num
   });
 }
 
-/** 회원 ID → 회원 (처리 기록의 관리자 이름) */
-export function useAdminUsersByIds(ids: string[]) {
+/** 회원 ID → 이름 (처리 기록의 관리자 이름) */
+export function useAdminUserNames(ids: string[]) {
   return useQuery({
-    queryKey: ["admin", LIVE ? "live" : "mock", "users-by-id", ...ids],
+    queryKey: ["admin", LIVE ? "live" : "mock", "user-names", ...ids],
     queryFn: () =>
-      LIVE
-        ? liveUsersByIds(ids)
-        : Promise.resolve(adminUsersMock.filter((u) => ids.includes(u.id))),
+      LIVE ? liveUserNames(ids) : Promise.resolve(adminUsersMock.filter((u) => ids.includes(u.id))),
     enabled: ids.length > 0,
     staleTime: 5 * 60_000,
   });
 }
 
-/** 권한 변경 기록 */
-export function useRoleChanges(days: number) {
+/** 관리자 변경 기록 (지정·해제·권한·정지·넘기기·긴급 정지) */
+export function useAdminChanges(days: number, enabled = true) {
   return useQuery({
-    queryKey: ["admin", LIVE ? "live" : "mock", "role-changes", days],
-    queryFn: () => (LIVE ? liveRoleChanges(days) : Promise.resolve(roleChangesMock)),
+    queryKey: ["admin", LIVE ? "live" : "mock", "admin-changes", days],
+    queryFn: () => (LIVE ? liveAdminChanges(days) : Promise.resolve(adminChangesMock)),
+    enabled,
     staleTime: 0,
   });
 }
