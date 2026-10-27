@@ -86,7 +86,15 @@ export type ReviewItem = {
   received: string;
   age: string;
   paras: { head: string; parts: { t: string; kind: SourcePartKind }[] }[];
-  fields: { label: string; value: string; conf: number }[];
+  fields: {
+    label: string;
+    value: string;
+    conf: number;
+    /** 백엔드 칸 상태: HELD(확인 전까지 안 보임)·CHECK(확인 필요)·EMPTY(값 없음). 없으면 문제 없음 */
+    status?: "HELD" | "CHECK" | "EMPTY";
+    /** 그 칸을 보는 이유 */
+    why?: string;
+  }[];
   impact: string;
   log: { at: string; who: string; text: string }[];
 };

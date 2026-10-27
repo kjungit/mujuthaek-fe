@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   ClipboardCheck,
   Database,
   ExternalLink,
@@ -12,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
+import { useAdminMe } from "@/components/admin/AdminGuard";
 import { useAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -45,12 +47,14 @@ const menu: MenuItem[] = [
     icon: Flag,
     count: { key: "newReports", tone: "wait" },
   },
+  { href: routes.adminTraffic, label: "트래픽", icon: Activity },
 ];
 
 /** 관리자 화면 틀: 왼쪽 232px 어두운 사이드바 + 본문 */
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: counts } = useAdminCounts();
+  const me = useAdminMe(); // 실제 연결이면 로그인한 관리자 닉네임
 
   return (
     <div className="bg-bg text-text box-border flex min-h-screen w-full flex-wrap">
@@ -111,7 +115,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <ExternalLink size={18} aria-hidden />
             서비스 화면 보기
           </Link>
-          <span className="text-brand-deep-text px-[12px] text-[13px]">운영자 {adminOperator}</span>
+          <span className="text-brand-deep-text px-[12px] text-[13px]">
+            운영자 {me.data?.nickname ?? adminOperator}
+          </span>
         </div>
       </aside>
 

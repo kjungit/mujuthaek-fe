@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
+import { isAreaReport, reopenFromReport, resolveReport } from "@/features/admin/api";
 import { useAdminReports, useSetAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { ReportItem, ReportStatus } from "@/mocks/admin";
+import { USE_MOCKS } from "@/lib/api/config";
 
 const TABS: { key: ReportStatus; label: string }[] = [
   { key: "new", label: "새 제보" },
@@ -25,7 +27,8 @@ export function AdminWebReports() {
   const items = data.items;
 
   const [tab, setTab] = useState<ReportStatus>("new");
-  const [sel, setSel] = useState<string>(items[0].id);
+  const [sel, setSel] = useState<string>(items[0]?.id ?? "");
+  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, Finish>>({});
   const [replies, setReplies] = useState<Record<string, string>>({});
 
@@ -34,8 +37,18 @@ export function AdminWebReports() {
   const selId = list.some((d) => d.id === sel) ? sel : (list[0]?.id ?? null);
   const cur = items.find((d) => d.id === selId);
 
-  const finish = (kind: Finish) => {
+  const finish = async (kind: Finish) => {
     if (!cur) return;
+    // 처리 끝과 답장을 실제 백엔드로 보내요(답은 알림 쪽 이벤트로 나가요)
+    if (!USE_MOCKS) {
+      try {
+        setError(null);
+        await resolveReport(cur.id, kind === "fix", replies[cur.id] ?? cur.reply);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        return;
+      }
+    }
     const next = { ...done, [cur.id]: kind };
     setDone(next);
     setTab("done");
@@ -149,15 +162,17 @@ export function AdminWebReports() {
                   <span className="text-[20px] font-extrabold">{cur.reported}</span>
                 </div>
                 <div className="bg-bg flex flex-col gap-[6px] rounded-[18px] px-[18px] py-[16px]">
-                  <span className="text-text-sub text-[13px] font-bold">원문</span>
+                  <span className="text-text-sub text-[13px] font-bold">
+                    {!USE_MOCKS ? "제보 설명" : "원문"}
+                  </span>
                   <span className="text-[15px] leading-[1.5] font-semibold">{cur.source}</span>
                 </div>
               </div>
               <div className="flex flex-col gap-[8px]">
                 <span className="text-[15px] font-extrabold">사용자 메모</span>
-                {cur.notes.map((n) => (
+                {cur.notes.map((n, i) => (
                   <div
-                    key={n.meta + n.text}
+                    key={`${i}-${n.meta}`}
                     className="rounded-control bg-bg flex flex-col gap-[4px] px-[14px] py-[12px]"
                   >
                     <span className="text-[15px] leading-[1.6]">{n.text}</span>
@@ -171,13 +186,23 @@ export function AdminWebReports() {
               aria-label="처리"
               className="rounded-card bg-surface flex flex-col gap-[14px] px-[26px] py-[22px]"
             >
+              {error && (
+                <div
+                  role="alert"
+                  className="rounded-control bg-fill text-text px-[16px] py-[12px] text-[14px] font-bold"
+                >
+                  처리하지 못했어요 · {error}
+                </div>
+              )}
               {done[cur.id] && (
                 <div
                   role="status"
                   className="rounded-control bg-ok-bg text-ok-text px-[16px] py-[12px] text-[15px] font-bold"
                 >
                   {done[cur.id] === "fix"
-                    ? "값을 고치고 답변을 보냈어요 · 판정이 다시 계산됐어요"
+                    ? !USE_MOCKS
+                      ? "고쳤다고 답변을 보냈어요 · 값은 「다시 검수로 보내기」로 검수에서 고쳐요"
+                      : "값을 고치고 답변을 보냈어요 · 판정이 다시 계산됐어요"
                     : "원문과 같다고 답변을 보냈어요"}
                 </div>
               )}
@@ -190,7 +215,10 @@ export function AdminWebReports() {
                   className="rounded-control border-line text-text resize-y border border-solid px-[14px] py-[12px] text-[15px] leading-[1.6] font-medium"
                 />
                 <span className="text-text-sub text-[13px] font-medium">
-                  알림으로 보내요 · 같은 제보를 보낸 {cur.groupCount}명 모두에게 가요
+                  {/* 답변 이벤트는 나가지만 알림 발송은 알림 담당 연결 뒤예요 */}
+                  {!USE_MOCKS
+                    ? `같은 제보를 보낸 ${cur.groupCount}명 모두에게 답변 이벤트가 나가요 · 알림 발송은 알림 기능 연결 뒤`
+                    : `알림으로 보내요 · 같은 제보를 보낸 ${cur.groupCount}명 모두에게 가요`}
                 </span>
               </label>
               <div className="flex flex-wrap gap-[8px]">
@@ -199,7 +227,8 @@ export function AdminWebReports() {
                   onClick={() => finish("fix")}
                   className="rounded-control bg-brand min-h-[52px] cursor-pointer border-0 px-[20px] text-[16px] font-extrabold text-white"
                 >
-                  값 고치고 답변 보내기
+                  {/* 이 버튼은 값을 고치지 않고 「고침」 답장만 보내요. 값은 검수에서 고쳐요 */}
+                  {!USE_MOCKS ? "고쳤다고 답변 보내기" : "값 고치고 답변 보내기"}
                 </button>
                 <button
                   type="button"
@@ -208,12 +237,27 @@ export function AdminWebReports() {
                 >
                   원문과 같아요 · 답변만
                 </button>
-                <Link
-                  href={routes.adminReview}
-                  className={cn(secondary, "inline-flex items-center no-underline")}
-                >
-                  다시 검수로 보내기
-                </Link>
+                {/* 생활권 제보는 AI 추출 값이 아니라 검수로 보내지 않아요 */}
+                {!isAreaReport(cur.id) && (
+                  <Link
+                    href={routes.adminReview}
+                    onClick={async (e) => {
+                      // 이 제보로 검수를 다시 연 뒤 검수 화면으로 가요
+                      if (USE_MOCKS || !cur) return;
+                      e.preventDefault();
+                      try {
+                        await reopenFromReport(cur.id);
+                        setCounts({});
+                        window.location.href = routes.adminReview;
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : String(err));
+                      }
+                    }}
+                    className={cn(secondary, "inline-flex items-center no-underline")}
+                  >
+                    다시 검수로 보내기
+                  </Link>
+                )}
               </div>
             </section>
           </div>

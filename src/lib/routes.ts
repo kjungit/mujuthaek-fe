@@ -31,6 +31,7 @@ export const routes = {
   adminSources: "/admin/sources",
   adminCriteria: "/admin/criteria",
   adminReports: "/admin/reports",
+  adminTraffic: "/admin/traffic",
 } as const;
 
 export type Mode = "home" | "business";
