@@ -15,6 +15,7 @@ import type {
   AdminUsersPage,
 } from "@/mocks/admin-users";
 import type { ActivityData, ActivityItem } from "@/mocks/admin-activity";
+import type { NotificationStats } from "@/mocks/admin-notifications";
 import type {
   ChatReport,
   ChatReportGroup,
@@ -1289,6 +1290,11 @@ const CRITERIA_KINDS: Record<string, string> = {
 };
 
 /** 검수·제보 처리(notice) + 기준값 바꾼 기록(eligibility) + 권한 변경(user)을 최근 순으로 합쳐요. 하나가 실패해도 나머지는 보여요 */
+/** GET /api/admin/notifications/stats (알림 서버 발송 결과 + 알림함 지표) */
+export function liveNotificationStats(days: number): Promise<NotificationStats> {
+  return api.get<NotificationStats>(`/api/admin/notifications/stats?days=${days}`);
+}
+
 export async function liveActivity(days: number): Promise<ActivityData> {
   const since = Date.now() - days * 86_400_000;
   const [main, criteria, roles, chatKept, chatRestored] = await Promise.all([

@@ -20,6 +20,7 @@ import {
   liveSources,
   liveBotTraffic,
   liveActivity,
+  liveNotificationStats,
   liveRealtime,
   liveAdminChanges,
   liveUsers,
@@ -34,6 +35,7 @@ import { botTrafficMock, noticeTitlesMock, realtimeMock, trafficMock } from "@/m
 import { chatReportTitlesMock, chatReportsMock, type ChatReviewStatus } from "@/mocks/admin-chat";
 import { adminChangesMock, adminUsersMock, type AdminUserFilter } from "@/mocks/admin-users";
 import { activityMock } from "@/mocks/admin-activity";
+import { notificationStatsMock } from "@/mocks/admin-notifications";
 
 export const adminKeys = {
   counts: ["admin", "counts"] as const,
@@ -276,6 +278,15 @@ export function useAdminChanges(days: number, enabled = true) {
     queryKey: ["admin", LIVE ? "live" : "mock", "admin-changes", days],
     queryFn: () => (LIVE ? liveAdminChanges(days) : Promise.resolve(adminChangesMock)),
     enabled,
+    staleTime: 0,
+  });
+}
+
+/** 알림: 발송 결과와 봤는지·눌렀는지 */
+export function useAdminNotificationStats(days: number) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "notifications", days],
+    queryFn: () => (LIVE ? liveNotificationStats(days) : Promise.resolve(notificationStatsMock)),
     staleTime: 0,
   });
 }

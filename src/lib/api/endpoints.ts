@@ -41,5 +41,7 @@ export const endpoints = {
   pushPublicKey: "/api/v1/push/public-key",
   /** 알림함: 목록(GET ?cursor&size&unread) · /unread-count · /{id}/read · /read-all */
   notifications: "/api/users/me/notifications",
+  /** 알림을 봤는지·눌렀는지 알리기 (/{id}/shown · /{id}/clicked, 로그인 없이) */
+  notificationEvents: "/api/v1/notifications",
   notificationSettings: "/api/users/me/notification-settings",
 } as const;

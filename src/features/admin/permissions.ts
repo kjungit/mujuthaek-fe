@@ -35,7 +35,7 @@ export const PERMISSION_INFO: Record<AdminPermission, { label: string; desc: str
     label: "권한 박탈",
     desc: "내가 가진 권한을 다른 관리자에게서 빼기 · 이 권한은 최상위만 주고 빼요",
   },
-  TRAFFIC: { label: "트래픽 보기", desc: "GA·서버 방문 통계, 봇" },
+  TRAFFIC: { label: "트래픽 보기", desc: "GA·서버 방문 통계, 봇, 알림 지표" },
   ACTIVITY: { label: "처리 기록 보기", desc: "모든 관리자의 처리 기록" },
 };
 
@@ -78,6 +78,7 @@ export const ROUTE_PERMISSIONS: Record<string, AdminPermission[]> = {
   [routes.adminCriteria]: ["CRITERIA"],
   [routes.adminReports]: ["REPORTS"],
   [routes.adminTraffic]: ["TRAFFIC"],
+  [routes.adminNotifications]: ["TRAFFIC"],
   [routes.adminChat]: ["CHAT"],
   [routes.adminUsers]: [
     "USERS_VIEW",
