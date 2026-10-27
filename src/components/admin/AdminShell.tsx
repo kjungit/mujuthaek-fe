@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  Bell,
   ClipboardCheck,
   Database,
   ExternalLink,
@@ -52,6 +53,7 @@ const menu: MenuItem[] = [
     count: { key: "newReports", tone: "wait" },
   },
   { href: routes.adminTraffic, label: "트래픽", icon: Activity },
+  { href: routes.adminNotifications, label: "알림", icon: Bell },
   {
     href: routes.adminChat,
     label: "채팅 신고",

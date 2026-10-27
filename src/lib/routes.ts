@@ -32,6 +32,7 @@ export const routes = {
   adminCriteria: "/admin/criteria",
   adminReports: "/admin/reports",
   adminTraffic: "/admin/traffic",
+  adminNotifications: "/admin/notifications",
   adminChat: "/admin/chat",
   adminUsers: "/admin/users",
   adminActivity: "/admin/activity",
