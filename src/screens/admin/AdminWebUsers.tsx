@@ -214,16 +214,22 @@ export function AdminWebUsers() {
               <table className="w-full border-collapse text-[14px]">
                 <thead>
                   <tr className="text-text-sub text-left">
-                    {["닉네임", "회원 구분", "권한", "로그인 방식", "가입", "마지막 로그인", ""].map(
-                      (h) => (
-                        <th
-                          key={h}
-                          className="border-b-line-soft border-b border-solid py-[10px] pr-[12px] font-bold"
-                        >
-                          {h}
-                        </th>
-                      ),
-                    )}
+                    {[
+                      "닉네임",
+                      "회원 구분",
+                      "권한",
+                      "로그인 방식",
+                      "가입",
+                      "마지막 로그인",
+                      "",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="border-b-line-soft border-b border-solid py-[10px] pr-[12px] font-bold"
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
