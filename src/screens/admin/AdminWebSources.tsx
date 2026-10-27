@@ -15,7 +15,7 @@ type ShownStatus = SourceStatus | "paused" | "running";
 const ST: Record<ShownStatus, { label: string; tone: BadgeTone }> = {
   ok: { label: "정상", tone: "ok" },
   late: { label: "지연", tone: "check" },
-  fail: { label: "연속 0건 · 3회", tone: "danger" },
+  fail: { label: "수집 실패", tone: "danger" },
   paused: { label: "일시 중지", tone: "neutral" },
   running: { label: "수집 중", tone: "ok" },
 };
@@ -109,7 +109,7 @@ export function AdminWebSources() {
         <SummaryTile dot="bg-warn-dot" label="지연 · 일시 중지" value={`${data.summary.late}곳`} />
         <SummaryTile
           dot="bg-danger-text"
-          label="실패 · 연속 0건"
+          label="수집 실패"
           value={`${data.summary.fail}곳`}
           alert
         />

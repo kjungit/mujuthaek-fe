@@ -65,7 +65,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       return (
         <Notice
           title="관리자만 볼 수 있어요"
-          text="관리자 권한이 필요한 화면이에요. 권한이 필요하면 운영 담당에게 요청해 주세요."
+          text="관리자 권한이 필요한 화면이에요. 권한이 필요하면 관리자에게 요청해 주세요."
           action={{ href: routes.main, label: "처음 화면으로" }}
         />
       );
@@ -85,7 +85,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
         text={
           me.data.freeze
             ? `최상위 관리자가 모든 관리자의 작업을 잠시 멈췄어요${me.data.freeze.reason ? ` · ${me.data.freeze.reason}` : ""}. 풀리면 다시 쓸 수 있어요.`
-            : "이용이 정지된 계정이에요. 운영 담당에게 문의해 주세요."
+            : "이용이 정지된 계정이에요. 관리자에게 문의해 주세요."
         }
         action={{ href: routes.main, label: "처음 화면으로" }}
       />

@@ -162,9 +162,7 @@ export function AdminWebReports() {
                   <span className="text-[20px] font-extrabold">{cur.reported}</span>
                 </div>
                 <div className="bg-bg flex flex-col gap-[6px] rounded-[18px] px-[18px] py-[16px]">
-                  <span className="text-text-sub text-[13px] font-bold">
-                    {!USE_MOCKS ? "제보 설명" : "원문"}
-                  </span>
+                  <span className="text-text-sub text-[13px] font-bold">제보 설명</span>
                   <span className="text-[15px] leading-[1.5] font-semibold">{cur.source}</span>
                 </div>
               </div>
@@ -200,9 +198,7 @@ export function AdminWebReports() {
                   className="rounded-control bg-ok-bg text-ok-text px-[16px] py-[12px] text-[15px] font-bold"
                 >
                   {done[cur.id] === "fix"
-                    ? !USE_MOCKS
-                      ? "고쳤다고 답변을 보냈어요 · 값은 「다시 검수로 보내기」로 검수에서 고쳐요"
-                      : "값을 고치고 답변을 보냈어요 · 판정이 다시 계산됐어요"
+                    ? "고쳤다고 답변을 보냈어요 · 값은 「다시 검수로 보내기」로 검수에서 고쳐요"
                     : "원문과 같다고 답변을 보냈어요"}
                 </div>
               )}
@@ -227,7 +223,7 @@ export function AdminWebReports() {
                   className="rounded-control bg-brand min-h-[52px] cursor-pointer border-0 px-[20px] text-[16px] font-extrabold text-white"
                 >
                   {/* 이 버튼은 값을 고치지 않고 「고침」 답장만 보내요. 값은 검수에서 고쳐요 */}
-                  {!USE_MOCKS ? "고쳤다고 답변 보내기" : "값 고치고 답변 보내기"}
+                  고쳤다고 답변 보내기
                 </button>
                 <button
                   type="button"

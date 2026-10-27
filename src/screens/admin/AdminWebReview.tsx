@@ -29,7 +29,7 @@ const partStyle: Record<SourcePartKind, string> = {
   plain: "text-text-body-long font-normal",
 };
 
-const REJECT_REASONS = ["중복 공고", "원문과 다름 · 다시 추출", "서비스 대상 아님", "마감된 공고"];
+const REJECT_REASONS = ["중복 공고", "원문과 다름", "서비스 대상 아님", "마감된 공고"];
 
 type Done = "ok" | "no";
 

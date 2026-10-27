@@ -21,7 +21,7 @@ import { canOpen, PERMISSION_INFO, ROUTE_PERMISSIONS } from "@/features/admin/pe
 import { useAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import { adminOperator, type AdminCounts } from "@/mocks/admin";
+import type { AdminCounts } from "@/mocks/admin";
 
 type MenuItem = {
   href: string;
@@ -132,7 +132,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </Link>
           <span className="text-brand-deep-text px-[12px] text-[13px]">
             {me.data?.role === "SUPER_ADMIN" ? "최상위 관리자" : "운영자"}{" "}
-            {me.data?.nickname ?? adminOperator}
+            {me.data?.nickname ?? "이름 없음"}
           </span>
         </div>
       </aside>

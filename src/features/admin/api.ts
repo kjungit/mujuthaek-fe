@@ -585,7 +585,7 @@ export async function decideReview(
 
 const REJECT: Record<string, string> = {
   "중복 공고": "DUPLICATE",
-  "원문과 다름 · 다시 추출": "SOURCE_MISMATCH",
+  "원문과 다름": "SOURCE_MISMATCH",
   "서비스 대상 아님": "OUT_OF_SCOPE",
   "마감된 공고": "CLOSED",
 };
