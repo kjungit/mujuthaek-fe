@@ -1,7 +1,9 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+import { sessionKey } from "@/features/auth/session";
 import { refreshAccessToken } from "@/lib/api/client";
 import { USE_MOCKS } from "@/lib/api/config";
 import { routes } from "@/lib/routes";
@@ -14,18 +16,24 @@ export function AuthCallback() {
   const router = useRouter();
   const params = useSearchParams();
   const joined = params.get("new") === "1";
+  const client = useQueryClient();
 
   useEffect(() => {
     let cancelled = false;
     (USE_MOCKS ? Promise.resolve("mock") : refreshAccessToken()).then((token) => {
       if (cancelled) return;
-      if (!token) router.replace(`${routes.login}?error=social&reason=token`);
-      else router.replace(joined ? routes.signup : routes.home);
+      if (!token) {
+        router.replace(`${routes.login}?error=social&reason=token`);
+        return;
+      }
+      // 로그인 전 화면에서 "로그인 안 함"으로 기억한 상태를 지우고 내 정보를 다시 받아요
+      void client.invalidateQueries({ queryKey: sessionKey });
+      router.replace(joined ? routes.signup : routes.home);
     });
     return () => {
       cancelled = true;
     };
-  }, [joined, router]);
+  }, [client, joined, router]);
 
   return (
     <main className="bg-bg text-text-sub flex min-h-screen items-center justify-center text-[16px] font-semibold">
