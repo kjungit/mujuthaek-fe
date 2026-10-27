@@ -8,7 +8,7 @@ import { USE_MOCKS } from "@/lib/api/config";
 import { routes } from "@/lib/routes";
 
 /** 내 정보 (GET /api/users/me). 관리자 화면은 role만 봐요 */
-export type AdminMe = { id: string; nickname: string; role: "USER" | "ADMIN" };
+export type AdminMe = { id: string; nickname: string; role: "USER" | "ADMIN" | "SUPER_ADMIN" };
 
 /** 로그인한 회원 정보. 목업이면 부르지 않아요. 로그인 안 했으면 401 오류로 끝나요(다시 시도하지 않음) */
 export function useAdminMe() {
@@ -48,7 +48,8 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       />
     );
   }
-  if (me.data.role !== "ADMIN") {
+  // 최상위 관리자(SUPER_ADMIN)도 관리자예요. 화면별 권한은 서버가 다시 막아요
+  if (me.data.role !== "ADMIN" && me.data.role !== "SUPER_ADMIN") {
     return (
       <Notice
         title="관리자만 볼 수 있어요"
