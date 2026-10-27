@@ -10,6 +10,7 @@ import type { NoticeFact, StandardNotice } from "@/mocks/notice";
 import type {
   EligibilityCategory,
   NoticeDoc,
+  NoticeHousingType,
   NoticeDocumentGroup,
   NoticeScheduleItem,
   NoticeSelectionKind,
@@ -65,10 +66,17 @@ export type ApiNoticeDetail = {
     address: string | null;
     lat: number | null;
     lng: number | null;
+    /** area 위치 ID (GET /areas/sites/{siteId}). area가 아직 모르는 위치면 null */
+    siteId: string | null;
     tags: string[];
   }[];
   unitTypes: {
     houseType: string;
+    /** 이 가격을 내는 대상 (예: 「수급자 등」·「그 외」) */
+    targetGroups: string[];
+    supplyGroupId: string | null;
+    /** 단지·건물 이름 */
+    siteName: string | null;
     exclusiveM2: number | null;
     depositWon: number | null;
     rentWon: number | null;
@@ -239,6 +247,83 @@ function factsOf(d: ApiNoticeDetail): NoticeFact[] {
   ].filter((f): f is NoticeFact => f !== null);
 }
 
+type ApiUnitType = ApiNoticeDetail["unitTypes"][number];
+
+const range = (values: (number | null)[]) => {
+  const known = values.filter((v): v is number => v !== null);
+  if (known.length < values.length || !known.length) return { min: null, max: undefined };
+  const min = Math.min(...known);
+  const max = Math.max(...known);
+  return { min, max: max === min ? undefined : max };
+};
+
+/**
+ * 주택 표 한 단지의 줄. 주택목록(호별) 공고는 같은 주택형·면적·가격 대상의 호를 한 줄로 모아 호수를 세고 가격은 범위로 보여줘요
+ * (68호 × 가격 대상 2 = 136줄이 되던 문제)
+ */
+function housingTypes(rows: ApiUnitType[], byUnit: boolean): NoticeHousingType[] {
+  const target = (u: ApiUnitType) => u.targetGroups.join("·") || undefined;
+  if (!byUnit) {
+    return rows.map((u) => ({
+      code: u.houseType,
+      areaSqm: u.exclusiveM2,
+      offered: u.supplyCount,
+      depositWon: u.depositWon,
+      monthlyRentWon: u.rentWon,
+      target: target(u),
+    }));
+  }
+  // 호 하나의 수는 첫 가격 대상 줄에만 있어요
+  const countOf = new Map<string, number>();
+  for (const u of rows) {
+    if (u.supplyGroupId && u.supplyCount !== null) countOf.set(u.supplyGroupId, u.supplyCount);
+  }
+  const groups = new Map<string, ApiUnitType[]>();
+  for (const u of rows) {
+    const key = [u.houseType, u.exclusiveM2, target(u)].join("|");
+    groups.set(key, [...(groups.get(key) ?? []), u]);
+  }
+  return [...groups.values()].map((same) => {
+    const ids = [...new Set(same.map((u) => u.supplyGroupId).filter((id): id is string => !!id))];
+    const deposit = range(same.map((u) => u.depositWon));
+    const rent = range(same.map((u) => u.rentWon));
+    return {
+      code: same[0].houseType,
+      areaSqm: same[0].exclusiveM2,
+      offered: ids.length ? ids.reduce((sum, id) => sum + (countOf.get(id) ?? 0), 0) : null,
+      depositWon: deposit.min,
+      depositMaxWon: deposit.max,
+      monthlyRentWon: rent.min,
+      monthlyRentMaxWon: rent.max,
+      target: target(same[0]),
+    };
+  });
+}
+
+/** 주택 표: 단지 이름이 있으면 단지별로 나눠요 */
+function housingOf(d: ApiNoticeDetail, sites: ApiNoticeDetail["sites"]): NoticeDoc["housing"] {
+  if (!d.unitTypes.length) return [];
+  const h = d.header;
+  const bySite = new Map<string | null, ApiUnitType[]>();
+  for (const u of d.unitTypes) bySite.set(u.siteName, [...(bySite.get(u.siteName) ?? []), u]);
+  if (bySite.size === 1 && bySite.has(null)) {
+    return [
+      {
+        id: "unit-types",
+        complexName: sites.map((s) => s.name ?? s.address).join(" · ") || h.title,
+        address: sites[0]?.address ?? h.regionName ?? "",
+        types: housingTypes(d.unitTypes, d.hasUnits),
+      },
+    ];
+  }
+  return [...bySite.entries()].map(([name, rows], i) => ({
+    id: `unit-types-${i}`,
+    complexName: name ?? "그 밖의 주택",
+    address: sites.find((s) => s.name === name)?.address ?? h.regionName ?? "",
+    types: housingTypes(rows, d.hasUnits),
+  }));
+}
+
 function docOf(d: ApiNoticeDetail, today: string): NoticeDoc {
   const { header: h } = d;
   const guidance = d.guidance ?? [];
@@ -293,22 +378,7 @@ function docOf(d: ApiNoticeDetail, today: string): NoticeDoc {
       text: c.description ?? c.originalText ?? "",
       detail: c.inReview ? "원문과 다시 확인하는 중이에요" : undefined,
     })),
-    housing: d.unitTypes.length
-      ? [
-          {
-            id: "unit-types",
-            complexName: sites.map((s) => s.name ?? s.address).join(" · ") || h.title,
-            address: sites[0]?.address ?? h.regionName ?? "",
-            types: d.unitTypes.map((u) => ({
-              code: u.houseType,
-              areaSqm: u.exclusiveM2,
-              offered: u.supplyCount,
-              depositWon: u.depositWon,
-              monthlyRentWon: u.rentWon,
-            })),
-          },
-        ]
-      : [],
+    housing: housingOf(d, sites),
     // 날짜순 (날짜 없는 일정은 뒤로)
     schedule: d.schedules
       .map((s) => scheduleItem(s, today))
@@ -351,7 +421,22 @@ const todayYmd = (now: Date) =>
 /** 상세 응답 → 화면 값. 판정(배지 · 내 자격 · 준비할 돈)은 판정 응답에서 따로 채워요 */
 export function toNotice(d: ApiNoticeDetail, now = new Date()): StandardNotice {
   const { header: h } = d;
-  const living = d.areaSummaries.filter((a) => a.kind === "LIVING").map((a) => a.score);
+  const scoreOf = new Map(
+    d.areaSummaries
+      .filter((a) => a.kind === "LIVING")
+      .map((a) => [a.siteId, Math.round(a.score)] as const),
+  );
+  const siteName = (s: ApiNoticeDetail["sites"][number]) => s.name ?? s.address ?? "단지";
+  const lifeSites = d.sites
+    .filter((s) => scoreOf.has(s.id))
+    .map((s) => ({
+      id: s.id,
+      areaId: s.siteId,
+      name: siteName(s),
+      score: scoreOf.get(s.id)!,
+      tags: s.tags.map((t) => tagLabel[t]).filter(Boolean),
+    }))
+    .sort((a, b) => b.score - a.score);
   const tags = [...new Set(d.sites.flatMap((s) => s.tags))].map((t) => tagLabel[t]).filter(Boolean);
   const agency = providerName(h.provider);
   const notice: StandardNotice = {
@@ -372,12 +457,15 @@ export function toNotice(d: ApiNoticeDetail, now = new Date()): StandardNotice {
     facts: factsOf(d),
     eligibility: [],
     doc: docOf(d, todayYmd(now)),
-    life: living.length ? { score: Math.round(Math.max(...living)), items: [] } : undefined,
+    life: lifeSites.length
+      ? { score: lifeSites[0].score, min: lifeSites.at(-1)!.score, sites: lifeSites }
+      : undefined,
     sites: d.sites.map((s) => ({
       id: s.id,
-      name: s.name ?? s.address ?? "단지",
+      name: siteName(s),
       lat: s.lat,
       lng: s.lng,
+      lifeScore: scoreOf.get(s.id),
     })),
     hasUnits: d.hasUnits,
   };

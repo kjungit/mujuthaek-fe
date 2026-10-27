@@ -1,19 +1,25 @@
 "use client";
 
-import { CircleAlert, ExternalLink, FileText, MapPin, Phone } from "lucide-react";
+import { ChevronDown, CircleAlert, ExternalLink, FileText, MapPin, Phone } from "lucide-react";
 import {
   categoryLabel,
   channelLabel,
   documentGroupLabel,
   formatPeriod,
   formatWon,
-  formatWonOr,
+  formatWonRange,
   sectionTitles,
   selectionLabel,
   visibleSections,
 } from "@/features/notice/format";
 import { cn } from "@/lib/cn";
-import type { NoticeDoc, NoticeSectionKey } from "@/mocks/notice-doc";
+import type {
+  EligibilityCategory,
+  NoticeDoc,
+  NoticeHousingType,
+  NoticeSectionKey,
+  NoticeSelectionKind,
+} from "@/mocks/notice-doc";
 
 type Variant = "web" | "mobile";
 
@@ -23,6 +29,80 @@ type SectionsProps = {
   /** 원문 PDF가 있을 때만: 해당 쪽 열기 */
   onOpenPage?: (page: number, label: string) => void;
 };
+
+type FoldItem = { id: string; text: string; detail?: string };
+
+/**
+ * 분류별로 접어 둔 목록 (누가 신청할 수 있나요 · 어떻게 뽑나요). 분류마다 배지 하나에 첫 항목을 한 줄로 미리 보여주고, 누르면 항목이 한 칸씩 펼쳐져요
+ */
+function FoldGroups({
+  groups,
+  badge,
+  web,
+}: {
+  groups: { key: string; label: string; items: FoldItem[] }[];
+  /** 배지 색 */
+  badge: string;
+  web: boolean;
+}) {
+  const shown = groups.filter((g) => g.items.length);
+  const sub = web ? "text-[15px]" : "text-[14px]";
+  return (
+    <ul className="m-0 flex list-none flex-col p-0">
+      {shown.map((g, i) => (
+        <li
+          key={g.key}
+          className={cn(i < shown.length - 1 && "border-line-soft border-b border-solid")}
+        >
+          <details className="group">
+            <summary className="flex min-h-[48px] cursor-pointer list-none items-center gap-[12px] py-[10px] [&::-webkit-details-marker]:hidden">
+              <span
+                className={cn(
+                  "rounded-tag flex-none px-[8px] py-[3px] text-center text-[12px] font-bold",
+                  web ? "min-w-[56px]" : "min-w-[48px]",
+                  badge,
+                )}
+              >
+                {g.label}
+              </span>
+              <span className={cn(sub, "min-w-0 flex-1 truncate group-open:invisible")}>
+                {g.items[0].text}
+              </span>
+              {g.items.length > 1 && (
+                <span className="text-text-sub flex-none text-[13px] font-semibold">
+                  {g.items.length}개
+                </span>
+              )}
+              <ChevronDown
+                size={18}
+                aria-hidden
+                className="text-text-sub flex-none transition-transform group-open:rotate-180"
+              />
+            </summary>
+            <ul className="m-0 flex list-none flex-col gap-[6px] p-0 pb-[12px]">
+              {g.items.map((e) => (
+                <li
+                  key={e.id}
+                  className="bg-bg rounded-tile flex flex-col gap-[4px] px-[14px] py-[10px]"
+                >
+                  <span className={cn(sub, "leading-[1.5]")}>{e.text}</span>
+                  {e.detail && (
+                    <span className="text-text-sub text-[13px] leading-[1.5]">
+                      예외 · {e.detail}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** 가격 대상이 둘 이상일 때만 「가격 대상」 칸을 둬요 */
+const hasTarget = (types: NoticeHousingType[]) => new Set(types.map((t) => t.target)).size > 1;
 
 export const sectionId = (k: NoticeSectionKey) => `notice-${k}`;
 
@@ -89,32 +169,15 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
 
   const body: Record<NoticeSectionKey, () => React.ReactNode> = {
     eligibility: () => (
-      <ul className="m-0 flex list-none flex-col p-0">
-        {doc.eligibility.map((e, i) => (
-          <li
-            key={e.id}
-            className={cn(
-              "flex gap-[12px] py-[12px]",
-              i < doc.eligibility.length - 1 && "border-line-soft border-b border-solid",
-            )}
-          >
-            <span
-              className={cn(
-                "rounded-tag bg-fill text-text-sub flex-none self-start px-[8px] py-[3px] text-center text-[12px] font-bold",
-                web ? "min-w-[56px]" : "min-w-[48px]",
-              )}
-            >
-              {categoryLabel[e.category]}
-            </span>
-            <span className="flex min-w-0 flex-col gap-[4px]">
-              <span className={cn(sub, "leading-[1.5]")}>{e.text}</span>
-              {e.detail && (
-                <span className="text-text-sub text-[13px] leading-[1.5]">예외 · {e.detail}</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <FoldGroups
+        web={web}
+        badge="bg-fill text-text-sub"
+        groups={(Object.keys(categoryLabel) as EligibilityCategory[]).map((category) => ({
+          key: category,
+          label: categoryLabel[category],
+          items: doc.eligibility.filter((e) => e.category === category),
+        }))}
+      />
     ),
 
     housing: () => (
@@ -135,12 +198,19 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                 <table className="w-full min-w-[520px] border-collapse text-[15px]">
                   <thead>
                     <tr className="text-text-sub text-left text-[13px]">
-                      {["주택형", "전용면적", "모집", "보증금", "월 임대료"].map((t, i) => (
+                      {[
+                        "주택형",
+                        "전용면적",
+                        ...(hasTarget(h.types) ? ["가격 대상"] : []),
+                        "모집",
+                        "보증금",
+                        "월 임대료",
+                      ].map((t, i, all) => (
                         <th
                           key={t}
                           className={cn(
                             "border-line border-b border-solid px-[12px] py-[10px] font-semibold",
-                            i >= 2 && "text-right",
+                            i >= all.length - 3 && "text-right",
                           )}
                         >
                           {t}
@@ -157,12 +227,15 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                             {t.code}
                           </td>
                           <td className={td}>{t.areaSqm === null ? "–" : `${t.areaSqm}㎡`}</td>
+                          {hasTarget(h.types) && <td className={td}>{t.target ?? "–"}</td>}
                           <td className={cn(td, "text-right")}>
                             {t.offered === null ? "–" : `${t.offered}호`}
                           </td>
-                          <td className={cn(td, "text-right")}>{formatWonOr(t.depositWon)}</td>
+                          <td className={cn(td, "text-right")}>
+                            {formatWonRange(t.depositWon, t.depositMaxWon)}
+                          </td>
                           <td className={cn(td, "text-right", t.mine && "rounded-r-[12px]")}>
-                            {formatWonOr(t.monthlyRentWon)}
+                            {formatWonRange(t.monthlyRentWon, t.monthlyRentMaxWon)}
                           </td>
                         </tr>
                       );
@@ -187,14 +260,18 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
                     <span
                       className={cn("text-[13px]", t.mine ? "text-brand-strong" : "text-text-sub")}
                     >
-                      {[t.offered !== null && `${t.offered}호`, t.mine && "신청 가능"]
+                      {[
+                        hasTarget(h.types) && t.target,
+                        t.offered !== null && `${t.offered}호`,
+                        t.mine && "신청 가능",
+                      ]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
                   </span>
                   <span className="text-right text-[14px] font-bold">
-                    {formatWonOr(t.depositWon)}
-                    <br />월 {formatWonOr(t.monthlyRentWon)}
+                    {formatWonRange(t.depositWon, t.depositMaxWon)}
+                    <br />월 {formatWonRange(t.monthlyRentWon, t.monthlyRentMaxWon)}
                   </span>
                 </div>
               ))
@@ -337,16 +414,15 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
     },
 
     selection: () => (
-      <ul className="m-0 flex list-none flex-col gap-[10px] p-0">
-        {doc.selection.map((s) => (
-          <li key={s.id} className="flex gap-[12px]">
-            <span className="rounded-tag bg-rank-bg text-rank-text min-w-[56px] flex-none self-start px-[8px] py-[3px] text-center text-[12px] font-bold">
-              {selectionLabel[s.kind]}
-            </span>
-            <span className={cn(sub, "leading-[1.5]")}>{s.text}</span>
-          </li>
-        ))}
-      </ul>
+      <FoldGroups
+        web={web}
+        badge="bg-rank-bg text-rank-text"
+        groups={(Object.keys(selectionLabel) as NoticeSelectionKind[]).map((kind) => ({
+          key: kind,
+          label: selectionLabel[kind],
+          items: doc.selection.filter((r) => r.kind === kind),
+        }))}
+      />
     ),
 
     cautions: () => (

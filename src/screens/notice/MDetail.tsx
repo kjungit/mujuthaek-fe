@@ -6,6 +6,7 @@ import { Heart } from "lucide-react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
+import { LifeCard } from "@/components/notice/LifeCard";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
@@ -13,7 +14,8 @@ import { MRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { dueText, formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
 import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/notice/judgment";
-import { toUnit, useNoticeUnits } from "@/features/notice/units";
+import { bySite, toUnit, useNoticeUnits } from "@/features/notice/units";
+import { UnitPrices } from "@/components/notice/UnitPrices";
 import type { StandardNotice } from "@/mocks/notice";
 import { useNotice } from "@/features/notice/queries";
 import { usePdfViewer } from "@/features/notice/usePdfViewer";
@@ -76,29 +78,44 @@ function MApiUnits({
           신청 가능만 {okCount}
         </button>
       </div>
-      <ul className="m-0 flex list-none flex-col gap-[8px] p-0">
-        {shown.map((u) => (
-          <li key={u.id} className="bg-bg rounded-tile flex flex-col gap-[3px] px-[14px] py-[12px]">
-            <span className="flex items-center justify-between gap-[8px]">
-              <span className="text-[15px] font-bold">{u.name}</span>
-              <span
-                className={cn(
-                  "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
-                  u.ok ? "bg-ok-bg text-ok-text" : "bg-surface text-text-sub",
-                )}
+      {bySite(shown, filtered).map((g) => (
+        <div key={g.key} className="flex flex-col gap-[8px]">
+          {g.name && (
+            <h4 className="text-text-sub m-0 text-[14px] font-extrabold">
+              {g.name} <span className="text-brand">{g.count}호</span>
+              {g.lifeScore !== undefined && (
+                <span className="text-text-tertiary font-bold"> · 생활권 {g.lifeScore}점</span>
+              )}
+            </h4>
+          )}
+          <ul aria-label={g.name} className="m-0 flex list-none flex-col gap-[8px] p-0">
+            {g.units.map((u) => (
+              <li
+                key={u.id}
+                className="bg-bg rounded-tile flex flex-col gap-[3px] px-[14px] py-[12px]"
               >
-                {u.ok ? "신청 가능" : u.otherTarget}
-              </span>
-            </span>
-            <span className="text-text-sub text-[13px]">
-              {u.type} · {u.area} · {u.floor}
-            </span>
-            <span className="text-[14px] font-bold">
-              보증금 {u.deposit} · {u.rent}
-            </span>
-          </li>
-        ))}
-      </ul>
+                <span className="flex items-center justify-between gap-[8px]">
+                  <span className="text-[15px] font-bold">
+                    {g.name ? (u.label ?? u.name) : u.name}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
+                      u.ok ? "bg-ok-bg text-ok-text" : "bg-surface text-text-sub",
+                    )}
+                  >
+                    {u.ok ? "신청 가능" : u.otherTarget}
+                  </span>
+                </span>
+                <span className="text-text-sub text-[13px]">
+                  {u.type} · {u.area} · {u.floor}
+                </span>
+                <UnitPrices unit={u} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
       {(filtered.length > shown.length || q.hasNextPage) && (
         <button
           type="button"
@@ -218,6 +235,8 @@ export function MDetail({ id }: { id: string }) {
 
         {n.hasUnits && <MApiUnits notice={n} judgment={j.judgment} />}
 
+        {n.life && <LifeCard life={n.life} variant="mobile" />}
+
         {n.ranking && <MRankCard ranking={n.ranking} />}
 
         <NoticeToc doc={doc} variant="mobile" />
@@ -226,35 +245,6 @@ export function MDetail({ id }: { id: string }) {
           variant="mobile"
           onOpenPage={pdfUrl ? (page, label) => pdf.show(page, label) : undefined}
         />
-
-        {n.life && (
-          <section aria-labelledby="life-h" className={cn(card, "gap-[10px] px-[20px] py-[16px]")}>
-            <div className="flex items-center justify-between">
-              <h3 id="life-h" className="m-0 text-[17px] font-extrabold">
-                생활권 {n.life.score}점
-              </h3>
-              <Link
-                href={routes.life}
-                className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
-              >
-                자세히
-              </Link>
-            </div>
-            {n.life.items.length > 0 && (
-              <div className="grid grid-cols-3 gap-[8px] text-center">
-                {n.life.items.map((it) => (
-                  <span
-                    key={it.kind}
-                    className="bg-bg rounded-control flex flex-col gap-[2px] px-[6px] py-[12px]"
-                  >
-                    <span className="text-text-sub text-[12px]">{it.label}</span>
-                    <span className="text-[16px] font-extrabold">{it.value}</span>
-                  </span>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
 
         {benefits.length > 0 && (
           <section aria-labelledby="bn-h" className={cn(card, "px-[20px] pt-[16px] pb-[6px]")}>

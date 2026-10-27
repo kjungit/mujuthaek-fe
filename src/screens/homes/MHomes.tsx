@@ -153,7 +153,7 @@ export function MHomes() {
               </span>
               <span className="text-[16px] font-extrabold tracking-[-0.02em]">{h.title}</span>
               <span className="text-text-tertiary text-[12px]">
-                {h.org} · {region.regionLabelOf(h)}
+                {[h.org, region.regionLabelOf(h), h.life].filter(Boolean).join(" · ")}
               </span>
               {h.price && <span className="text-[14px] font-semibold">{h.price}</span>}
               <span className="text-text-sub text-[13px]">

@@ -299,12 +299,6 @@ export function WebDetailUnits({ id }: { id: string }) {
                       </span>
                     </div>
                     <div className="flex gap-[8px]">
-                      <Link
-                        href={routes.life}
-                        className="bg-fill text-text hover:text-text inline-flex min-h-[48px] items-center gap-[6px] rounded-sm px-[16px] text-[15px] font-bold no-underline"
-                      >
-                        <MapPin size={18} aria-hidden />이 집 생활권
-                      </Link>
                       <button
                         type="button"
                         className="bg-brand inline-flex min-h-[48px] cursor-pointer items-center gap-[6px] rounded-sm border-0 px-[16px] text-[15px] font-bold text-white"

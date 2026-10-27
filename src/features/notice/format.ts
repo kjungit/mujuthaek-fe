@@ -20,6 +20,10 @@ export function formatWon(won: number): string {
 /** 원문에 금액이 없으면 "원문 확인" */
 export const formatWonOr = (won: number | null) => (won === null ? "원문 확인" : formatWon(won));
 
+/** 호마다 다르면 범위: "15만 4,990원 ~ 16만 7,670원" */
+export const formatWonRange = (won: number | null, max?: number) =>
+  won === null || max === undefined ? formatWonOr(won) : `${formatWon(won)} ~ ${formatWon(max)}`;
+
 /** 공고 상세 맨 위 마감 표시 */
 export const dueText = (n: { dday: number; dueLabel?: string }) => n.dueLabel ?? `마감 D-${n.dday}`;
 

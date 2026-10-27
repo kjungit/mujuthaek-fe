@@ -35,6 +35,11 @@ export type MapPoint = { x: number; y: number };
 export type NoticeUnit = MapPoint & {
   id: string;
   name: string;
+  /** 호 표기 (예: A동 214호). 단지별로 묶어 보여줄 때 */
+  label?: string;
+  siteName?: string;
+  /** 가격 대상이 여럿이면 대상별 보증금·월세 */
+  prices?: { target: string; deposit: string; rent: string }[];
   /** 모바일 지도 말풍선용 짧은 이름 */
   short?: string;
   addr?: string;
@@ -53,6 +58,8 @@ export type NoticeUnit = MapPoint & {
   ok: boolean;
   /** 단지·건물 (sites[].id). 실제 API에서만 */
   siteId?: string;
+  /** 단지 생활권 총점. 실제 API에서만 */
+  lifeScore?: number;
   otherTarget: string;
   prep: string;
 };
@@ -78,12 +85,16 @@ type NoticeBase = {
   doc: NoticeDoc;
 };
 
-export type NoticeLifeItem = {
-  kind: "commute" | "station" | "park";
-  label: string;
-  value: string;
-  /** 막대 길이(%) */
-  pct: number;
+/** 단지 하나의 생활권 총점. 항목 점수·가까운 시설은 areaId로 따로 불러와요 (GET /areas/sites/{areaId}) */
+export type NoticeLifeSite = {
+  /** sites[].id */
+  id: string;
+  /** area 위치 ID. 아직 위치를 못 찾았으면 null */
+  areaId: string | null;
+  name: string;
+  score: number;
+  /** 세권 태그 이름 (역세권 · 숲세권 …) */
+  tags: string[];
 };
 
 export type NoticeBenefit = {
@@ -111,8 +122,8 @@ export type StandardNotice = NoticeBase & {
   units?: NoticeUnit[];
   /** 목업 준비할 돈 (실제는 판정 응답의 주택형별 준비할 돈) */
   money?: NoticeMoney;
-  /** 생활권 점수가 아직 없으면 칸을 숨겨요 */
-  life?: { score: number; items: NoticeLifeItem[] };
+  /** 생활권 점수가 아직 없으면 칸을 숨겨요. 단지가 여럿이면 score는 가장 높은 단지, min은 가장 낮은 단지 (높은 순 sites) */
+  life?: { score: number; min: number; sites: NoticeLifeSite[] };
   benefitArea?: string;
   /** 혜택 판정이 아직 없으면 칸을 숨겨요 */
   benefits?: NoticeBenefit[];
@@ -122,7 +133,14 @@ export type StandardNotice = NoticeBase & {
   hasUnits?: boolean;
 };
 
-export type NoticeSite = { id: string; name: string; lat: number | null; lng: number | null };
+export type NoticeSite = {
+  id: string;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  /** 생활권 총점 (아직 없으면 없음) */
+  lifeScore?: number;
+};
 
 /** 주택목록(엑셀)이 붙은 공고 */
 export type UnitListNotice = NoticeBase & {
@@ -175,10 +193,15 @@ const happyHousing: Omit<StandardNotice, "id"> = {
   },
   life: {
     score: 82,
-    items: [
-      { kind: "commute", label: "통근", value: "32분", pct: 78 },
-      { kind: "station", label: "역까지", value: "도보 6분", pct: 90 },
-      { kind: "park", label: "공원까지", value: "도보 12분", pct: 55 },
+    min: 82,
+    sites: [
+      {
+        id: "main",
+        areaId: "mock-area-1",
+        name: "마포 행복주택",
+        score: 82,
+        tags: ["역세권", "숲세권"],
+      },
     ],
   },
   benefitArea: "서울 마포구",
@@ -453,10 +476,10 @@ const parkville: Omit<StandardNotice, "id"> = {
   },
   life: {
     score: 64,
-    items: [
-      { kind: "commute", label: "통근", value: "48분", pct: 45 },
-      { kind: "station", label: "역까지", value: "버스 12분", pct: 50 },
-      { kind: "park", label: "공원까지", value: "도보 8분", pct: 70 },
+    min: 52,
+    sites: [
+      { id: "a", areaId: "mock-area-2", name: "사송 A-2블록", score: 64, tags: ["숲세권"] },
+      { id: "b", areaId: "mock-area-3", name: "사송 B-1블록", score: 52, tags: [] },
     ],
   },
   benefitArea: "경남 양산시",
