@@ -10,7 +10,7 @@ import {
   SetupProgress,
   setupCard,
 } from "@/components/auth/WelcomeParts";
-import { useAuthSession } from "@/features/auth/queries";
+import { useSession } from "@/features/auth/session";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useWelcomeSetup } from "@/features/auth/useWelcomeSetup";
 import { cn } from "@/lib/cn";
@@ -18,7 +18,7 @@ import { routes } from "@/lib/routes";
 
 export function MWelcome() {
   const setup = useWelcomeSetup();
-  const { data } = useAuthSession();
+  const { data: session } = useSession();
   const conditions = useConditionSummary();
 
   return (
@@ -29,7 +29,7 @@ export function MWelcome() {
             <Check size={34} strokeWidth={2.4} aria-hidden />
           </span>
           <h1 className="tracking-h1 m-0 text-[26px] font-extrabold">
-            가입을 환영해요, {data.userName}님
+            가입을 환영해요{session ? `, ${session.nickname}님` : ""}
           </h1>
           <span className="text-text-sub text-[16px] leading-[1.6]">
             세 가지만 정하면 딱 맞는 공고를 놓치지 않아요

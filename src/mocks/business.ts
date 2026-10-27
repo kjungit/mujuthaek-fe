@@ -261,6 +261,8 @@ export type SpaceDetail = {
   notReady?: boolean;
   /** 요약 아래 안내 (모집 정책: 입주 조건은 원문에서) */
   summaryNote?: string;
+  /** 공고 안내: 출처 요약 · 기관 · 문의처 · 접수 방법 · 링크 (모집 정책 · 사업 지원, 실제 API) */
+  about?: { summary?: string; rows: { label: string; value: string; href?: string }[] };
 };
 
 export const spaceDetails: SpaceDetail[] = [

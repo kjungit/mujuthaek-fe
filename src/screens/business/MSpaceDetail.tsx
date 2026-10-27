@@ -11,7 +11,7 @@ import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { SpaceDetail } from "@/mocks/business";
-import { AnswerButtons } from "./parts";
+import { AboutSection, AnswerButtons } from "./parts";
 
 const card = "bg-surface mx-[16px] flex flex-col rounded-card px-[20px] py-[16px]";
 const h3 = "m-0 text-[17px] font-extrabold";
@@ -130,6 +130,8 @@ function MSpaceDetailView({
             )}
           </div>
         </section>
+
+        {data.about && <AboutSection about={data.about} />}
 
         <section aria-labelledby="me-h" className={cn(card, "gap-[6px]")}>
           <h3 id="me-h" className={h3}>
