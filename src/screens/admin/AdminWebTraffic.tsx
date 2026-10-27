@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
+import { NotificationPanel } from "@/screens/admin/AdminWebNotifications";
 import {
   useAdminBotTraffic,
   useAdminRealtime,
@@ -20,13 +21,14 @@ import type {
   TrafficItem,
 } from "@/mocks/admin-traffic";
 
-type Tab = "overview" | "acquisition" | "engagement" | "bots";
+type Tab = "overview" | "acquisition" | "engagement" | "bots" | "notifications";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "개요" },
   { key: "acquisition", label: "유입" },
   { key: "engagement", label: "이용 흐름" },
   { key: "bots", label: "봇·보안" },
+  { key: "notifications", label: "알림" },
 ];
 const PERIODS = [7, 28, 90];
 
@@ -117,7 +119,7 @@ export function AdminWebTraffic() {
       <AdminTitleRow>
         <AdminTitle
           title="트래픽"
-          desc="방문·유입·이용 흐름은 Google Analytics(통계에 동의한 사람만), 가입·로그인·봇은 서버 기록이에요"
+          desc="방문·유입·이용 흐름은 Google Analytics(통계에 동의한 사람만), 가입·로그인·봇은 서버 기록, 알림은 발송 결과와 받은 회원이 보고 눌렀는지예요"
         />
         <div className="flex flex-wrap gap-[8px]">
           <Segmented
@@ -135,7 +137,9 @@ export function AdminWebTraffic() {
         </div>
       </AdminTitleRow>
 
-      {tab === "bots" ? (
+      {tab === "notifications" ? (
+        <NotificationPanel days={days} />
+      ) : tab === "bots" ? (
         <BotsPanel days={Math.min(days, 30)} />
       ) : (
         <GaPanels tab={tab} days={days} />

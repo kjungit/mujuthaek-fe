@@ -1,12 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
 import { useAdminNotificationStats } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import type { NotificationStats } from "@/mocks/admin-notifications";
-
-const PERIODS = [7, 30, 90];
 
 const TYPE_LABEL: Record<string, string> = {
   NEW_NOTICE: "새 공고",
@@ -55,8 +51,8 @@ function rows(data: NotificationStats) {
   });
 }
 
-export function AdminWebNotifications() {
-  const [days, setDays] = useState(7);
+/** 트래픽 「알림」 탭: 보낸 알림이 잘 갔는지, 받은 회원이 보고 눌렀는지 (회원별 값 없이 합계만) */
+export function NotificationPanel({ days }: { days: number }) {
   const { data, isPending, isError } = useAdminNotificationStats(days);
   const list = data ? rows(data) : [];
   const total = list.reduce(
@@ -103,29 +99,6 @@ export function AdminWebNotifications() {
 
   return (
     <>
-      <AdminTitleRow>
-        <AdminTitle
-          title="알림"
-          desc="보낸 알림이 잘 갔는지, 받은 회원이 보고 눌렀는지 보여 줘요. 회원별 값은 없고 합계만 있어요"
-        />
-        <div role="group" aria-label="기간" className="flex flex-wrap gap-[6px]">
-          {PERIODS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              aria-pressed={days === p}
-              onClick={() => setDays(p)}
-              className={cn(
-                "rounded-pill min-h-[40px] cursor-pointer border-0 px-[16px] text-[14px] font-bold",
-                days === p ? "bg-text text-white" : "bg-surface text-text-sub",
-              )}
-            >
-              {p}일
-            </button>
-          ))}
-        </div>
-      </AdminTitleRow>
-
       {isPending && <span className="text-text-sub text-[15px]">불러오는 중이에요</span>}
       {isError && <span className="text-text-sub text-[15px]">알림 지표를 불러오지 못했어요</span>}
 
