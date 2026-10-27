@@ -66,12 +66,15 @@ self.addEventListener("push", (event) => {
     data = { title: "무주택자들", body: event.data.text() };
   }
 
+  // 알림 서버 내용: { v, type, title, body, linkPath, tag } (contracts web-push 4장)
   event.waitUntil(
     self.registration.showNotification(data.title ?? "무주택자들", {
       body: data.body,
       icon: data.icon ?? "/icons/icon-192.png",
       badge: "/icons/badge-96.png",
-      data: { url: data.url ?? "/" },
+      // 같은 화면 알림은 기기에서 최신 것 하나로 바꿔 보여요
+      tag: data.tag,
+      data: { url: data.linkPath ?? data.url ?? "/" },
     }),
   );
 });
