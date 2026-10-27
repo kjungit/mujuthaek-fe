@@ -4,12 +4,12 @@ import Link from "next/link";
 import { Banknote, Info, MapPin, Percent, Wallet, type LucideIcon } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
-import { useSupportList } from "@/features/business/queries";
+import { useRegionScope, useSupportList } from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { SupportType } from "@/mocks/business";
-import { SupportBadge, TypeFilters, supportFilters } from "./parts";
+import { RegionScopeChips, SupportBadge, TypeFilters, supportFilters } from "./parts";
 
 const typeIcon: Record<SupportType, LucideIcon> = { fund: Wallet, loan: Banknote, tax: Percent };
 const typeTone: Record<SupportType, string> = {
@@ -24,7 +24,8 @@ const colTemplate = {
 };
 
 export function WebBizSupport() {
-  const { data, loading } = useSupportList();
+  const scope = useRegionScope();
+  const { data, loading } = useSupportList(scope);
   const { filter, setFilter, count, visible } = useTypeFilter(data.items);
 
   return (
@@ -39,14 +40,17 @@ export function WebBizSupport() {
               <strong className="text-brand-strong">{data.count}개</strong> · {data.baseDate} 기준
             </span>
           </div>
-          <TypeFilters
-            label="지원 종류"
-            options={supportFilters(false)}
-            value={filter}
-            onChange={setFilter}
-            count={count}
-            className="flex-wrap"
-          />
+          <div className="flex flex-col items-end gap-[8px]">
+            <RegionScopeChips scope={scope} />
+            <TypeFilters
+              label="지원 종류"
+              options={supportFilters(false)}
+              value={filter}
+              onChange={setFilter}
+              count={count}
+              className="flex-wrap"
+            />
+          </div>
         </div>
 
         {Boolean(data.missingSiteCount) && (

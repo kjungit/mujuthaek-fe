@@ -9,20 +9,31 @@ import { InfoTag } from "@/components/ui/Chip";
 import {
   useBizProfileChips,
   useBusinessSummary,
+  useInitialSpaceType,
+  useRegionScope,
   useSupportList,
 } from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import { SupportBadge, TypeFilters, spaceFilters, spaceIcon, spaceLink, spaceThumb } from "./parts";
+import {
+  RegionScopeChips,
+  SupportBadge,
+  TypeFilters,
+  spaceFilters,
+  spaceIcon,
+  spaceLink,
+  spaceThumb,
+} from "./parts";
 
 const ASIDE_SUPPORT_COUNT = 3;
 
 export function WebBusiness() {
-  const { data, loading } = useBusinessSummary();
+  const scope = useRegionScope();
+  const { data, loading } = useBusinessSummary(scope);
   const profileChips = useBizProfileChips();
-  const { data: support } = useSupportList();
-  const { filter, setFilter, count, visible } = useTypeFilter(data.list);
+  const { data: support } = useSupportList(scope);
+  const { filter, setFilter, count, visible } = useTypeFilter(data.list, useInitialSpaceType());
   const asideItems = support.items.slice(0, ASIDE_SUPPORT_COUNT);
 
   return (
@@ -123,7 +134,10 @@ export function WebBusiness() {
             style={{ flex: "999 1 560px" }}
           >
             <div className="flex flex-wrap items-center justify-between gap-[12px]">
-              <h2 className="tracking-title m-0 text-[22px] font-extrabold">공간</h2>
+              <span className="flex flex-wrap items-center gap-[12px]">
+                <h2 className="tracking-title m-0 text-[22px] font-extrabold">공간</h2>
+                <RegionScopeChips scope={scope} />
+              </span>
               <TypeFilters
                 label="공간 종류"
                 options={spaceFilters(false)}

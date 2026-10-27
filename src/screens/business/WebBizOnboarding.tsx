@@ -6,7 +6,13 @@ import { ArrowRight, Briefcase, Info, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge } from "@/components/ui/Badge";
-import { industries, needOptions } from "@/features/business/profile";
+import {
+  industryGroups,
+  needOptions,
+  restrictionOptions,
+  statusOptions,
+  validIndustryCode,
+} from "@/features/business/profile";
 import { useBizOnboardingForm } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -151,14 +157,44 @@ export function WebBizOnboarding() {
                 className={cn(control, "px-[14px] font-medium")}
               >
                 <option value="">업종 선택</option>
-                {industries.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
+                {industryGroups.map((g) => (
+                  <optgroup key={g.group} label={g.group}>
+                    {g.items.map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <span className="text-text-sub text-[13px] font-medium">
                 업종에 따라 들어갈 수 있는 공간이 달라져요
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-[8px] text-[15px] font-bold">
+              <span>
+                업종 코드{" "}
+                <span className="text-text-sub font-medium">· 선택, 알면 더 정확해요</span>
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={5}
+                placeholder="예: 58222"
+                value={draft.industryCode ?? ""}
+                onChange={(e) => f.set({ industryCode: e.target.value.replace(/\D/g, "") })}
+                className={cn(control, "box-content min-w-0 px-[16px] font-medium")}
+              />
+              <span className="text-text-sub text-[13px] font-medium">
+                사업자등록증의 업종 코드(한국표준산업분류 5자리)를 넣으면 업종 선택 대신 이 코드로
+                판정해요 ·{" "}
+                <a href="https://kssc.kostat.go.kr" target="_blank" rel="noreferrer">
+                  코드 찾기
+                </a>
+                {draft.industryCode &&
+                  !validIndustryCode(draft.industryCode) &&
+                  " · 5자리 숫자로 넣어 주세요"}
               </span>
             </label>
 
@@ -224,7 +260,7 @@ export function WebBizOnboarding() {
               <Info size={16} aria-hidden />
               {pre
                 ? "예비 창업이면 업력 · 직원 수 · 매출은 입력하지 않아요"
-                : "업력은 사업자등록일부터 세요 · 매출은 이번 탭에서만 쓰고 저장하지 않아요"}
+                : "업력은 사업자등록일부터 세요 · 매출은 이번 탭에서만 쓰고 저장하지 않아요 · 직원 수는 지금 공고 조건에 없어 참고용이에요"}
             </span>
 
             <div className="flex flex-col gap-[8px]">
@@ -287,6 +323,78 @@ export function WebBizOnboarding() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[15px] font-bold">
+                해당 유형{" "}
+                <span className="text-text-sub font-medium">· 공고의 대상 조건에 써요</span>
+              </span>
+              <div role="group" aria-label="해당 유형" className="flex flex-wrap gap-[8px]">
+                <button
+                  type="button"
+                  aria-pressed={f.statuses?.length === 0}
+                  onClick={f.toggleNoStatus}
+                  className={cn(
+                    "rounded-pill min-h-[44px] cursor-pointer border-2 border-solid px-[18px] text-[15px] font-bold",
+                    pickTone(f.statuses?.length === 0),
+                  )}
+                >
+                  해당 없음
+                </button>
+                {statusOptions.map((o) => (
+                  <button
+                    key={o.code}
+                    type="button"
+                    aria-pressed={Boolean(f.statuses?.includes(o.code))}
+                    onClick={() => f.toggleStatus(o.code)}
+                    className={cn(
+                      "rounded-pill min-h-[44px] cursor-pointer border-2 border-solid px-[16px] text-[14px] font-semibold",
+                      pickTone(Boolean(f.statuses?.includes(o.code))),
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[15px] font-bold">
+                신청 제한 사유{" "}
+                <span className="text-text-sub font-medium">· 해당하는 게 있으면 골라요</span>
+              </span>
+              <div role="group" aria-label="신청 제한 사유" className="flex flex-wrap gap-[8px]">
+                <button
+                  type="button"
+                  aria-pressed={f.restrictions?.length === 0}
+                  onClick={f.toggleNoRestriction}
+                  className={cn(
+                    "rounded-pill min-h-[44px] cursor-pointer border-2 border-solid px-[18px] text-[15px] font-bold",
+                    pickTone(f.restrictions?.length === 0),
+                  )}
+                >
+                  해당 없음
+                </button>
+                {restrictionOptions.map((r) => (
+                  <button
+                    key={r.code}
+                    type="button"
+                    aria-pressed={Boolean(f.restrictions?.includes(r.code))}
+                    onClick={() => f.toggleRestriction(r.code)}
+                    className={cn(
+                      "rounded-pill min-h-[44px] cursor-pointer border-2 border-solid px-[16px] text-[14px] font-semibold",
+                      pickTone(Boolean(f.restrictions?.includes(r.code))),
+                    )}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <span className="text-text-sub text-[13px] font-medium">
+                공고의 &apos;해당하면 신청할 수 없어요&apos; 조건에 써요 · 민감한 정보라 이번
+                탭에서만 쓰고 저장하지 않아요
+              </span>
             </div>
 
             <div className="border-line-soft flex flex-wrap items-center justify-between gap-[10px] border-t border-solid pt-[22px]">

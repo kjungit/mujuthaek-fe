@@ -227,6 +227,14 @@ export type SpaceRule = {
   met: boolean;
   /** 근거 원문 문장 (실제 API) */
   quote?: string;
+  /** 질문형 조건이면 질문 id (예 · 아니요로 답해요) */
+  questionId?: string;
+  /** 내 답 */
+  answer?: "YES" | "NO";
+  /** 불충족으로 정해짐 (실제 API) */
+  notMet?: boolean;
+  /** "다음 중 하나만 맞으면 돼요" 묶음의 길들 (실제 API) */
+  options?: { label: string; met: boolean; notMet: boolean; rules: SpaceRule[] }[];
 };
 
 export type SpaceDetail = {
@@ -253,6 +261,8 @@ export type SpaceDetail = {
   notReady?: boolean;
   /** 요약 아래 안내 (모집 정책: 입주 조건은 원문에서) */
   summaryNote?: string;
+  /** 공고 안내: 출처 요약 · 기관 · 문의처 · 접수 방법 · 링크 (모집 정책 · 사업 지원, 실제 API) */
+  about?: { summary?: string; rows: { label: string; value: string; href?: string }[] };
 };
 
 export const spaceDetails: SpaceDetail[] = [

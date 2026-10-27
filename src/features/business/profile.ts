@@ -20,27 +20,88 @@ export type BizProfileInput = {
   regionCode: string;
   /** 필요한 공간 (STARTUP_SPACE · SHOP_RENTAL · MEETING_ROOM) */
   needs: string[];
+  /** 업종 코드 직접 입력 (한국표준산업분류 11차 5자리). 있으면 업종 선택지의 대표 코드 대신 써요 */
+  industryCode?: string;
+  /** 해당 유형 코드 (소상공인 · 사회적기업 …). 해당 없음이면 빈 목록, 아직 안 골랐으면 null */
+  statuses?: string[] | null;
 };
 
+/** 이번 탭에서만 쓰는 사업 정보: 매출, 신청 제한 사유 (민감해서 기기에 저장하지 않아요) */
+export type BizSession = {
+  /** 연 매출 (만 원) */
+  revenue: string;
+  /** 고른 신청 제한 사유 코드. 해당 없음이면 빈 목록, 아직 안 골랐으면 null */
+  restrictions: string[] | null;
+};
+
+export const emptyBizSession: BizSession = { revenue: "", restrictions: null };
+
 export type BizProfileSnapshot =
-  { status: "loading" } | { status: "ready"; profile: BizProfileInput | null; revenue: string };
+  { status: "loading" } | { status: "ready"; profile: BizProfileInput | null; session: BizSession };
 
 /**
- * 업종 선택지 → 한국표준산업분류(11차) 대표 코드. 판정 엔진은 공고의 업종 코드가 이 코드의 앞부분이면 해당한다고 봐요.
- * 범위가 넓어 코드 하나로 정할 수 없는 업종(소매 · 콘텐츠 · 제조 · 기타)은 보내지 않고 업종 조건을 확인 필요로 둬요
+ * 신청 제한 사유 (판정 엔진 Codes의 사업공간 · 창업지원 신청 제한 사유). 공고의 "해당하면 신청할 수 없어요" 조건에 써요
+ */
+export const restrictionOptions = [
+  { code: "TAX_ARREARS", label: "국세·지방세 체납 중" },
+  { code: "CREDIT_DELINQUENT", label: "금융기관 채무불이행·불량거래자" },
+  { code: "BUSINESS_SUSPENDED", label: "휴업 중인 사업자" },
+  { code: "PROGRAM_SANCTION", label: "창업지원사업 참여 제한 제재 중" },
+  { code: "CLAWBACK_UNPAID", label: "환수금 반환이 끝나지 않음" },
+  { code: "SUBSIDY_EXCLUDED", label: "보조사업 수행 배제 대상" },
+  { code: "WAGE_ARREARS", label: "체불사업주 명단 공개 대상" },
+  { code: "ADULT_WARD", label: "피성년후견인·피한정후견인" },
+  { code: "LH_EMPLOYEE_FAMILY", label: "LH 직원과 그 배우자·부모·자녀" },
+] as const;
+
+/**
+ * 업종 선택지 → 한국표준산업분류(11차) 세세분류 대표 코드. 판정 엔진은 공고의 업종 코드(2~5자리)가 이 코드의 앞부분이면 해당한다고 봐요.
+ * 묶음(group)으로 나눠 보여주고, 코드 하나로 정할 수 없는 "그 밖의 제조" · "기타"만 코드를 보내지 않아 업종 조건을 확인 필요로 둬요.
+ * key는 저장값이라 바꾸지 않아요 (예전 선택지 SOFTWARE · CONTENT 등도 그대로 읽혀요)
  */
 export const industries = [
-  { key: "SOFTWARE", label: "소프트웨어 개발", code: "58222" },
-  { key: "IT_SERVICE", label: "IT 서비스 · 플랫폼", code: "62010" },
-  { key: "FOOD", label: "음식점", code: "56111" },
-  { key: "CAFE", label: "카페", code: "56221" },
-  { key: "ONLINE_SALES", label: "온라인 판매", code: "47912" },
-  { key: "RETAIL", label: "소매 (매장)", code: null },
-  { key: "DESIGN", label: "디자인", code: "73203" },
-  { key: "CONTENT", label: "콘텐츠 · 미디어", code: null },
-  { key: "MANUFACTURING", label: "제조", code: null },
-  { key: "OTHER", label: "기타", code: null },
+  { group: "IT · 소프트웨어", key: "SOFTWARE", label: "소프트웨어 개발", code: "58222" },
+  { group: "IT · 소프트웨어", key: "GAME", label: "게임 개발", code: "58211" },
+  { group: "IT · 소프트웨어", key: "IT_SERVICE", label: "IT 서비스 · 외주 개발", code: "62010" },
+  { group: "IT · 소프트웨어", key: "PLATFORM", label: "플랫폼 · 앱 서비스", code: "63120" },
+  { group: "IT · 소프트웨어", key: "DATA_AI", label: "데이터 · AI", code: "62090" },
+  { group: "음식점 · 카페", key: "FOOD", label: "음식점", code: "56111" },
+  { group: "음식점 · 카페", key: "CAFE", label: "카페", code: "56221" },
+  { group: "음식점 · 카페", key: "BAKERY", label: "제과점 · 베이커리", code: "56191" },
+  {
+    group: "판매 · 유통",
+    key: "ONLINE_SALES",
+    label: "온라인 판매 (쇼핑몰 · 스마트스토어)",
+    code: "47912",
+  },
+  { group: "판매 · 유통", key: "RETAIL", label: "종합 소매 (매장)", code: "47190" },
+  { group: "판매 · 유통", key: "RETAIL_FOOD", label: "식품 소매", code: "47219" },
+  { group: "판매 · 유통", key: "RETAIL_CLOTH", label: "의류 소매", code: "47419" },
+  { group: "판매 · 유통", key: "RETAIL_COSMETIC", label: "화장품 소매", code: "47813" },
+  { group: "콘텐츠 · 디자인", key: "DESIGN", label: "디자인", code: "73203" },
+  { group: "콘텐츠 · 디자인", key: "CONTENT", label: "영상 · 콘텐츠 제작", code: "59111" },
+  { group: "콘텐츠 · 디자인", key: "PUBLISH", label: "출판 · 웹툰", code: "58119" },
+  { group: "콘텐츠 · 디자인", key: "MUSIC", label: "음악 · 오디오", code: "59201" },
+  { group: "콘텐츠 · 디자인", key: "AD", label: "광고 · 마케팅 대행", code: "71310" },
+  { group: "제조", key: "MFG_FOOD", label: "식품 제조", code: "10799" },
+  { group: "제조", key: "MFG_COSMETIC", label: "화장품 제조", code: "20423" },
+  { group: "제조", key: "MFG_CLOTH", label: "의류 제조", code: "14199" },
+  { group: "제조", key: "MFG_ELECTRONIC", label: "전자부품 제조", code: "26299" },
+  { group: "제조", key: "MFG_MACHINE", label: "기계 제조", code: "29199" },
+  { group: "제조", key: "MANUFACTURING", label: "그 밖의 제조", code: null },
+  { group: "서비스", key: "EDU", label: "교육 · 학원", code: "85669" },
+  { group: "서비스", key: "BEAUTY", label: "미용", code: "96112" },
+  { group: "서비스", key: "CONSULT", label: "경영 컨설팅", code: "71531" },
+  { group: "서비스", key: "LAUNDRY", label: "세탁", code: "96911" },
+  { group: "농림 · 기타", key: "AGRI", label: "농업", code: "01110" },
+  { group: "농림 · 기타", key: "OTHER", label: "기타", code: null },
 ] as const;
+
+/** 업종 선택지를 묶음별로 (select의 optgroup) */
+export const industryGroups = Array.from(new Set(industries.map((i) => i.group))).map((group) => ({
+  group,
+  items: industries.filter((i) => i.group === group),
+}));
 
 export const needOptions = [
   { key: "STARTUP_SPACE", label: "사무실 · 창업 공간" },
@@ -56,10 +117,35 @@ export const emptyBizProfile: BizProfileInput = {
   employees: "",
   regionCode: "",
   needs: [],
+  industryCode: "",
+  statuses: null,
 };
+
+/** 해당 유형 (판정 엔진 Codes의 사업공간 · 창업지원 유형). 공고의 「소상공인」「사회적기업」 같은 대상 조건에 써요 */
+export const statusOptions = [
+  { code: "SMALL_BUSINESS", label: "소상공인" },
+  { code: "SME", label: "중소기업" },
+  { code: "VENTURE_COMPANY", label: "벤처기업" },
+  { code: "ONE_PERSON_CREATIVE", label: "1인 창조기업" },
+  { code: "WOMAN", label: "여성 (대표자)" },
+  { code: "CAREER_BREAK_WOMAN", label: "경력단절여성" },
+  { code: "DISABLED", label: "장애인" },
+  { code: "STUDENT", label: "대학생 · 대학원생" },
+  { code: "NATIONAL_MERIT", label: "국가유공자 등 보훈대상자" },
+  { code: "SOCIAL_ENTERPRISE", label: "사회적기업" },
+  { code: "PRE_SOCIAL_ENTERPRISE", label: "예비사회적기업" },
+  { code: "SOCIAL_COOPERATIVE", label: "사회적협동조합" },
+  { code: "VILLAGE_ENTERPRISE", label: "마을기업" },
+  { code: "SELF_SUFFICIENCY_ENTERPRISE", label: "자활기업" },
+  { code: "SOCIAL_VENTURE", label: "소셜벤처" },
+] as const;
+
+/** 업종 코드 직접 입력이 올바른지 (5자리 숫자) */
+export const validIndustryCode = (v: string | undefined) => /^\d{5}$/.test(v ?? "");
 
 const DEVICE_KEY = "mujuthaek:business:v1";
 const REVENUE_KEY = "mujuthaek:business:revenue";
+const RESTRICTIONS_KEY = "mujuthaek:business:restrictions";
 /** 조건 입력의 "이 기기에 저장" 설정을 같이 따라요 */
 const SAVE_PREF_KEY = "mujuthaek:save-on-device";
 const SESSION_DEVICE_KEY = "mujuthaek:business:device-session";
@@ -95,7 +181,18 @@ function readSnapshot(): BizProfileSnapshot {
   } catch {
     profile = null;
   }
-  return { status: "ready", profile, revenue: read(session, REVENUE_KEY) ?? "" };
+  let restrictions: string[] | null = null;
+  try {
+    const raw = read(session, RESTRICTIONS_KEY);
+    restrictions = raw ? (JSON.parse(raw) as string[]) : null;
+  } catch {
+    restrictions = null;
+  }
+  return {
+    status: "ready",
+    profile,
+    session: { revenue: read(session, REVENUE_KEY) ?? "", restrictions },
+  };
 }
 
 let snapshot: BizProfileSnapshot | null = null;
@@ -127,7 +224,7 @@ export function useBizProfileInput(): BizProfileSnapshot {
   return useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
 }
 
-export function saveBizProfile(profile: BizProfileInput, revenue: string) {
+export function saveBizProfile(profile: BizProfileInput, { revenue, restrictions }: BizSession) {
   const onDevice = read(local, SAVE_PREF_KEY) !== "false";
   write(
     onDevice ? local : session,
@@ -135,6 +232,7 @@ export function saveBizProfile(profile: BizProfileInput, revenue: string) {
     JSON.stringify(profile),
   );
   write(session, REVENUE_KEY, revenue || null);
+  write(session, RESTRICTIONS_KEY, restrictions === null ? null : JSON.stringify(restrictions));
   emit();
 }
 
@@ -164,7 +262,9 @@ export function toBusinessApplicant(
   revenueManWon: string,
   today = new Date(),
 ): BusinessApplicant {
-  const code = industries.find((i) => i.key === p.industry)?.code ?? undefined;
+  const code = validIndustryCode(p.industryCode)
+    ? p.industryCode
+    : (industries.find((i) => i.key === p.industry)?.code ?? undefined);
   if (p.stage === "pre") {
     return { applicantType: "INDIVIDUAL", hasSite: false, history: [], industryCode: code };
   }
@@ -195,5 +295,6 @@ export function profileChips(p: BizProfileInput | null): string[] {
     p.stage === "run" && digits(p.months) !== null ? `업력 ${digits(p.months)}개월` : null,
     employees !== null ? `${employees}인` : null,
     region && (p.stage === "pre" ? `희망 지역 ${region}` : `사업장 ${region}`),
+    ...(p.statuses ?? []).map((c) => statusOptions.find((o) => o.code === c)?.label),
   ].filter((c): c is string => Boolean(c));
 }
