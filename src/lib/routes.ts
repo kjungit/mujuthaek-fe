@@ -14,7 +14,6 @@ export const routes = {
   homes: "/homes",
   notice: (id: string) => `/notices/${id}`,
   score: "/score",
-  life: "/life",
   alerts: "/alerts",
   me: "/me",
   search: "/search",

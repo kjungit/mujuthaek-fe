@@ -1,5 +1,5 @@
 // 화면용 예시 데이터 (디자인 WebBusiness · WebBizOnboarding · WebSpaceDetail · WebBizSupport와 모바일 짝). 실제 값은 API에서 받아요.
-import type { Verdict } from "@/components/ui/Badge";
+import type { ListingVerdict, Verdict } from "@/components/ui/Badge";
 
 /* ---------- 사업 정보 ---------- */
 
@@ -36,11 +36,15 @@ export type SpaceItem = {
   tags: string[];
   money: string;
   due: string;
+  /** 상세 화면 없이 원문으로 보내는 공간 (사업공간 모집 정책) */
+  externalUrl?: string;
 };
 
 export type BusinessSummary = {
-  spaces: { count: number; closingSoon: number; newThisWeek: number };
-  support: { count: number; maxAmount: string; needCheck: number };
+  /** newThisWeek: 실제 API는 아직 몰라서 없어요 */
+  spaces: { count: number; closingSoon: number; newThisWeek?: number };
+  /** maxAmount: 실제 API는 지원 금액을 몰라서 없어요 */
+  support: { count: number; maxAmount?: string; needCheck: number };
   list: SpaceItem[];
 };
 
@@ -130,17 +134,22 @@ export type SupportItem = {
   /** 사업공간 홈 오른쪽 목록의 한 줄 설명 */
   summary: string;
   due: string;
+  /** 상세 화면 (실제 API) */
+  href?: string;
 };
 
 export type SupportList = {
   count: number;
   baseDate: string;
   items: SupportItem[];
+  /** 사업장 소재지를 넣으면 판정할 수 있는 사업 수 */
+  missingSiteCount?: number;
 };
 
 export const supportList: SupportList = {
   count: 3,
   baseDate: "10월 20일",
+  missingSiteCount: 1,
   items: [
     {
       id: "f1",
@@ -211,11 +220,26 @@ export type SpaceFact = { label: string; value: string; mValue: string };
 export type SpaceCondition = { label: string; value: string; note?: string; mValue: string };
 export type SpaceDoc = { name: string; note: string; mNote: string; ready: boolean };
 export type SpaceStep = { step: number; title: string; when: string };
-export type SpaceRule = { label: string; rule: string; mRule: string; met: boolean };
+export type SpaceRule = {
+  label: string;
+  rule: string;
+  mRule: string;
+  met: boolean;
+  /** 근거 원문 문장 (실제 API) */
+  quote?: string;
+  /** 질문형 조건이면 질문 id (예 · 아니요로 답해요) */
+  questionId?: string;
+  /** 내 답 */
+  answer?: "YES" | "NO";
+  /** 불충족으로 정해짐 (실제 API) */
+  notMet?: boolean;
+  /** "다음 중 하나만 맞으면 돼요" 묶음의 길들 (실제 API) */
+  options?: { label: string; met: boolean; notMet: boolean; rules: SpaceRule[] }[];
+};
 
 export type SpaceDetail = {
   id: string;
-  verdict: Verdict;
+  verdict: ListingVerdict;
   due: string;
   tag: string;
   title: string;
@@ -229,7 +253,16 @@ export type SpaceDetail = {
   currentStep: number;
   schedule: SpaceStep[];
   rules: SpaceRule[];
-  linkedSupport: { id: string; title: string; desc: string; amount: string };
+  /** 함께 받을 지원. 실제 API는 아직 없어요 */
+  linkedSupport?: { id: string; title: string; desc: string; amount: string };
+  /** 공고 원문 */
+  sourceUrl?: string;
+  /** 판정 틀이 아직 없어 자격을 판정하지 못함 (자격 조건 정리 중) */
+  notReady?: boolean;
+  /** 요약 아래 안내 (모집 정책: 입주 조건은 원문에서) */
+  summaryNote?: string;
+  /** 공고 안내: 출처 요약 · 기관 · 문의처 · 접수 방법 · 링크 (모집 정책 · 사업 지원, 실제 API) */
+  about?: { summary?: string; rows: { label: string; value: string; href?: string }[] };
 };
 
 export const spaceDetails: SpaceDetail[] = [

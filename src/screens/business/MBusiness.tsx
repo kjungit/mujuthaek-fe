@@ -6,18 +6,22 @@ import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
 import { VerdictBadge } from "@/components/ui/Badge";
-import { useBizProfile, useBusinessSummary } from "@/features/business/queries";
+import {
+  useBizProfileChips,
+  useBusinessSummary,
+  useInitialSpaceType,
+  useRegionScope,
+} from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import { TypeFilters, spaceFilters, spaceThumb } from "./parts";
+import { RegionScopeChips, TypeFilters, spaceFilters, spaceLink, spaceThumb } from "./parts";
 
 export function MBusiness() {
-  const { data } = useBusinessSummary();
-  const { data: profile } = useBizProfile();
-  const { filter, setFilter, count, visible } = useTypeFilter(data.list);
-
-  const profileChips = [profile.stageLabel, profile.industry, `희망 ${profile.region}`];
+  const scope = useRegionScope();
+  const { data, loading } = useBusinessSummary(scope);
+  const profileChips = useBizProfileChips();
+  const { filter, setFilter, count, visible } = useTypeFilter(data.list, useInitialSpaceType());
 
   return (
     <MPage>
@@ -44,7 +48,7 @@ export function MBusiness() {
             href={routes.bizOnboarding}
             className="rounded-pill bg-brand-soft text-brand-strong hover:text-brand-strong flex-none px-[12px] py-[6px] text-[13px] font-bold no-underline"
           >
-            수정
+            {profileChips.length ? "수정" : "사업 정보 입력하기"}
           </Link>
         </div>
 
@@ -65,9 +69,15 @@ export function MBusiness() {
           >
             <span className="text-text-sub text-[13px] font-semibold">사업 지원</span>
             <span className="tracking-h1 text-[28px] font-extrabold">{data.support.count}개</span>
-            <span className="text-text-sub text-[12px]">최대 {data.support.maxAmount}</span>
+            <span className="text-text-sub text-[12px]">
+              {data.support.maxAmount
+                ? `최대 ${data.support.maxAmount}`
+                : `확인 필요 ${data.support.needCheck}개`}
+            </span>
           </Link>
         </div>
+
+        <RegionScopeChips scope={scope} className="px-[4px]" />
 
         <TypeFilters
           label="공간 종류"
@@ -80,10 +90,15 @@ export function MBusiness() {
           className="overflow-x-auto px-[4px] pt-[4px] pb-[2px]"
         />
 
+        {visible.length === 0 && (
+          <p className="text-text-sub m-0 px-[20px] py-[40px] text-center text-[15px]">
+            {loading ? "공간을 불러오는 중이에요" : "지금 지원할 수 있는 공간이 없어요"}
+          </p>
+        )}
         {visible.map((it) => (
           <Link
             key={it.id}
-            href={routes.space(it.id)}
+            {...spaceLink(it)}
             className="bg-surface text-text hover:text-text flex gap-[14px] rounded-[22px] p-[16px] no-underline"
           >
             <span

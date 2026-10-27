@@ -2,7 +2,14 @@ import { Building, Store, Users, type LucideIcon } from "lucide-react";
 import { Badge, verdictLabel } from "@/components/ui/Badge";
 import { FilterChip } from "@/components/ui/Chip";
 import { cn } from "@/lib/cn";
-import type { SpaceType, SupportStatus } from "@/mocks/business";
+import { routes } from "@/lib/routes";
+import type { SpaceItem, SpaceType, SupportStatus } from "@/mocks/business";
+
+/** 공간 카드 링크: 상세 화면이 없는 공간(모집 정책)은 원문을 새 탭으로 */
+export const spaceLink = (it: SpaceItem) =>
+  it.externalUrl
+    ? { href: it.externalUrl, target: "_blank", rel: "noreferrer" }
+    : { href: routes.space(it.id) };
 
 export const spaceIcon: Record<SpaceType, LucideIcon> = {
   startup: Building,
@@ -75,22 +82,134 @@ export function TypeFilters<K extends string>({
 }) {
   return (
     <div id={id} role="group" aria-label={label} className={cn("flex gap-[6px]", className)}>
-      {options.map((o) => (
-        <FilterChip
-          key={o.key}
-          selected={value === o.key}
-          onClick={() => onChange(o.key)}
-          className={cn("font-bold", mobile && "flex-none px-[14px]")}
-        >
-          {mobile ? (
-            `${o.label} ${count(o.key)}`
-          ) : (
-            <span>
-              {o.label} <span className="font-semibold opacity-80">{count(o.key)}</span>
-            </span>
-          )}
-        </FilterChip>
-      ))}
+      {/* 0건인 종류는 숨겨요 (전체와 지금 고른 것은 늘 보여요) */}
+      {options
+        .filter((o) => o.key === "all" || o.key === value || count(o.key) > 0)
+        .map((o) => (
+          <FilterChip
+            key={o.key}
+            selected={value === o.key}
+            onClick={() => onChange(o.key)}
+            className={cn("font-bold", mobile && "flex-none px-[14px]")}
+          >
+            {mobile ? (
+              `${o.label} ${count(o.key)}`
+            ) : (
+              <span>
+                {o.label} <span className="font-semibold opacity-80">{count(o.key)}</span>
+              </span>
+            )}
+          </FilterChip>
+        ))}
     </div>
+  );
+}
+
+/** 목록 지역: 사업 정보의 지역 기준 / 전국. 사업 정보에 지역이 없으면 안 보여요 */
+export function RegionScopeChips({
+  scope,
+  className,
+}: {
+  scope: { label: string | null; nationwide: boolean; setNationwide: (v: boolean) => void };
+  className?: string;
+}) {
+  if (!scope.label) return null;
+  return (
+    <div role="group" aria-label="지역" className={cn("flex flex-wrap gap-[6px]", className)}>
+      <FilterChip selected={!scope.nationwide} onClick={() => scope.setNationwide(false)}>
+        {scope.label} 기준
+      </FilterChip>
+      <FilterChip selected={scope.nationwide} onClick={() => scope.setNationwide(true)}>
+        전국
+      </FilterChip>
+    </div>
+  );
+}
+
+/** 질문형 조건 답하기: 예 · 아니요 (다시 누르면 답을 지워요) */
+export function AnswerButtons({
+  questionId,
+  answer,
+  onAnswer,
+}: {
+  questionId: string;
+  answer?: "YES" | "NO";
+  onAnswer: (questionId: string, value: "YES" | "NO") => void;
+}) {
+  return (
+    <span role="group" aria-label="답하기" className="flex flex-none gap-[6px]">
+      {(["YES", "NO"] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          aria-pressed={answer === v}
+          onClick={() => onAnswer(questionId, v)}
+          className={cn(
+            "min-h-[40px] cursor-pointer rounded-[10px] border-0 px-[14px] text-[14px] font-bold",
+            answer === v ? "bg-text text-white" : "bg-fill text-text-sub",
+          )}
+        >
+          {v === "YES" ? "예" : "아니요"}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+/** 공고 안내: 출처가 준 요약 · 기관 · 문의처 · 접수 방법 · 링크 (모집 정책 · 사업 지원) */
+export function AboutSection({
+  about,
+  web,
+}: {
+  about: { summary?: string; rows: { label: string; value: string; href?: string }[] };
+  web?: boolean;
+}) {
+  return (
+    <section
+      aria-labelledby="about-h"
+      className={cn(
+        "bg-surface flex flex-col",
+        web
+          ? "rounded-card-lg gap-[14px] px-[32px] py-[28px]"
+          : "rounded-card mx-[16px] gap-[10px] px-[20px] py-[16px]",
+      )}
+    >
+      <h2
+        id="about-h"
+        className={cn("m-0 font-extrabold", web ? "tracking-title text-[22px]" : "text-[17px]")}
+      >
+        공고 안내
+      </h2>
+      {about.summary && (
+        <p className="m-0 text-[15px] leading-[1.7] whitespace-pre-line">{about.summary}</p>
+      )}
+      {about.rows.length > 0 && (
+        <dl className="m-0 flex flex-col">
+          {about.rows.map((r, i) => (
+            <div
+              key={r.label}
+              className={cn(
+                "flex flex-wrap justify-between gap-x-[16px] gap-y-[4px] py-[10px] text-[15px]",
+                i < about.rows.length - 1 && "border-line-soft border-b border-solid",
+              )}
+            >
+              <dt className="text-text-sub">{r.label}</dt>
+              <dd className="m-0 font-bold whitespace-pre-line">
+                {r.href ? (
+                  <a href={r.href} target="_blank" rel="noreferrer">
+                    {r.value}
+                  </a>
+                ) : (
+                  r.value
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <span className="text-text-tertiary text-[12px]">
+        출처 사이트가 준 정보를 그대로 옮겼어요 · 정확한 내용은 공고 원문을 확인해 주세요
+      </span>
+    </section>
   );
 }
