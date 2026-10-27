@@ -35,7 +35,7 @@ const KIND: Record<string, { kind: string; icon: AlertIcon }> = {
   DEADLINE_D1: { kind: "마감 하루 전", icon: "clock" },
   CORRECTED: { kind: "정정 안내", icon: "notice" },
   FOLLOW_UP: { kind: "후속 안내", icon: "notice" },
-  // 내 제보에 관리자가 답함. 본문 끝에 「관리자 답변: …」이 붙어 와요 (알림함에만)
+  // 내 제보에 관리자가 답함 (처리 결과)
   REPORT_ANSWERED: { kind: "제보 답변", icon: "notice" },
 };
 
