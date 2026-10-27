@@ -20,6 +20,10 @@ export type ChatReport = {
     /** 검토 전 신고 수 */
     reportCount: number;
   };
+  /** 처리한 관리자 회원 ID (검토 전이면 없음) */
+  reviewedBy?: string | null;
+  /** 처리한 시각 */
+  reviewedAt?: string | null;
 };
 
 /** 화면용: 신고된 메시지 하나와 그 메시지에 들어온 신고들 */

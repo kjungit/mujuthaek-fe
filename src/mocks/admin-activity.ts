@@ -6,6 +6,7 @@ export type ActivityKind =
   | "BENEFIT_REPORT"
   | "PROGRAM_REPORT"
   | "AREA_REPORT"
+  | "CHAT_REPORT"
   | "CRITERIA"
   | "ROLE";
 

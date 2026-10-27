@@ -23,6 +23,7 @@ const GROUP_OF: Record<ActivityKind, Group> = {
   BENEFIT_REPORT: "report",
   PROGRAM_REPORT: "report",
   AREA_REPORT: "report",
+  CHAT_REPORT: "report",
   CRITERIA: "criteria",
   ROLE: "role",
 };
@@ -34,6 +35,7 @@ const KIND_LABEL: Record<ActivityKind, string> = {
   BENEFIT_REPORT: "혜택 제보",
   PROGRAM_REPORT: "창업 사업 제보",
   AREA_REPORT: "생활권 제보",
+  CHAT_REPORT: "채팅 신고",
   CRITERIA: "기준값",
   ROLE: "관리자",
 };
@@ -43,6 +45,8 @@ const ACTION: Record<string, { label: string; cls: string }> = {
   EDITED_APPROVED: { label: "고쳐서 승인", cls: "bg-ok-bg text-ok-text" },
   REJECTED: { label: "반려", cls: "bg-fill text-text" },
   REOPENED: { label: "다시 열기", cls: "bg-check-bg text-check-text" },
+  KEPT_HIDDEN: { label: "계속 가리기", cls: "bg-danger-bg text-danger-text" },
+  RESTORED: { label: "다시 보이기", cls: "bg-ok-bg text-ok-text" },
   FIXED: { label: "고침", cls: "bg-ok-bg text-ok-text" },
   KEPT: { label: "그대로 둠", cls: "bg-fill text-text" },
   REPLACED: { label: "값 바꿈", cls: "bg-check-bg text-check-text" },
@@ -92,7 +96,7 @@ export function AdminWebActivity() {
       <AdminTitleRow>
         <AdminTitle
           title="처리 기록"
-          desc="관리자가 처리한 검수·제보·기준값과 관리자 지정·권한·이용 정지를 최근 순으로 보여 줘요 · 채팅 신고 처리는 누가 했는지 남지 않아요"
+          desc="관리자가 처리한 검수·제보·채팅 신고·기준값과 관리자 지정·권한·이용 정지를 최근 순으로 보여 줘요"
         />
         <div role="group" aria-label="기간" className="flex flex-wrap gap-[6px]">
           {PERIODS.map((p) => (
