@@ -11,6 +11,7 @@ import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { SpaceDetail } from "@/mocks/business";
+import { AboutSection, AnswerButtons } from "./parts";
 
 const card = "bg-surface mx-[16px] flex flex-col rounded-card px-[20px] py-[16px]";
 const h3 = "m-0 text-[17px] font-extrabold";
@@ -38,16 +39,20 @@ export function MSupportDetail({ id }: { id: string }) {
   );
 }
 
+type OnAnswer = (questionId: string, value: "YES" | "NO") => void;
+
 function MBizDetail({
   data,
   loading,
   error,
   back,
+  answer,
 }: {
   data: SpaceDetail | undefined;
   loading: boolean;
   error: boolean;
   back: Back;
+  answer?: OnAnswer;
 }) {
   if (!data) {
     return (
@@ -66,14 +71,23 @@ function MBizDetail({
       </MPage>
     );
   }
-  return <MSpaceDetailView data={data} back={back} />;
+  return <MSpaceDetailView data={data} back={back} onAnswer={answer} />;
 }
 
-function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
+function MSpaceDetailView({
+  data,
+  back,
+  onAnswer,
+}: {
+  data: SpaceDetail;
+  back: Back;
+  onAnswer?: OnAnswer;
+}) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const [fav, setFav] = useState(false);
   const met = data.rules.filter((r) => r.met).length;
-  const unmet = data.rules.length - met;
+  const no = data.rules.filter((r) => r.notMet).length;
+  const unmet = data.rules.length - met - no;
 
   return (
     <MPage>
@@ -117,6 +131,8 @@ function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
           </div>
         </section>
 
+        {data.about && <AboutSection about={data.about} />}
+
         <section aria-labelledby="me-h" className={cn(card, "gap-[6px]")}>
           <h3 id="me-h" className={h3}>
             내 자격
@@ -124,10 +140,63 @@ function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
           <span className="bg-ok-bg text-ok-text my-[4px] rounded-sm px-[12px] py-[10px] text-[14px] font-bold">
             {data.notReady
               ? "자격 조건을 정리하고 있어요 · 원문을 확인해 주세요"
-              : `${data.rules.length}개 중 ${met}개 충족 · ${unmet}개 확인 필요`}
+              : `${data.rules.length}개 중 ${met}개 충족 · ${unmet}개 확인 필요${no ? ` · ${no}개 해당 안 됨` : ""}`}
           </span>
           {data.rules.map((r, i) =>
-            r.met ? (
+            r.options ? (
+              <div
+                key={`${i}-${r.label}`}
+                className={cn(
+                  row(i === data.rules.length - 1),
+                  "flex-col items-stretch gap-[8px] py-[10px]",
+                )}
+              >
+                <span className="flex items-center justify-between gap-[8px]">
+                  <span className="font-bold">{r.label}</span>
+                  <span
+                    className={cn(
+                      "flex-none text-[13px] font-bold",
+                      r.met ? "text-ok-text" : r.notMet ? "text-text-sub" : "text-check-text",
+                    )}
+                  >
+                    {r.met ? "충족" : r.notMet ? "해당 안 돼요" : "확인 필요"}
+                  </span>
+                </span>
+                {r.options.map((o, k) => (
+                  <div
+                    key={k}
+                    className="bg-bg rounded-control flex flex-col gap-[8px] px-[12px] py-[10px]"
+                  >
+                    <span className="text-text-sub text-[12px] font-bold">
+                      {k + 1}번째 길 {o.met ? "· 충족" : o.notMet ? "· 해당 안 됨" : ""}
+                    </span>
+                    {o.rules.map((x, m) => (
+                      <div key={m} className="flex flex-col gap-[6px]">
+                        <span className="text-[14px] leading-[1.5]">{x.mRule || o.label}</span>
+                        {x.questionId && onAnswer && (
+                          <AnswerButtons
+                            questionId={x.questionId}
+                            answer={x.answer}
+                            onAnswer={onAnswer}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : r.questionId && onAnswer ? (
+              <div
+                key={`${i}-${r.label}`}
+                className={cn(
+                  row(i === data.rules.length - 1),
+                  "flex-col items-stretch gap-[8px] py-[10px]",
+                )}
+              >
+                <span className="text-[14px] leading-[1.5]">{r.mRule}</span>
+                <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />
+              </div>
+            ) : r.met ? (
               <div
                 key={`${i}-${r.label}`}
                 className={cn(row(i === data.rules.length - 1), "py-[10px]")}
@@ -146,12 +215,16 @@ function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
                   <span>{r.label}</span>
                   {r.mRule && <span className="text-text-sub text-[13px]">{r.mRule}</span>}
                 </span>
-                <Link
-                  href={routes.bizOnboarding}
-                  className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-                >
-                  확인 필요 · 입력
-                </Link>
+                {r.notMet ? (
+                  <span className="text-text-sub flex-none font-bold">해당 안 돼요</span>
+                ) : (
+                  <Link
+                    href={routes.bizOnboarding}
+                    className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
+                  >
+                    확인 필요 · 입력
+                  </Link>
+                )}
               </div>
             ),
           )}

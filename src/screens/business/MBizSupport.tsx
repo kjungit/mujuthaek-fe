@@ -5,13 +5,14 @@ import { ChevronRight, MapPin } from "lucide-react";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
-import { useSupportList } from "@/features/business/queries";
+import { useRegionScope, useSupportList } from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { routes } from "@/lib/routes";
-import { SupportBadge, TypeFilters, supportFilters } from "./parts";
+import { RegionScopeChips, SupportBadge, TypeFilters, supportFilters } from "./parts";
 
 export function MBizSupport() {
-  const { data, loading } = useSupportList();
+  const scope = useRegionScope();
+  const { data, loading } = useSupportList(scope);
   const { filter, setFilter, count, visible } = useTypeFilter(data.items);
 
   return (
@@ -25,6 +26,8 @@ export function MBizSupport() {
             {data.baseDate} 기준
           </span>
         </div>
+
+        <RegionScopeChips scope={scope} className="px-[4px]" />
 
         <TypeFilters
           label="지원 종류"
