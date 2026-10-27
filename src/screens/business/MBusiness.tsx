@@ -6,18 +6,22 @@ import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
 import { VerdictBadge } from "@/components/ui/Badge";
-import { useBizProfile, useBusinessSummary } from "@/features/business/queries";
+import {
+  useBizProfileChips,
+  useBusinessSummary,
+  useInitialSpaceType,
+  useRegionScope,
+} from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import { TypeFilters, spaceFilters, spaceLink, spaceThumb } from "./parts";
+import { RegionScopeChips, TypeFilters, spaceFilters, spaceLink, spaceThumb } from "./parts";
 
 export function MBusiness() {
-  const { data, loading } = useBusinessSummary();
-  const { data: profile } = useBizProfile();
-  const { filter, setFilter, count, visible } = useTypeFilter(data.list);
-
-  const profileChips = [profile.stageLabel, profile.industry, `희망 ${profile.region}`];
+  const scope = useRegionScope();
+  const { data, loading } = useBusinessSummary(scope);
+  const profileChips = useBizProfileChips();
+  const { filter, setFilter, count, visible } = useTypeFilter(data.list, useInitialSpaceType());
 
   return (
     <MPage>
@@ -44,7 +48,7 @@ export function MBusiness() {
             href={routes.bizOnboarding}
             className="rounded-pill bg-brand-soft text-brand-strong hover:text-brand-strong flex-none px-[12px] py-[6px] text-[13px] font-bold no-underline"
           >
-            수정
+            {profileChips.length ? "수정" : "사업 정보 입력하기"}
           </Link>
         </div>
 
@@ -65,9 +69,15 @@ export function MBusiness() {
           >
             <span className="text-text-sub text-[13px] font-semibold">사업 지원</span>
             <span className="tracking-h1 text-[28px] font-extrabold">{data.support.count}개</span>
-            <span className="text-text-sub text-[12px]">최대 {data.support.maxAmount}</span>
+            <span className="text-text-sub text-[12px]">
+              {data.support.maxAmount
+                ? `최대 ${data.support.maxAmount}`
+                : `확인 필요 ${data.support.needCheck}개`}
+            </span>
           </Link>
         </div>
+
+        <RegionScopeChips scope={scope} className="px-[4px]" />
 
         <TypeFilters
           label="공간 종류"

@@ -1,21 +1,91 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Building, Check, ChevronLeft, ChevronRight, ExternalLink, Flag } from "lucide-react";
+import {
+  Bell,
+  Building,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Flag,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
-import { useSpaceDetail } from "@/features/business/queries";
+import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { SpaceDetail } from "@/mocks/business";
+import type { SpaceDetail, SpaceRule } from "@/mocks/business";
+import { AboutSection, AnswerButtons } from "./parts";
 
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
 
-function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
+type OnAnswer = (questionId: string, value: "YES" | "NO") => void;
+
+/** 조건 상태 동그라미: 충족 ✓ · 해당 안 됨 ✕ · 확인 필요 ? */
+function RuleMark({ met, notMet, small }: { met: boolean; notMet?: boolean; small?: boolean }) {
+  const size = small ? "size-[22px]" : "size-[28px]";
+  if (met)
+    return (
+      <span
+        className={cn(
+          "rounded-pill bg-brand flex flex-none items-center justify-center text-white",
+          size,
+        )}
+      >
+        <Check size={small ? 13 : 16} strokeWidth={3} aria-hidden />
+      </span>
+    );
+  if (notMet)
+    return (
+      <span
+        className={cn(
+          "rounded-pill bg-fill text-text-sub flex flex-none items-center justify-center",
+          size,
+        )}
+      >
+        <X size={small ? 13 : 16} strokeWidth={3} aria-hidden />
+      </span>
+    );
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "rounded-pill bg-check-bg text-check-text flex flex-none items-center justify-center font-extrabold",
+        size,
+        small ? "text-[13px]" : "text-[16px]",
+      )}
+    >
+      ?
+    </span>
+  );
+}
+
+/** 오른쪽 칸: 질문이면 예 · 아니요, 아니면 결과 (확인 필요면 사업 정보 입력으로) */
+function RuleAction({ r, onAnswer }: { r: SpaceRule; onAnswer?: OnAnswer }) {
+  if (r.questionId && onAnswer)
+    return <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />;
+  if (r.met) return <span className="text-ok-text flex-none text-[14px] font-bold">충족</span>;
+  if (r.notMet)
+    return <span className="text-text-sub flex-none text-[14px] font-bold">해당 안 돼요</span>;
+  if (r.options)
+    return <span className="text-check-text flex-none text-[14px] font-bold">확인 필요</span>;
+  return (
+    <Link
+      href={routes.bizOnboarding}
+      className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
+    >
+      확인 필요 · 입력
+    </Link>
+  );
+}
+
+function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?: OnAnswer }) {
   return (
     <div className="flex flex-col">
       {rules.map((r, i) => {
@@ -24,40 +94,43 @@ function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
           <div
             key={`${i}-${r.label}`}
             className={cn(
-              "flex items-center gap-[12px]",
-              last ? "flex-wrap pt-[12px]" : "border-line-soft border-b border-solid py-[12px]",
+              "flex flex-col gap-[10px]",
+              last ? "pt-[12px]" : "border-line-soft border-b border-solid py-[12px]",
             )}
           >
-            {r.met ? (
-              <span className="rounded-pill bg-brand flex size-[28px] flex-none items-center justify-center text-white">
-                <Check size={16} strokeWidth={3} aria-hidden />
+            <div className="flex items-center gap-[12px]">
+              <RuleMark met={r.met} notMet={r.notMet} />
+              <span className="flex flex-1 flex-col gap-[2px]">
+                <span className="text-[15px] font-bold">{r.label}</span>
+                {r.rule && <span className="text-text-sub text-[13px]">{r.rule}</span>}
+                {r.quote && (
+                  <span className="text-text-tertiary text-[12px] leading-[1.5]">
+                    원문 · {r.quote}
+                  </span>
+                )}
               </span>
-            ) : (
-              <span
-                aria-hidden
-                className="rounded-pill bg-check-bg text-check-text flex size-[28px] flex-none items-center justify-center text-[16px] font-extrabold"
-              >
-                ?
-              </span>
-            )}
-            <span className="flex flex-1 flex-col gap-[2px]">
-              <span className="text-[15px] font-bold">{r.label}</span>
-              <span className="text-text-sub text-[13px]">{r.rule}</span>
-              {r.quote && (
-                <span className="text-text-tertiary text-[12px] leading-[1.5]">
-                  원문 · {r.quote}
-                </span>
-              )}
-            </span>
-            {r.met ? (
-              <span className="text-ok-text text-[14px] font-bold">충족</span>
-            ) : (
-              <Link
-                href={routes.bizOnboarding}
-                className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-              >
-                확인 필요 · 입력
-              </Link>
+              <RuleAction r={r} onAnswer={onAnswer} />
+            </div>
+            {r.options && (
+              <ol className="m-0 ml-[40px] flex list-none flex-col gap-[8px] p-0">
+                {r.options.map((o, k) => (
+                  <li
+                    key={k}
+                    className="bg-bg rounded-tile flex flex-col gap-[8px] px-[14px] py-[12px]"
+                  >
+                    <span className="flex items-center gap-[8px]">
+                      <RuleMark met={o.met} notMet={o.notMet} small />
+                      <span className="text-text-sub text-[13px] font-bold">{k + 1}번째 길</span>
+                    </span>
+                    {o.rules.map((x, m) => (
+                      <div key={m} className="flex items-center gap-[10px]">
+                        <span className="flex-1 text-[14px]">{x.rule || o.label}</span>
+                        <RuleAction r={x} onAnswer={onAnswer} />
+                      </div>
+                    ))}
+                  </li>
+                ))}
+              </ol>
             )}
           </div>
         );
@@ -66,12 +139,44 @@ function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
   );
 }
 
+/** 돌아갈 목록: 공간 상세는 사업공간 홈, 사업 지원 상세는 사업 지원 목록 */
+type Back = { href: string; label: string; noun: string };
+
 export function WebSpaceDetail({ id }: { id: string }) {
-  const { data, loading, error } = useSpaceDetail(id);
+  return (
+    <WebBizDetail
+      {...useSpaceDetail(id)}
+      back={{ href: routes.business, label: "공간 목록", noun: "공간" }}
+    />
+  );
+}
+
+export function WebSupportDetail({ id }: { id: string }) {
+  return (
+    <WebBizDetail
+      {...useSupportDetail(id)}
+      back={{ href: routes.bizSupport, label: "사업 지원 목록", noun: "사업 지원" }}
+    />
+  );
+}
+
+function WebBizDetail({
+  data,
+  loading,
+  error,
+  back,
+  answer,
+}: {
+  data: SpaceDetail | undefined;
+  loading: boolean;
+  error: boolean;
+  back: Back;
+  answer?: OnAnswer;
+}) {
   if (!data) {
     return (
       <WebPage>
-        <WebHeader mode="business" current={routes.business} unread={3} />
+        <WebHeader mode="business" current={back.href} unread={3} />
         <WebMain className="pt-[24px]">
           {(loading || error) && (
             <div
@@ -79,35 +184,44 @@ export function WebSpaceDetail({ id }: { id: string }) {
               className="rounded-card-lg bg-surface text-text-sub px-[24px] py-[64px] text-center text-[15px]"
             >
               {error
-                ? "공간을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요"
-                : "공간을 불러오는 중이에요"}
+                ? `${back.noun}을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요`
+                : `${back.noun}을 불러오는 중이에요`}
             </div>
           )}
         </WebMain>
       </WebPage>
     );
   }
-  return <WebSpaceDetailView data={data} />;
+  return <WebSpaceDetailView data={data} back={back} onAnswer={answer} />;
 }
 
-function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
+function WebSpaceDetailView({
+  data,
+  back,
+  onAnswer,
+}: {
+  data: SpaceDetail;
+  back: Back;
+  onAnswer?: OnAnswer;
+}) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const [fav, setFav] = useState(false);
   // 모집 정책은 공간 정보 대신 자격 조건이 많아서 넓은 칸에 보여줘요
   const wideRules = data.rules.length > 0 && Boolean(data.summaryNote);
   const met = data.rules.filter((r) => r.met).length;
-  const unmet = data.rules.length - met;
+  const no = data.rules.filter((r) => r.notMet).length;
+  const unmet = data.rules.length - met - no;
 
   return (
     <WebPage>
-      <WebHeader mode="business" current={routes.business} unread={3} />
+      <WebHeader mode="business" current={back.href} unread={3} />
       <WebMain className="gap-[16px] pt-[24px]">
         <Link
-          href={routes.business}
+          href={back.href}
           className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[4px] self-start text-[15px] font-semibold no-underline"
         >
           <ChevronLeft size={18} aria-hidden />
-          공간 목록
+          {back.label}
         </Link>
 
         <div className="flex flex-wrap items-start gap-[24px]">
@@ -153,6 +267,8 @@ function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
               </div>
             </section>
 
+            {data.about && <AboutSection about={data.about} web />}
+
             {wideRules && (
               <section
                 aria-labelledby="rules-h"
@@ -165,7 +281,7 @@ function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
                   공고 원문에서 뽑은 조건이에요 · 확인 필요는 사업 정보를 넣거나 원문으로 확인해
                   주세요
                 </span>
-                <RuleList rules={data.rules} />
+                <RuleList rules={data.rules} onAnswer={onAnswer} />
               </section>
             )}
 
@@ -324,9 +440,9 @@ function WebSpaceDetailView({ data }: { data: SpaceDetail }) {
               <div className="rounded-tile bg-ok-bg text-ok-text px-[16px] py-[14px] text-[15px] font-bold">
                 {data.notReady
                   ? "자격 조건을 정리하고 있어요 · 원문을 확인해 주세요"
-                  : `${data.rules.length}개 조건 중 ${met}개 충족 · ${unmet}개 확인 필요`}
+                  : `${data.rules.length}개 조건 중 ${met}개 충족 · ${unmet}개 확인 필요${no ? ` · ${no}개 해당 안 됨` : ""}`}
               </div>
-              {!wideRules && <RuleList rules={data.rules} />}
+              {!wideRules && <RuleList rules={data.rules} onAnswer={onAnswer} />}
             </section>
 
             <section aria-label="신청" className={cn(card, "gap-[10px] p-[22px]")}>
