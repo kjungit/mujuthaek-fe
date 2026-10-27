@@ -65,6 +65,11 @@ export function MAlerts() {
             >
               푸시 알림 켜기
             </button>
+            {push.error && (
+              <span role="alert" className="text-danger-text text-[13px] font-bold">
+                {push.error}
+              </span>
+            )}
             <Link
               href={routes.install}
               className="border-brand/18 text-brand-strong hover:text-brand-strong inline-flex min-h-[44px] items-center border-t border-solid text-[14px] font-bold no-underline"
@@ -129,7 +134,9 @@ export function MAlerts() {
                   >
                     {a.short?.title ?? a.title}
                   </span>
-                  <span className="text-text-sub text-[13px]">{a.short?.body ?? a.body}</span>
+                  <span className="text-text-sub text-[13px] whitespace-pre-line">
+                    {a.short?.body ?? a.body}
+                  </span>
                 </span>
               </button>
             ))}

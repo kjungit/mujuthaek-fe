@@ -1,7 +1,7 @@
-// 화면용 예시 데이터 (디자인 WebAlerts · MAlerts). 실제 값은 API에서 받아요.
+// 화면용 예시 데이터 (디자인 WebAlerts · MAlerts). 실제 값은 알림함 API (features/alerts/api.ts)
 
 export type AlertType = "공고" | "혜택" | "공지";
-export type AlertGroup = "오늘" | "어제" | "이번 주";
+export type AlertGroup = "오늘" | "어제" | "이번 주" | "이전";
 export type AlertIcon = "home" | "clock" | "benefit" | "notice";
 
 export type AlertItem = {

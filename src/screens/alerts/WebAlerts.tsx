@@ -122,7 +122,9 @@ export function WebAlerts() {
                         >
                           {a.title}
                         </span>
-                        <span className="text-text-sub text-[14px]">{a.body}</span>
+                        <span className="text-text-sub text-[14px] whitespace-pre-line">
+                          {a.body}
+                        </span>
                       </span>
                       <span
                         aria-hidden
@@ -160,6 +162,11 @@ export function WebAlerts() {
                 >
                   이 브라우저에서 알림 받기
                 </button>
+              )}
+              {push.error && (
+                <span role="alert" className="text-[13px] font-bold text-white">
+                  {push.error}
+                </span>
               )}
             </section>
 
