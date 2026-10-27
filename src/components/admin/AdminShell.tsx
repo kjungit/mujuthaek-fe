@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   ClipboardCheck,
   Database,
   ExternalLink,
@@ -46,6 +47,7 @@ const menu: MenuItem[] = [
     icon: Flag,
     count: { key: "newReports", tone: "wait" },
   },
+  { href: routes.adminTraffic, label: "트래픽", icon: Activity },
 ];
 
 /** 관리자 화면 틀: 왼쪽 232px 어두운 사이드바 + 본문 */
