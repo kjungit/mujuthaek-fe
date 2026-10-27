@@ -76,10 +76,8 @@ export const ROUTE_PERMISSIONS: Record<string, AdminPermission[]> = {
   [routes.adminReview]: ["NOTICE_REVIEW", "BENEFIT_REVIEW"],
   [routes.adminSources]: ["SOURCES"],
   [routes.adminCriteria]: ["CRITERIA"],
-  [routes.adminReports]: ["REPORTS"],
+  [routes.adminReports]: ["REPORTS", "CHAT"],
   [routes.adminTraffic]: ["TRAFFIC"],
-  [routes.adminNotifications]: ["TRAFFIC"],
-  [routes.adminChat]: ["CHAT"],
   [routes.adminUsers]: [
     "USERS_VIEW",
     "USERS_SUSPEND",
