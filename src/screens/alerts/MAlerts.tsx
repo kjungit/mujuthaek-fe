@@ -134,7 +134,9 @@ export function MAlerts() {
                   >
                     {a.short?.title ?? a.title}
                   </span>
-                  <span className="text-text-sub text-[13px]">{a.short?.body ?? a.body}</span>
+                  <span className="text-text-sub text-[13px] whitespace-pre-line">
+                    {a.short?.body ?? a.body}
+                  </span>
                 </span>
               </button>
             ))}

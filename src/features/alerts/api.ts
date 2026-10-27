@@ -6,7 +6,7 @@ import type { AlertGroup, AlertIcon, AlertItem, AlertsData, AlertType } from "@/
 /** GET /api/users/me/notifications 한 줄 */
 type InboxItem = {
   id: string;
-  /** NEW_NOTICE · NEW_SUPPORT · DEADLINE_D3 · DEADLINE_D1 · CORRECTED · FOLLOW_UP */
+  /** NEW_NOTICE · NEW_SUPPORT · DEADLINE_D3 · DEADLINE_D1 · CORRECTED · FOLLOW_UP · REPORT_ANSWERED */
   type: string;
   /** NOTICE · BENEFIT · SPACE_RECRUITMENT */
   target: { type: string; id: string } | null;
@@ -35,6 +35,8 @@ const KIND: Record<string, { kind: string; icon: AlertIcon }> = {
   DEADLINE_D1: { kind: "마감 하루 전", icon: "clock" },
   CORRECTED: { kind: "정정 안내", icon: "notice" },
   FOLLOW_UP: { kind: "후속 안내", icon: "notice" },
+  // 내 제보에 관리자가 답함. 본문 끝에 「관리자 답변: …」이 붙어 와요 (알림함에만)
+  REPORT_ANSWERED: { kind: "제보 답변", icon: "notice" },
 };
 
 const KST = "Asia/Seoul";

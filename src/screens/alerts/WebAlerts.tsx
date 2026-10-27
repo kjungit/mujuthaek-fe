@@ -122,7 +122,9 @@ export function WebAlerts() {
                         >
                           {a.title}
                         </span>
-                        <span className="text-text-sub text-[14px]">{a.body}</span>
+                        <span className="text-text-sub text-[14px] whitespace-pre-line">
+                          {a.body}
+                        </span>
                       </span>
                       <span
                         aria-hidden
