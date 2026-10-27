@@ -161,6 +161,11 @@ export function WebAlerts() {
                   이 브라우저에서 알림 받기
                 </button>
               )}
+              {push.error && (
+                <span role="alert" className="text-[13px] font-bold text-white">
+                  {push.error}
+                </span>
+              )}
             </section>
 
             <section

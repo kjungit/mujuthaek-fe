@@ -10,6 +10,12 @@ function urlBase64ToUint8Array(base64String: string) {
   return Uint8Array.from(rawData, (char) => char.charCodeAt(0));
 }
 
+function sameKey(a: ArrayBuffer | null, b: Uint8Array) {
+  if (!a || a.byteLength !== b.length) return false;
+  const x = new Uint8Array(a);
+  return x.every((v, i) => v === b[i]);
+}
+
 export function isPushSupported() {
   return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
@@ -27,13 +33,22 @@ async function publicKey() {
 }
 
 export async function subscribePush() {
-  const key = await publicKey().catch(() => "");
-  if (!key) throw new Error("웹 푸시 공개키를 받지 못했어요.");
-
+  // 허용 창은 버튼을 누른 바로 그때 띄워야 브라우저가 막지 않아요 (다른 요청을 먼저 기다리지 않기)
   const permission = await Notification.requestPermission();
-  if (permission !== "granted") throw new Error("알림 권한이 허용되지 않았어요.");
+  if (permission !== "granted")
+    throw new Error(
+      "브라우저에서 알림이 허용되지 않았어요. 주소창 왼쪽 자물쇠에서 알림을 허용해 주세요.",
+    );
+
+  const key = await publicKey().catch(() => "");
+  if (!key) throw new Error("알림 서버 설정(공개키)을 받지 못했어요. 잠시 뒤 다시 해 주세요.");
 
   const registration = await navigator.serviceWorker.ready;
+  // 예전에 다른 키로 받은 구독이 남아 있으면 새 키로 받을 수 없어서 먼저 풀어요
+  const old = await registration.pushManager.getSubscription();
+  if (old && !sameKey(old.options.applicationServerKey, urlBase64ToUint8Array(key))) {
+    await old.unsubscribe();
+  }
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(key),
