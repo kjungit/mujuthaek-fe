@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Lock } from "lucide-react";
 import { useAdminMe, type AdminMe } from "@/components/admin/AdminGuard";
 import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
 import {
@@ -498,18 +499,30 @@ function UserPanel({
     : wholeBlock(me, u, "정지");
   const appointBlock = !has(me, "ADMIN_APPOINT") ? "「관리자 지정」 권한이 없어요" : null;
 
+  const added = picked.filter((p) => !u.permissions.includes(p));
+  const removed = u.permissions.filter((p) => !picked.includes(p));
+
   return (
-    <div className="flex flex-col gap-[18px]">
-      <div className="text-text-sub flex flex-wrap gap-x-[12px] text-[13px]">
-        <span>
-          회원 ID <span className="font-mono">{u.id}</span>
-        </span>
-      </div>
+    <div className="flex flex-col gap-[14px]">
+      <span className="text-text-sub text-[13px]">
+        회원 ID <span className="text-text font-mono">{u.id}</span>
+      </span>
 
       {/* 단계 */}
-      <div className="flex flex-col gap-[8px]">
-        <h3 className="m-0 text-[15px] font-extrabold">단계 · {ROLE_LABEL[u.role]}</h3>
-        <div className="flex flex-wrap items-center gap-[8px]">
+      <PanelSection
+        title="단계"
+        aside={
+          <span
+            className={cn(
+              "rounded-tag px-[10px] py-[3px] text-[13px] font-extrabold",
+              u.role === "ADMIN" ? "bg-brand-soft text-brand-strong" : "bg-fill text-text",
+            )}
+          >
+            {ROLE_LABEL[u.role]}
+          </span>
+        }
+      >
+        <div className="flex flex-wrap items-start gap-[10px]">
           {u.role === "USER" ? (
             <ActionButton
               label="관리자로 지정"
@@ -544,7 +557,7 @@ function UserPanel({
           {isSuper(me) && u.role === "ADMIN" && (
             <ActionButton
               label="최상위 넘기기"
-              tone="plain"
+              tone="warn"
               block={u.suspension ? "이용 정지 중인 관리자에게는 넘길 수 없어요" : null}
               busy={busy}
               onClick={() =>
@@ -560,59 +573,95 @@ function UserPanel({
             />
           )}
         </div>
-      </div>
+      </PanelSection>
 
       {/* 권한 */}
       {u.role === "ADMIN" && (
-        <div className="flex flex-col gap-[10px]">
-          <div className="flex flex-wrap items-baseline justify-between gap-[8px]">
-            <h3 className="m-0 text-[15px] font-extrabold">권한</h3>
-            {grantLock && <span className="text-text-sub text-[13px]">{grantLock}</span>}
-          </div>
+        <PanelSection
+          title="권한"
+          aside={
+            <span className="text-text-sub text-[13px]">
+              {u.permissions.length ? `${u.permissions.length}개 받음` : "아직 받은 권한이 없어요"}
+            </span>
+          }
+        >
+          {grantLock && <Hint>{grantLock}</Hint>}
           {!grantLock && (
-            <div className="flex flex-wrap gap-[6px]">
+            <div className="flex flex-wrap items-center gap-[6px]">
+              <span className="text-text-sub mr-[4px] text-[13px] font-bold">빠른 선택</span>
               {PERMISSION_PRESETS.map((p) => (
                 <button
                   key={p.label}
                   type="button"
                   onClick={() => preset(p.items)}
-                  className="rounded-pill bg-fill text-text-sub min-h-[34px] cursor-pointer border-0 px-[12px] text-[13px] font-bold"
+                  className="rounded-pill border-line bg-surface text-text hover:bg-fill min-h-[34px] cursor-pointer border border-solid px-[12px] text-[13px] font-bold"
                 >
                   {p.label}
                 </button>
               ))}
             </div>
           )}
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-[10px]">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-[12px]">
             {PERMISSION_GROUPS.map((g) => (
               <fieldset
                 key={g.label}
-                className="rounded-control border-line-soft m-0 flex flex-col gap-[6px] border border-solid px-[12px] py-[10px]"
+                className="rounded-control border-line bg-surface m-0 flex min-w-0 flex-col gap-[4px] border border-solid px-[14px] pt-[10px] pb-[12px]"
               >
-                <legend className="text-text-sub px-[4px] text-[12px] font-bold">{g.label}</legend>
+                <legend className="text-text px-[6px] text-[13px] font-extrabold">{g.label}</legend>
                 {g.items.map((p) => {
                   const lock = lockOf(p);
+                  const on = picked.includes(p);
+                  const mark =
+                    on && !u.permissions.includes(p)
+                      ? "add"
+                      : !on && u.permissions.includes(p)
+                        ? "remove"
+                        : null;
                   return (
                     <label
                       key={p}
-                      title={lock ?? PERMISSION_INFO[p].desc}
                       className={cn(
-                        "flex items-start gap-[8px] text-[14px]",
-                        lock ? "opacity-50" : "cursor-pointer",
+                        "flex items-start gap-[10px] rounded-sm px-[6px] py-[7px]",
+                        lock ? "cursor-not-allowed" : "hover:bg-fill cursor-pointer",
+                        mark === "add" && "bg-ok-bg",
+                        mark === "remove" && "bg-danger-bg",
                       )}
                     >
                       <input
                         type="checkbox"
-                        checked={picked.includes(p)}
+                        checked={on}
                         disabled={!!lock || busy}
                         onChange={() => toggle(p)}
-                        className="mt-[3px]"
+                        className="accent-brand mt-[2px] size-[18px] flex-none"
                       />
-                      <span className="flex flex-col">
-                        <span className="font-bold">{PERMISSION_INFO[p].label}</span>
-                        <span className="text-text-sub text-[12px]">
-                          {lock ?? PERMISSION_INFO[p].desc}
+                      <span className="flex min-w-0 flex-col gap-[2px]">
+                        <span
+                          className={cn(
+                            "flex items-center gap-[6px] text-[15px] font-bold",
+                            lock ? "text-text-sub" : "text-text",
+                          )}
+                        >
+                          {PERMISSION_INFO[p].label}
+                          {mark && (
+                            <span
+                              className={cn(
+                                "text-[11px] font-extrabold",
+                                mark === "add" ? "text-ok-text" : "text-danger-text",
+                              )}
+                            >
+                              {mark === "add" ? "+ 추가" : "− 빼기"}
+                            </span>
+                          )}
                         </span>
+                        <span className="text-text-sub text-[13px] leading-[1.45]">
+                          {PERMISSION_INFO[p].desc}
+                        </span>
+                        {lock && (
+                          <span className="text-check-text flex items-center gap-[4px] text-[12px] font-bold">
+                            <Lock size={12} aria-hidden />
+                            {lock}
+                          </span>
+                        )}
                       </span>
                     </label>
                   );
@@ -621,37 +670,49 @@ function UserPanel({
             ))}
           </div>
           {!grantLock && (
-            <div className="flex items-center gap-[8px]">
+            <div className="border-line-soft flex flex-wrap items-center gap-[10px] border-t border-solid pt-[12px]">
+              <span className="text-text text-[14px] font-bold">
+                {changed ? `추가 ${added.length} · 빼기 ${removed.length}` : "바뀐 권한이 없어요"}
+              </span>
+              <span className="flex-1" />
+              {changed && (
+                <button
+                  type="button"
+                  onClick={() => setPicked(u.permissions)}
+                  className="rounded-control bg-fill text-text min-h-[40px] cursor-pointer border-0 px-[14px] text-[14px] font-bold"
+                >
+                  되돌리기
+                </button>
+              )}
               <ActionButton
                 label="권한 저장"
                 tone="brand"
-                block={changed ? null : "바뀐 권한이 없어요"}
+                block={changed ? null : ""}
                 busy={busy}
                 onClick={() =>
                   run(null, `${name}님의 권한을 저장했어요`, () => setUserPermissions(u.id, picked))
                 }
               />
-              {changed && (
-                <button
-                  type="button"
-                  onClick={() => setPicked(u.permissions)}
-                  className="text-text-sub cursor-pointer border-0 bg-transparent text-[13px] font-bold underline"
-                >
-                  되돌리기
-                </button>
-              )}
             </div>
           )}
-        </div>
+        </PanelSection>
       )}
 
       {/* 이용 정지 */}
-      <div className="flex flex-col gap-[8px]">
-        <h3 className="m-0 text-[15px] font-extrabold">이용 정지</h3>
+      <PanelSection
+        title="이용 정지"
+        aside={
+          u.suspension ? (
+            <span className="rounded-tag bg-danger-bg text-danger-text px-[10px] py-[3px] text-[13px] font-extrabold">
+              정지 중
+            </span>
+          ) : null
+        }
+      >
         {u.suspension ? (
-          <div className="flex flex-wrap items-center gap-[10px] text-[14px]">
-            <span className="rounded-tag bg-danger-bg text-danger-text px-[10px] py-[4px] text-[13px] font-extrabold">
-              {u.suspension.until ? `${when(u.suspension.until)}까지` : "해제할 때까지"} ·{" "}
+          <div className="flex flex-wrap items-center gap-[12px] text-[14px]">
+            <span className="text-text">
+              <b>{u.suspension.until ? `${when(u.suspension.until)}까지` : "해제할 때까지"}</b> ·{" "}
               {u.suspension.reason}
             </span>
             <ActionButton
@@ -667,51 +728,88 @@ function UserPanel({
             />
           </div>
         ) : suspendBlock ? (
-          <span className="text-text-sub text-[13px]">{suspendBlock}</span>
+          <Hint>{suspendBlock}</Hint>
         ) : (
-          <div className="flex flex-wrap items-center gap-[8px]">
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              maxLength={200}
-              placeholder="정지 이유 (회원에게는 보이지 않아요)"
-              aria-label="정지 이유"
-              className="rounded-control border-line min-h-[40px] min-w-[220px] flex-1 border border-solid px-[12px] text-[14px]"
-            />
-            <select
-              aria-label="정지 기간"
-              value={period ?? ""}
-              onChange={(e) => setPeriod(e.target.value ? Number(e.target.value) : null)}
-              className="rounded-control border-line min-h-[40px] border border-solid px-[10px] text-[14px]"
-            >
-              {PERIODS.map((p) => (
-                <option key={p.label} value={p.days ?? ""}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-            <ActionButton
-              label="이용 정지"
-              tone="danger"
-              block={reason.trim() ? null : "정지 이유를 적어 주세요"}
-              busy={busy}
-              onClick={() =>
-                run(
-                  `${name}님을 ${period ? `${period}일` : "해제할 때까지"} 이용 정지할까요? 로그인이 바로 끊기고 다시 로그인할 수 없어요.`,
-                  `${name}님을 이용 정지했어요`,
-                  () =>
-                    suspendUser(
-                      u.id,
-                      reason.trim(),
-                      period ? new Date(Date.now() + period * 86_400_000).toISOString() : null,
-                    ),
-                )
-              }
-            />
+          <div className="flex flex-col gap-[6px]">
+            <div className="flex flex-wrap items-center gap-[8px]">
+              <input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                maxLength={200}
+                placeholder="정지 이유 (회원에게는 보이지 않아요)"
+                aria-label="정지 이유"
+                className="rounded-control border-line bg-surface min-h-[42px] max-w-[520px] min-w-[220px] flex-1 border border-solid px-[12px] text-[14px]"
+              />
+              <select
+                aria-label="정지 기간"
+                value={period ?? ""}
+                onChange={(e) => setPeriod(e.target.value ? Number(e.target.value) : null)}
+                className="rounded-control border-line bg-surface min-h-[42px] border border-solid px-[10px] text-[14px]"
+              >
+                {PERIODS.map((p) => (
+                  <option key={p.label} value={p.days ?? ""}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <ActionButton
+                label="이용 정지"
+                tone="danger"
+                block={reason.trim() ? null : ""}
+                busy={busy}
+                onClick={() =>
+                  run(
+                    `${name}님을 ${period ? `${period}일` : "해제할 때까지"} 이용 정지할까요? 로그인이 바로 끊기고 다시 로그인할 수 없어요.`,
+                    `${name}님을 이용 정지했어요`,
+                    () =>
+                      suspendUser(
+                        u.id,
+                        reason.trim(),
+                        period ? new Date(Date.now() + period * 86_400_000).toISOString() : null,
+                      ),
+                  )
+                }
+              />
+            </div>
+            <span className="text-text-sub text-[13px]">
+              이유를 적어야 정지할 수 있어요. 정지하면 로그인이 바로 끊기고, 기간이 지나면 저절로
+              풀려요.
+            </span>
           </div>
         )}
-      </div>
+      </PanelSection>
     </div>
+  );
+}
+
+/** 회원 관리 패널의 한 칸 (흰 카드 + 제목) */
+function PanelSection({
+  title,
+  aside,
+  children,
+}: {
+  title: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-card bg-surface border-line-soft flex flex-col gap-[12px] border border-solid px-[18px] py-[16px]">
+      <div className="flex flex-wrap items-center gap-[10px]">
+        <h3 className="text-text m-0 text-[16px] font-extrabold">{title}</h3>
+        {aside}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** 할 수 없는 이유 안내 */
+function Hint({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-control bg-check-bg text-check-text flex items-center gap-[6px] self-start px-[12px] py-[8px] text-[13px] font-bold">
+      <Lock size={14} aria-hidden />
+      {children}
+    </span>
   );
 }
 
@@ -723,28 +821,40 @@ function ActionButton({
   onClick,
 }: {
   label: string;
-  tone: "brand" | "plain" | "danger";
-  /** 누를 수 없는 이유 (있으면 버튼을 막고 옆에 보여 줘요) */
+  tone: "brand" | "plain" | "danger" | "warn";
+  /** 누를 수 없는 이유 (있으면 버튼을 막고 아래에 보여 줘요, 빈 문자열이면 막기만) */
   block: string | null;
   busy: boolean;
   onClick: () => void;
 }) {
+  const off = block != null || busy;
   return (
-    <span className="flex flex-wrap items-center gap-[8px]">
+    <span className="flex flex-col items-start gap-[4px]">
       <button
         type="button"
-        disabled={!!block || busy}
+        disabled={off}
         onClick={onClick}
         className={cn(
-          "rounded-control min-h-[38px] cursor-pointer border-0 px-[14px] text-[13px] font-bold disabled:cursor-default disabled:opacity-40",
-          tone === "brand" && "bg-brand text-white",
-          tone === "plain" && "bg-fill text-text",
-          tone === "danger" && "bg-danger-text text-white",
+          "rounded-control min-h-[40px] border-0 px-[16px] text-[14px] font-bold",
+          off
+            ? "bg-fill text-text-tertiary cursor-not-allowed"
+            : cn(
+                "cursor-pointer",
+                tone === "brand" && "bg-brand text-white",
+                tone === "plain" && "bg-fill text-text",
+                tone === "danger" && "bg-danger-text text-white",
+                tone === "warn" && "bg-check-bg text-check-text",
+              ),
         )}
       >
         {label}
       </button>
-      {block && <span className="text-text-sub text-[12px]">{block}</span>}
+      {block && (
+        <span className="text-check-text flex items-center gap-[4px] text-[12px] font-bold">
+          <Lock size={12} aria-hidden />
+          {block}
+        </span>
+      )}
     </span>
   );
 }
