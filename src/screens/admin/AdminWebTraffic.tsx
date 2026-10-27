@@ -164,7 +164,7 @@ function GaPanels({ tab, days }: { tab: Tab; days: number }) {
       {tab === "engagement" && <Engagement ga={data.ga} />}
       {data.ga.fetchedAt && (
         <span className="text-text-sub text-[13px]">
-          GA에서 가져온 시각 {when(data.ga.fetchedAt)} · GA 숫자는 한 시간쯤 다시 써요
+          GA에서 가져온 시각 {when(data.ga.fetchedAt)} · GA 숫자는 한 시간마다 새로 받아요
         </span>
       )}
     </>
@@ -281,7 +281,7 @@ function Acquisition({ ga }: { ga: TrafficData["ga"] }) {
           unit="세션"
         />
       </Card>
-      <Card title="캠페인" desc="알림·공유 링크에 붙인 utm_campaign">
+      <Card title="캠페인" desc="공유 링크 등에 붙인 캠페인 이름 (utm_campaign)">
         <BarList
           items={ga.campaigns.filter((c) => c.name !== "(not set)" && c.name !== "(direct)")}
           unit="세션"
@@ -362,9 +362,8 @@ function Bots({ data }: { data: BotTrafficData }) {
   return (
     <>
       <span className="text-text-sub text-[13px]">
-        api 요청과 화면 요청(주소를 직접 연 것, 프론트 서버가 넘겨요)을 세요. 화면 요청은 응답
-        코드를 몰라 오류 숫자에는 안 들어가요. IP는 마지막 자리를 가려 보여 주고, 원본은 14일 뒤
-        지워요
+        서비스 요청과 화면 접속을 함께 세요. 화면 접속은 오류 숫자에는 들어가지 않아요. IP는 마지막
+        자리를 가려 보여 주고, 원본은 14일 뒤 지워요
       </span>
       <Card title="보낸 쪽별 요청" desc={`${data.days}일`}>
         <div className="flex flex-wrap gap-[12px] text-[13px]">
@@ -443,7 +442,7 @@ function Bots({ data }: { data: BotTrafficData }) {
           <AccessList items={data.loginFailures} />
         </Card>
       </Grid>
-      <Card title="관리자 접근 기록" desc="관리자 API 요청(누가 했는지는 저장하지 않아요)">
+      <Card title="관리자 접근 기록" desc="관리자 화면에서 보낸 요청 (누가 했는지는 남기지 않아요)">
         <AccessList items={data.adminAccess} />
       </Card>
     </>

@@ -75,27 +75,28 @@ export function AdminWebHome() {
     {
       href: routes.adminReview,
       label: "검수 대기",
-      value: `${data.review.count}건`,
-      note: `가장 오래된 건 ${data.review.oldest} 째`,
+      value: data.review.count == null ? "-" : `${data.review.count}건`,
+      note:
+        data.review.count == null ? data.review.oldest : `가장 오래된 건 ${data.review.oldest} 째`,
       noteClassName: "text-check-text font-bold",
     },
     {
       href: routes.adminSources,
       label: "오늘 수집",
-      value: `${data.collected.count}건`,
+      value: data.collected.count == null ? "-" : `${data.collected.count}건`,
       note: data.collected.note,
     },
     {
       href: routes.adminSources,
       label: "수집 이상",
-      value: `${data.issues.count}곳`,
+      value: data.issues.count == null ? "-" : `${data.issues.count}곳`,
       note: data.issues.note,
       valueClassName: "text-danger-text",
     },
     {
       href: routes.adminReports,
       label: "새 제보",
-      value: `${data.reports.count}건`,
+      value: data.reports.count == null ? "-" : `${data.reports.count}건`,
       note: data.reports.note,
     },
   ].filter((c) => can(c.href));
@@ -195,10 +196,10 @@ export function AdminWebHome() {
                 오늘 처리
               </h2>
               <span className="text-text-sub text-[15px]">
-                승인 <strong className="text-text">{data.today.approved}</strong> · 수정 후 승인{" "}
-                <strong className="text-text">{data.today.editedApproved}</strong> · 반려{" "}
-                <strong className="text-text">{data.today.rejected}</strong> · 제보 답변{" "}
-                <strong className="text-text">{data.today.replied}</strong>
+                승인 <strong className="text-text">{data.today.approved ?? "-"}</strong> · 수정 후
+                승인 <strong className="text-text">{data.today.editedApproved ?? "-"}</strong> ·
+                반려 <strong className="text-text">{data.today.rejected ?? "-"}</strong> · 제보 답변{" "}
+                <strong className="text-text">{data.today.replied ?? "-"}</strong>
               </span>
             </section>
           </div>

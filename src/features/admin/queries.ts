@@ -93,13 +93,14 @@ export function useAdminOverview() {
     const empty = {
       ...adminOverview,
       asOf: wait,
-      review: { count: 0, oldest: "-" },
-      collected: { count: 0, note: wait },
-      issues: { count: 0, note: wait },
-      reports: { count: 0, note: wait },
+      // 받기 전에는 0이 아니라 「-」로 보여요
+      review: { count: null, oldest: wait },
+      collected: { count: null, note: wait },
+      issues: { count: null, note: wait },
+      reports: { count: null, note: wait },
       todos: [],
       quality: { asIs: "-", edited: "-", rejected: "-", medianTime: "-", fixedByReport: "-" },
-      today: { approved: 0, editedApproved: 0, rejected: 0, replied: 0 },
+      today: { approved: null, editedApproved: null, rejected: null, replied: null },
     };
     return { ...q, data: q.data ?? empty };
   }

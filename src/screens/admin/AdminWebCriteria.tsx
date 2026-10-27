@@ -15,9 +15,11 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "region", label: "지역 구분" },
 ];
 
+// 올해 값은 적용 중, 다음 해 값은 고시가 나오면 미리 넣어 둬요
+const THIS_YEAR = new Date().getFullYear();
 const YEARS = [
-  { y: 2026, label: "2026 · 적용 중" },
-  { y: 2027, label: "2027 · 입력 대기" },
+  { y: THIS_YEAR, label: `${THIS_YEAR} · 적용 중` },
+  { y: THIS_YEAR + 1, label: `${THIS_YEAR + 1} · 미리 입력` },
 ];
 
 const won = (v: number) => new Intl.NumberFormat("ko-KR").format(Math.round(v));
@@ -27,7 +29,7 @@ const td = "border-line-soft border-b border-solid px-[8px] py-[12px] text-right
 
 function IncomePanel() {
   const { data } = useAdminCriteria();
-  const [year, setYear] = useState(2026);
+  const [year, setYear] = useState(THIS_YEAR);
   const [note, setNote] = useState<string | null>(null);
   const setCounts = useSetAdminCounts();
   // 2027년 고시값을 「적용 예약」으로 실제 기준값 API에 넣어요
@@ -130,7 +132,7 @@ function IncomePanel() {
         ) : (
           <>
             <div className="rounded-tile bg-check-bg text-check-text px-[16px] py-[14px] text-[15px] font-bold">
-              {note ?? "고시값을 입력하면 2027년 1월 1일 0시부터 적용돼요"}
+              {note ?? `고시값을 입력하면 ${year}년 1월 1일 0시부터 적용돼요`}
             </div>
             <div
               className="grid gap-[12px]"
@@ -237,7 +239,7 @@ function ScorePanel() {
           청약 가점표 · 만점 {data.score.max}점
         </h2>
         <span className="text-text-sub text-[14px]">
-          주택공급에 관한 규칙 별표 1 · 청약 가점 계산은 판정 코드가 이 기준으로 해요
+          주택공급에 관한 규칙 별표 1 · 청약 가점은 이 기준으로 계산해요
         </span>
       </div>
       <div
@@ -253,8 +255,7 @@ function ScorePanel() {
         ))}
       </div>
       <span className="text-text-sub text-[14px]">
-        기준 {data.score.lastChecked} · 여기서는 볼 수만 있어요. 법령이 바뀌면 판정 코드를 고쳐
-        반영해요
+        기준 {data.score.lastChecked} · 여기서는 볼 수만 있어요. 법령이 바뀌면 개발팀이 반영해요
       </span>
     </section>
   );
@@ -289,7 +290,7 @@ function RegionPanel() {
         </div>
       ))}
       <span className="text-text-sub pt-[8px] text-[13px]">
-        참고용 목록이에요 · 아직 판정에 쓰지 않고, 여기서 바꿀 수 없어요
+        참고용 목록이에요 · 판정에는 쓰지 않고, 여기서 바꿀 수 없어요
       </span>
     </section>
   );

@@ -572,7 +572,7 @@ function UserPanel({
                 ) &&
                 run(
                   "정말 넘길까요? 이 작업은 바로 적용돼요.",
-                  `${name}님에게 최상위 관리자를 넘겼어요. 화면을 새로 고치면 바뀐 권한이 보여요`,
+                  `${name}님에게 최상위 관리자를 넘겼어요`,
                   () => transferSuperAdmin(u.id),
                 )
               }
