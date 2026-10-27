@@ -16,7 +16,7 @@ export const searchTypes: SearchType[] = ["공고", "혜택", "지역"];
 export type SearchTab = "전체" | SearchType;
 
 export const resultHref = (r: SearchResult) =>
-  r.type === "공고" ? routes.notice(r.id) : r.type === "혜택" ? routes.benefit(r.id) : routes.life;
+  r.type === "공고" ? routes.notice(r.id) : r.type === "혜택" ? routes.benefit(r.id) : routes.homes;
 
 /** 제목을 검색어 기준으로 잘라 강조할 부분을 표시해요 */
 export function splitTitle(text: string, terms: string[]) {

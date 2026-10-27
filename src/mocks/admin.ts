@@ -596,7 +596,7 @@ export const adminReports: {
       summary: "역까지 더 멀어요",
       age: "2일 전",
       groupCount: 1,
-      link: routes.life,
+      link: routes.homes,
       notes: [{ text: "단지 정문 기준이면 15분 넘게 걸려요", meta: "사용자 · 10월 18일" }],
       reply: "알려주셔서 고마워요. 단지 정문 기준으로 다시 계산하고 있어요.",
     },
