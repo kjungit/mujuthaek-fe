@@ -83,7 +83,7 @@ export function WebAlerts() {
                     <button
                       key={a.id}
                       type="button"
-                      onClick={() => alerts.markRead(a.id)}
+                      onClick={() => alerts.open(a)}
                       aria-label={`${a.isRead ? "" : "읽지 않음, "}${a.kind}, ${a.title}`}
                       className={cn(
                         "text-text flex cursor-pointer items-start gap-[14px] border-0 px-[24px] py-[16px] text-left",

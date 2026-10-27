@@ -16,6 +16,8 @@ export type AlertItem = {
   /** 모바일에서 줄여 쓰는 값 */
   short?: { title?: string; body?: string; time?: string };
   read: boolean;
+  /** 누르면 갈 화면 (알림함 API의 linkPath). 없으면 이동하지 않아요 */
+  linkPath?: string | null;
 };
 
 /** 받는 알림 요약(PC 오른쪽) */

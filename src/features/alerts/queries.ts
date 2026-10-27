@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { liveAlerts, markAlertRead, markAllAlertsRead } from "@/features/alerts/api";
 import { mockQuery } from "@/features/mock-query";
 import { USE_MOCKS } from "@/lib/api/config";
@@ -42,6 +43,7 @@ export type AlertView = AlertItem & { isRead: boolean; urgent: boolean };
 export function useAlerts() {
   const { data, isError } = useAlertsData();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [tab, setTab] = useState<AlertTab>("전체");
   // 누른 알림은 서버 응답을 기다리지 않고 바로 읽음으로 보여요
   const [readNow, setReadNow] = useState<Record<string, boolean>>({});
@@ -67,6 +69,11 @@ export function useAlerts() {
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: alertsKeys.list });
 
+  const markRead = (id: string) => {
+    setReadNow((r) => ({ ...r, [id]: true }));
+    if (!USE_MOCKS) void markAlertRead(id).then(refresh, refresh);
+  };
+
   return {
     data,
     tab,
@@ -81,9 +88,11 @@ export function useAlerts() {
         : unread
           ? `읽지 않은 알림 ${unread}개`
           : "모두 읽었어요",
-    markRead: (id: string) => {
-      setReadNow((r) => ({ ...r, [id]: true }));
-      if (!USE_MOCKS) void markAlertRead(id).then(refresh, refresh);
+    markRead,
+    /** 알림을 누르면 읽음으로 바꾸고 그 화면으로 가요 (앱 안 경로만) */
+    open: (a: AlertItem) => {
+      markRead(a.id);
+      if (a.linkPath?.startsWith("/") && !a.linkPath.startsWith("//")) router.push(a.linkPath);
     },
     readAll: () => {
       setReadNow(Object.fromEntries(data.items.map((a) => [a.id, true])));
