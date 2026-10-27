@@ -214,7 +214,7 @@ export function AdminWebUsers() {
               <table className="w-full border-collapse text-[14px]">
                 <thead>
                   <tr className="text-text-sub text-left">
-                    {["닉네임", "단계", "권한", "로그인 방식", "가입", "마지막 로그인", ""].map(
+                    {["닉네임", "회원 구분", "권한", "로그인 방식", "가입", "마지막 로그인", ""].map(
                       (h) => (
                         <th
                           key={h}
@@ -508,9 +508,9 @@ function UserPanel({
         회원 ID <span className="text-text font-mono">{u.id}</span>
       </span>
 
-      {/* 단계 */}
+      {/* 회원 구분 */}
       <PanelSection
-        title="단계"
+        title="회원 구분"
         aside={
           <span
             className={cn(
