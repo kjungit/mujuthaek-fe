@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { Building, Check, ChevronRight } from "lucide-react";
-import { useState } from "react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
+import { ReportButton } from "@/components/report/ReportButton";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
+import { useFavorite } from "@/features/favorites/api";
 import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { track } from "@/lib/analytics";
 import { useDocChecks } from "@/features/business/state";
@@ -85,7 +86,8 @@ function MSpaceDetailView({
   onAnswer?: OnAnswer;
 }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
-  const [fav, setFav] = useState(false);
+  const favorite = useFavorite(data.target?.type, data.target?.id);
+  const fav = favorite.on;
   const met = data.rules.filter((r) => r.met).length;
   const no = data.rules.filter((r) => r.notMet).length;
   const unmet = data.rules.length - met - no;
@@ -298,6 +300,16 @@ function MSpaceDetailView({
         <span className="text-text-sub px-[16px] pt-[4px] text-center text-[13px]">
           자격만 판정해요 · 선정 가능성은 알려드리지 않아요
         </span>
+        <ReportButton
+          target={
+            data.target && {
+              kind: data.target.type === "NOTICE" ? "notice" : "program",
+              id: data.target.id,
+            }
+          }
+          screen={data.target?.type === "STARTUP_SUPPORT" ? "사업 지원 상세" : "사업공간 상세"}
+          className="px-[16px]"
+        />
       </main>
       <MBottomActions>
         <a
@@ -315,7 +327,7 @@ function MSpaceDetailView({
           aria-pressed={fav}
           onClick={() => {
             if (!fav) track("notice_bookmark", { notice_kind: "space" });
-            setFav((v) => !v);
+            favorite.toggle();
           }}
           className={cn(
             "rounded-control min-h-[56px] min-w-0 cursor-pointer border-0 text-[16px] font-extrabold",

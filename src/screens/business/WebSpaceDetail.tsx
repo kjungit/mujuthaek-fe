@@ -1,20 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Bell,
-  Building,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  Flag,
-  X,
-} from "lucide-react";
-import { useState } from "react";
+import { Bell, Building, Check, ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
+import { ReportButton } from "@/components/report/ReportButton";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
+import { useFavorite } from "@/features/favorites/api";
 import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { track } from "@/lib/analytics";
 import { useDocChecks } from "@/features/business/state";
@@ -206,7 +198,8 @@ function WebSpaceDetailView({
   onAnswer?: OnAnswer;
 }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
-  const [fav, setFav] = useState(false);
+  const favorite = useFavorite(data.target?.type, data.target?.id);
+  const fav = favorite.on;
   // 모집 정책은 공간 정보 대신 자격 조건이 많아서 넓은 칸에 보여줘요
   const wideRules = data.rules.length > 0 && Boolean(data.summaryNote);
   const met = data.rules.filter((r) => r.met).length;
@@ -452,7 +445,7 @@ function WebSpaceDetailView({
                 aria-pressed={fav}
                 onClick={() => {
                   if (!fav) track("notice_bookmark", { notice_kind: "space" });
-                  setFav((v) => !v);
+                  favorite.toggle();
                 }}
                 className={cn(
                   "rounded-control flex min-h-[56px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[17px] font-extrabold",
@@ -477,13 +470,15 @@ function WebSpaceDetailView({
               </span>
             </section>
 
-            <a
-              href="#"
-              className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[6px] self-center text-[14px] font-semibold no-underline"
-            >
-              <Flag size={16} aria-hidden />
-              정보가 틀렸어요 · 제보하기
-            </a>
+            <ReportButton
+              target={
+                data.target && {
+                  kind: data.target.type === "NOTICE" ? "notice" : "program",
+                  id: data.target.id,
+                }
+              }
+              screen={back.noun === "사업 지원" ? "사업 지원 상세" : "사업공간 상세"}
+            />
           </aside>
         </div>
       </WebMain>

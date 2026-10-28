@@ -20,6 +20,7 @@ import {
 } from "@/features/homes/filters";
 import { HomesMap } from "@/components/homes/HomesMap";
 import { RegionSelect } from "@/components/homes/RegionSelect";
+import { useFavoriteActions, useFavorites } from "@/features/favorites/api";
 import { useHomeList } from "@/features/homes/list";
 import { useRegionFilter } from "@/features/homes/region";
 import { track } from "@/lib/analytics";
@@ -120,10 +121,13 @@ export function WebHomes() {
   const [view, setView] = useState<"list" | "map">("list");
   const verdicts = useMemo(() => new Map(visible.map((l) => [l.id, l.verdict])), [visible]);
   const verdictOf = useCallback((id: string) => verdicts.get(id), [verdicts]);
-  // 관심 공고는 로그인 연결 때 서버 값으로 바꿔요 (지금은 이 화면 안에서만)
-  const [liked, setLiked] = useState(
-    () => new Set(visible.filter((l) => l.liked).map((l) => l.id)),
+  // 관심 공고: 내 관심 목록(서버)에서 공고만
+  const { data: favorites = [] } = useFavorites();
+  const liked = useMemo(
+    () => new Set(favorites.filter((f) => f.targetType === "NOTICE").map((f) => f.targetId)),
+    [favorites],
   );
+  const favorite = useFavoriteActions();
 
   const toggleLike = (id: string) => {
     if (!liked.has(id)) {
@@ -131,12 +135,7 @@ export function WebHomes() {
       const org = visible.find((l) => l.id === id)?.org.split(" · ")[0];
       track("notice_bookmark", { notice_kind: "standard", agency: org || "-", via: "list" });
     }
-    setLiked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    favorite.set("NOTICE", id, !liked.has(id));
   };
 
   const resetFilters = () => {

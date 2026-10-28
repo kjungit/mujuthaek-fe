@@ -303,9 +303,9 @@ export function WebProfile() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[15px]">확인 필요한 조건</span>
+                <span className="text-[15px]">확인이 필요한 공고</span>
                 <span className="rounded-badge bg-check-bg text-check-text px-[10px] py-[4px] text-[14px] font-extrabold">
-                  {form.preview.needCheck}개
+                  {form.preview.needCheck}곳
                 </span>
               </div>
               <span className="border-line-soft text-text-sub border-t border-solid pt-[12px] text-[13px]">

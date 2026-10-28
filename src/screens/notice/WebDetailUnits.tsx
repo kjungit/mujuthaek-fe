@@ -9,6 +9,7 @@ import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { WebRankCard } from "@/components/notice/RankCard";
 import { WebUnitFilter } from "@/components/notice/UnitFilter";
+import { useFavorite } from "@/features/favorites/api";
 import { pdfSections, dueText } from "@/features/notice/format";
 import { noticeParams, useJudgmentViewed } from "@/features/notice/analytics";
 import { useNotice } from "@/features/notice/queries";
@@ -32,6 +33,7 @@ export function WebDetailUnits({ id }: { id: string }) {
   const units = n?.kind === "units" ? n.units : [];
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
   const pdf = usePdfViewer();
+  const favorite = useFavorite("NOTICE", id);
   useJudgmentViewed(id, n);
   if (n?.kind !== "units") return null;
   const { doc } = n;
@@ -369,11 +371,23 @@ export function WebDetailUnits({ id }: { id: string }) {
               {n.ranking && <WebRankCard ranking={n.ranking} className="py-[22px]" />}
               <button
                 type="button"
-                onClick={() => track("notice_bookmark", noticeParams(n))}
-                className="bg-brand rounded-tile flex min-h-[58px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[17px] font-extrabold text-white"
+                aria-pressed={favorite.on}
+                onClick={() => {
+                  if (!favorite.on) track("notice_bookmark", noticeParams(n));
+                  favorite.toggle();
+                }}
+                className={cn(
+                  "rounded-tile flex min-h-[58px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[17px] font-extrabold",
+                  favorite.on ? "bg-brand-soft text-brand-strong" : "bg-brand text-white",
+                )}
               >
-                <Heart size={20} strokeWidth={2.2} aria-hidden />
-                관심 등록하고 마감 알림 받기
+                <Heart
+                  size={20}
+                  strokeWidth={2.2}
+                  fill={favorite.on ? "currentColor" : "none"}
+                  aria-hidden
+                />
+                {favorite.on ? "관심 공고 · 마감 알림 받는 중" : "관심 등록하고 마감 알림 받기"}
               </button>
               <button
                 type="button"

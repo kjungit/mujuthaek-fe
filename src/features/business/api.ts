@@ -471,10 +471,14 @@ export function useApiSupportDetail(id: string) {
   const data = useMemo(
     () =>
       q.data &&
-      policyDetail(q.data, {
-        kind: supportKindLabel[q.data.subField],
-        note: "지원 금액 · 신청 방법 · 제출 서류는 원문에서 확인해 주세요",
-      }),
+      policyDetail(
+        q.data,
+        {
+          kind: supportKindLabel[q.data.subField],
+          note: "지원 금액 · 신청 방법 · 제출 서류는 원문에서 확인해 주세요",
+        },
+        "STARTUP_SUPPORT",
+      ),
     [q.data],
   );
   return { data, loading: !q.isError && q.isPending, error: q.isError, answer };
@@ -581,6 +585,7 @@ function policyDetail(
     kind: "입주기업 모집",
     note: "입주 공간 · 기간 · 비용 · 준비 서류는 원문에서 확인해 주세요",
   },
+  type: "SPACE_RECRUITMENT" | "STARTUP_SUPPORT" = "SPACE_RECRUITMENT",
 ): SpaceDetail {
   const period = formatPeriod(e.applyStart, e.applyEnd);
   const region = regionLabelOf(e.regionCodes);
@@ -614,6 +619,7 @@ function policyDetail(
     notReady: !e.judgment,
     summaryNote: text.note,
     about: aboutOf(e.info),
+    target: { type, id: e.id },
   };
 }
 
@@ -680,6 +686,7 @@ export function useApiSpaceDetail(id: string) {
       rules: rulesOf(j),
       sourceUrl: n.doc.source.detailUrl || undefined,
       notReady: Boolean(e) && !j,
+      target: { type: "NOTICE", id: n.id },
     };
   }, [n, evaluation.data]);
   const loading =
