@@ -102,9 +102,10 @@ export function AdminWebReview() {
       </AdminTitleRow>
 
       <div className="flex flex-wrap items-start gap-[20px]">
+        {/* 대기열·원문·추출 결과는 칸마다 따로 휠로 내려요(아래 건을 골라도 페이지를 다시 올리지 않게) */}
         <section
           aria-label="검수 대기열"
-          className="rounded-card bg-surface flex min-w-0 flex-col overflow-hidden"
+          className="rounded-card bg-surface flex max-h-[calc(100dvh-150px)] min-w-0 flex-col overflow-hidden"
           style={{ flex: "1 1 290px" }}
         >
           <div className="flex flex-col gap-[12px] px-[18px] pt-[18px] pb-[12px]">
@@ -132,33 +133,35 @@ export function AdminWebReview() {
               })}
             </div>
           </div>
-          {shown.map((q) => {
-            const on = q.id === selId;
-            const r = REASON[q.reason];
-            return (
-              <button
-                key={q.id}
-                type="button"
-                aria-pressed={on}
-                onClick={() => select(q.id)}
-                className={cn(
-                  "border-t-line-soft text-text flex cursor-pointer flex-col gap-[6px] border-0 border-t border-l-4 border-solid py-[14px] pr-[18px] pl-[14px] text-left",
-                  on ? "bg-row-selected border-l-brand" : "bg-surface border-l-transparent",
-                )}
-              >
-                <span className="flex w-full items-center justify-between gap-[8px]">
-                  <Badge tone={r.tone} size="xs">
-                    {r.label}
-                  </Badge>
-                  <span className="text-text-sub text-[12px]">{q.age}</span>
-                </span>
-                <span className="text-[15px] font-bold">{q.title}</span>
-                <span className="text-text-sub text-[13px]">
-                  {q.source} · {statusText(q.id)}
-                </span>
-              </button>
-            );
-          })}
+          <div className="flex min-h-0 flex-col overflow-y-auto overscroll-contain">
+            {shown.map((q) => {
+              const on = q.id === selId;
+              const r = REASON[q.reason];
+              return (
+                <button
+                  key={q.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => select(q.id)}
+                  className={cn(
+                    "border-t-line-soft text-text flex cursor-pointer flex-col gap-[6px] border-0 border-t border-l-4 border-solid py-[14px] pr-[18px] pl-[14px] text-left",
+                    on ? "bg-row-selected border-l-brand" : "bg-surface border-l-transparent",
+                  )}
+                >
+                  <span className="flex w-full items-center justify-between gap-[8px]">
+                    <Badge tone={r.tone} size="xs">
+                      {r.label}
+                    </Badge>
+                    <span className="text-text-sub text-[12px]">{q.age}</span>
+                  </span>
+                  <span className="text-[15px] font-bold">{q.title}</span>
+                  <span className="text-text-sub text-[13px]">
+                    {q.source} · {statusText(q.id)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </section>
 
         {/* 검수 건을 바꾸면 상세 영역을 통째로 새로 그려요(이전 건의 문단·칸이 남아 보이지 않게) */}
@@ -199,7 +202,7 @@ export function AdminWebReview() {
           <div className="flex flex-wrap items-stretch gap-[16px]">
             <section
               aria-labelledby="src-h"
-              className="rounded-card bg-surface box-content flex min-w-0 flex-col gap-[12px] px-[24px] py-[22px]"
+              className="rounded-card bg-surface box-border flex max-h-[calc(100dvh-120px)] min-w-0 flex-col gap-[12px] px-[24px] py-[22px]"
               style={{ flex: "1 1 320px" }}
             >
               <div className="flex items-center justify-between">
@@ -217,21 +220,23 @@ export function AdminWebReview() {
                   </span>
                 </span>
               </div>
-              {cur.paras.map((p) => (
-                <p key={p.head} className="text-text-body-long m-0 text-[15px] leading-[1.85]">
-                  <strong className="text-text">{p.head}</strong>{" "}
-                  {p.parts.map((s, i) => (
-                    <span key={i} className={cn("rounded-[4px]", partStyle[s.kind])}>
-                      {s.t}
-                    </span>
-                  ))}
-                </p>
-              ))}
+              <div className="-mr-[12px] flex min-h-0 flex-col gap-[12px] overflow-y-auto overscroll-contain pr-[12px]">
+                {cur.paras.map((p) => (
+                  <p key={p.head} className="text-text-body-long m-0 text-[15px] leading-[1.85]">
+                    <strong className="text-text">{p.head}</strong>{" "}
+                    {p.parts.map((s, i) => (
+                      <span key={i} className={cn("rounded-[4px]", partStyle[s.kind])}>
+                        {s.t}
+                      </span>
+                    ))}
+                  </p>
+                ))}
+              </div>
             </section>
 
             <section
               aria-labelledby="ex-h"
-              className="rounded-card bg-surface box-content flex min-w-0 flex-col gap-[12px] px-[24px] py-[22px]"
+              className="rounded-card bg-surface box-border flex max-h-[calc(100dvh-120px)] min-w-0 flex-col gap-[12px] px-[24px] py-[22px]"
               style={{ flex: "1 1 320px" }}
             >
               <div className="flex items-center justify-between">
@@ -240,61 +245,65 @@ export function AdminWebReview() {
                 </h3>
                 <span className="text-text-sub text-[13px]">상태</span>
               </div>
-              {cur.fields.map((f) => {
-                // 신뢰도 숫자 대신 백엔드 칸 상태(보류·확인 필요)로 표시해요
-                const low = f.status ? true : f.conf < 0.7;
-                const value = curEdits[f.label] ?? f.value;
-                // 백엔드가 칸별 수정을 받지 않는 칸(목록·묶음 등)은 읽기만
-                const readOnly = meta ? meta.fields[f.label]?.editable === false : false;
-                return (
-                  <label
-                    key={f.label}
-                    className="grid items-center gap-[10px] text-[14px] font-bold"
-                    style={{ gridTemplateColumns: "92px minmax(0, 1fr) 54px" }}
-                  >
-                    {f.label}
-                    <input
-                      type="text"
-                      value={value}
-                      readOnly={readOnly}
-                      title={
-                        readOnly ? "여기서 고칠 수 없는 칸이에요. 다르면 반려해 주세요" : undefined
-                      }
-                      onChange={(e) =>
-                        setEdits({
-                          ...edits,
-                          [cur.id]: { ...curEdits, [f.label]: e.target.value },
-                        })
-                      }
-                      className={cn(
-                        "text-text box-border min-h-[44px] min-w-0 rounded-sm border-solid px-[12px] text-[15px] font-medium",
-                        low
-                          ? "border-lowconf-line bg-lowconf-bg border-2"
-                          : "border-line bg-surface border",
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "text-right text-[13px] font-extrabold",
-                        low ? "text-check-text" : "text-text-sub",
-                      )}
+              <div className="-mr-[12px] flex min-h-0 flex-col gap-[12px] overflow-y-auto overscroll-contain py-[2px] pr-[12px]">
+                {cur.fields.map((f) => {
+                  // 신뢰도 숫자 대신 백엔드 칸 상태(보류·확인 필요)로 표시해요
+                  const low = f.status ? true : f.conf < 0.7;
+                  const value = curEdits[f.label] ?? f.value;
+                  // 백엔드가 칸별 수정을 받지 않는 칸(목록·묶음 등)은 읽기만
+                  const readOnly = meta ? meta.fields[f.label]?.editable === false : false;
+                  return (
+                    <label
+                      key={f.label}
+                      className="grid items-center gap-[10px] text-[14px] font-bold"
+                      style={{ gridTemplateColumns: "92px minmax(0, 1fr) 54px" }}
                     >
-                      {f.status === "HELD"
-                        ? "보류"
-                        : f.status === "CHECK"
-                          ? "확인"
-                          : f.status === "EMPTY"
-                            ? "값 없음"
-                            : ""}
-                    </span>
-                    {f.why && (
-                      <span className="text-check-text col-start-2 col-end-4 text-[12px] font-medium">
-                        {f.why}
+                      {f.label}
+                      <input
+                        type="text"
+                        value={value}
+                        readOnly={readOnly}
+                        title={
+                          readOnly
+                            ? "여기서 고칠 수 없는 칸이에요. 다르면 반려해 주세요"
+                            : undefined
+                        }
+                        onChange={(e) =>
+                          setEdits({
+                            ...edits,
+                            [cur.id]: { ...curEdits, [f.label]: e.target.value },
+                          })
+                        }
+                        className={cn(
+                          "text-text box-border min-h-[44px] min-w-0 rounded-sm border-solid px-[12px] text-[15px] font-medium",
+                          low
+                            ? "border-lowconf-line bg-lowconf-bg border-2"
+                            : "border-line bg-surface border",
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "text-right text-[13px] font-extrabold",
+                          low ? "text-check-text" : "text-text-sub",
+                        )}
+                      >
+                        {f.status === "HELD"
+                          ? "보류"
+                          : f.status === "CHECK"
+                            ? "확인"
+                            : f.status === "EMPTY"
+                              ? "값 없음"
+                              : ""}
                       </span>
-                    )}
-                  </label>
-                );
-              })}
+                      {f.why && (
+                        <span className="text-check-text col-start-2 col-end-4 text-[12px] font-medium">
+                          {f.why}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
               <span className="text-text-sub border-line-soft border-t border-solid pt-[10px] text-[13px]">
                 보류: 확인 전까지 회원 화면·판정에 안 보이는 칸 · 확인: 확인이 필요한 칸 · 고친 칸은
                 &apos;수정 후 승인&apos;으로 저장돼요
