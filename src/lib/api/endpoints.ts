@@ -63,4 +63,16 @@ export const endpoints = {
   noticeReports: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}/reports`,
   benefitReports: (id: string) => `/api/v1/benefits/${encodeURIComponent(id)}/reports`,
   programReports: (id: string) => `/api/v1/programs/${encodeURIComponent(id)}/reports`,
+  /** 공고 채팅방 정보 {noticeId, readOnly, readOnlyFrom, guide}. 방 = 공고 (로그인 없이) */
+  noticeChat: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}/chat`,
+  /** 채팅 목록(GET ?cursor&size, 최신순) · 보내기(POST {content, parentId?}) */
+  noticeChatMessages: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}/chat/messages`,
+  /** 채팅 실시간 받기 (SSE, 로그인 없이 EventSource로) */
+  noticeChatStream: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}/chat/stream`,
+  /** 내 메시지 지우기(DELETE) */
+  chatMessage: (id: string) => `/api/v1/chat/messages/${encodeURIComponent(id)}`,
+  /** 좋아요(PUT) · 취소(DELETE) → {messageId, likeCount, liked} */
+  chatMessageLike: (id: string) => `/api/v1/chat/messages/${encodeURIComponent(id)}/like`,
+  /** 메시지 신고 {reason, detail?} */
+  chatMessageReports: (id: string) => `/api/v1/chat/messages/${encodeURIComponent(id)}/reports`,
 } as const;

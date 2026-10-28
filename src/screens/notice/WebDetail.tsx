@@ -1,5 +1,6 @@
 "use client";
 
+import { NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
@@ -490,6 +491,8 @@ export function WebDetail({ id }: { id: string }) {
                 variant="web"
                 onOpenPage={pdfUrl ? openOriginal : undefined}
               />
+
+              <NoticeChat noticeId={n.id} variant="web" />
 
               {benefits.length > 0 && (
                 <section

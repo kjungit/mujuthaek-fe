@@ -1,5 +1,6 @@
 "use client";
 
+import { NoticeChat } from "@/components/chat/NoticeChat";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
 import { Building, Check, ChevronRight } from "lucide-react";
@@ -294,6 +295,7 @@ function MSpaceDetailView({
             <ChevronRight size={20} aria-hidden />
           </Link>
         )}
+        {data.favoriteType === "NOTICE" && <NoticeChat noticeId={data.id} variant="mobile" />}
         <span className="text-text-sub px-[16px] pt-[4px] text-center text-[13px]">
           자격만 판정해요 · 선정 가능성은 알려드리지 않아요
         </span>

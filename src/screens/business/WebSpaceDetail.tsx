@@ -1,5 +1,6 @@
 "use client";
 
+import { NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
@@ -414,6 +415,8 @@ function WebSpaceDetailView({
                 </Link>
               </section>
             )}
+
+            {data.favoriteType === "NOTICE" && <NoticeChat noticeId={data.id} variant="web" />}
           </div>
 
           <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 340px" }}>

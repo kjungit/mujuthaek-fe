@@ -22,6 +22,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly body: unknown,
+    /** 429 등에서 다시 해도 되는 때까지 남은 초 (Retry-After). 없거나 다른 주소라 못 읽으면 null */
+    readonly retryAfter: number | null = null,
   ) {
     super(`API 요청 실패 (${status})`);
     this.name = "ApiError";
@@ -98,7 +100,10 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}) {
   // Vercel·프록시가 대신 낸 502·503·504면 백엔드가 꺼져 있는 거예요. 화면 위에 운영 시간을 알려요
   if (isGatewayError(res.status, data)) backendStatus.markDown();
   else backendStatus.markUp();
-  if (!res.ok) throw new ApiError(res.status, data);
+  if (!res.ok) {
+    const retryAfter = Number(res.headers.get("Retry-After"));
+    throw new ApiError(res.status, data, retryAfter > 0 ? retryAfter : null);
+  }
   return data as T;
 }
 

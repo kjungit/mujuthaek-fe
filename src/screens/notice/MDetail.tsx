@@ -1,5 +1,6 @@
 "use client";
 
+import { NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
@@ -247,6 +248,8 @@ export function MDetail({ id }: { id: string }) {
 
         <NoticeToc doc={doc} variant="mobile" />
         <NoticeSections doc={doc} variant="mobile" onOpenPage={pdfUrl ? openOriginal : undefined} />
+
+        <NoticeChat noticeId={n.id} variant="mobile" />
 
         {benefits.length > 0 && (
           <section aria-labelledby="bn-h" className={cn(card, "px-[20px] pt-[16px] pb-[6px]")}>
