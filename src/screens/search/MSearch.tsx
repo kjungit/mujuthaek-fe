@@ -16,8 +16,19 @@ import { routes } from "@/lib/routes";
 import { ResultBadge } from "./ResultBadge";
 
 export function MSearch() {
-  const { query, setQuery, keyword, recent, remember, terms, results, loading, error } =
-    useSearch();
+  const {
+    query,
+    setQuery,
+    keyword,
+    recent,
+    remember,
+    terms,
+    results,
+    totals,
+    more,
+    loading,
+    error,
+  } = useSearch();
   const [tab, setTab] = useState<SearchTab>("전체");
   const tabs: SearchTab[] = ["전체", ...searchTypes];
 
@@ -74,8 +85,7 @@ export function MSearch() {
         <div role="group" aria-label="결과 종류" className="flex gap-[6px] px-[16px]">
           {tabs.map((t) => {
             const on = t === tab;
-            const count =
-              t === "전체" ? results.length : results.filter((r) => r.type === t).length;
+            const count = t === "전체" ? searchTypes.reduce((n, k) => n + totals[k], 0) : totals[t];
             return (
               <button
                 key={t}
@@ -93,23 +103,18 @@ export function MSearch() {
           })}
         </div>
 
-        {!keyword && (
-          <p className="text-text-sub m-0 px-[20px] py-[32px] text-center text-[14px]">
-            공고나 혜택의 이름, 기관으로 찾아요 (예: 행복주택, 월세 지원)
-          </p>
-        )}
-        {keyword && error && (
+        {error && (
           <p role="alert" className="text-text-sub m-0 px-[20px] py-[32px] text-center text-[14px]">
             검색하지 못했어요. 잠시 뒤 다시 해 주세요
           </p>
         )}
-        {keyword && !error && !loading && results.length === 0 && (
+        {!error && !loading && results.length === 0 && (
           <p className="text-text-sub m-0 px-[20px] py-[32px] text-center text-[14px]">
-            「{keyword}」에 맞는 공고·혜택이 없어요
+            {keyword ? `「${keyword}」에 맞는 공고·혜택이 없어요` : "지금 열린 공고·혜택이 없어요"}
           </p>
         )}
         {results.length > 0 &&
-          groupResults(results, tab)
+          groupResults(results, tab, totals)
             .filter((sec) => sec.count > 0)
             .map((sec) => (
               <section key={sec.type} className="flex flex-col pt-[8px]">
@@ -142,6 +147,11 @@ export function MSearch() {
                     <ResultBadge badge={r.badge} size="sm" className="rounded-tag" />
                   </Link>
                 ))}
+                {more[sec.type] && (
+                  <p className="text-text-sub m-0 px-[20px] py-[12px] text-[13px]">
+                    {sec.count - sec.rows.length}건 더 있어요 · 검색어로 좁혀 보세요
+                  </p>
+                )}
               </section>
             ))}
 
