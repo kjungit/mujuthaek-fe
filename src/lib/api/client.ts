@@ -1,3 +1,4 @@
+import { backendStatus, isGatewayError } from "./availability";
 import { endpoints } from "./endpoints";
 
 /**
@@ -67,8 +68,8 @@ export function refreshAccessToken(): Promise<string | null> {
 
 type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
 
-function send(path: string, { body, headers, ...init }: RequestOptions) {
-  return fetch(`${API_BASE_URL}${path}`, {
+async function send(path: string, { body, headers, ...init }: RequestOptions) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",
@@ -78,7 +79,11 @@ function send(path: string, { body, headers, ...init }: RequestOptions) {
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     credentials: "include",
+  }).catch((error: unknown) => {
+    backendStatus.markDown(); // 연결 자체가 안 됨 (서버가 꺼져 있는 시간 등)
+    throw error;
   });
+  return res;
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions = {}) {
@@ -90,6 +95,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}) {
   }
 
   const data = res.status === 204 || res.status === 304 ? null : await res.json().catch(() => null);
+  // Vercel·프록시가 대신 낸 502·503·504면 백엔드가 꺼져 있는 거예요. 화면 위에 운영 시간을 알려요
+  if (isGatewayError(res.status, data)) backendStatus.markDown();
+  else backendStatus.markUp();
   if (!res.ok) throw new ApiError(res.status, data);
   return data as T;
 }

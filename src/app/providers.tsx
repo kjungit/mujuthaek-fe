@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 import { Analytics } from "@/components/analytics/Analytics";
 import { OfflineBanner } from "@/components/pwa/OfflineBanner";
+import { ServiceHoursBanner } from "@/components/pwa/ServiceHoursBanner";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -21,6 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ServiceWorkerRegister />
       <OfflineBanner />
+      <ServiceHoursBanner />
       <Analytics />
       {children}
       <ReactQueryDevtools initialIsOpen={false} />
