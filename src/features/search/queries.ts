@@ -32,7 +32,8 @@ export const resultHref = (r: SearchResult) =>
 
 const RECENT_KEY = "mujuthaek.search.recent";
 const RECENT_MAX = 8;
-const SIZE = 20;
+/** 종류마다 한 번에 받는 수 (서버 최대). 넘으면 검색어로 좁혀 달라고 해요 */
+const SIZE = 100;
 
 function readRecent(): string[] {
   try {
@@ -54,7 +55,7 @@ const meta = (...parts: (string | null | undefined)[]) => parts.filter(Boolean).
 
 /**
  * 검색: 검색어로 주거 공고 · 사업공간(공고) 와 혜택 · 사업 지원(혜택)을 찾아 내 판정 배지와 함께 보여줘요.
- * 판정 입력은 맞춤 목록과 같은 구간 값이에요. 최근 검색어는 이 기기에만 저장해요
+ * 검색어가 없으면 열린 것 전부(맞춤 목록 순서). 판정 입력은 맞춤 목록과 같은 구간 값이에요. 최근 검색어는 이 기기에만 저장해요
  */
 export function useSearch() {
   const [query, setQuery] = useState(USE_MOCKS ? searchData.query : "");
@@ -71,7 +72,7 @@ export function useSearch() {
   const keyword = useDeferredValue(query.trim());
   const judge = useJudgeInput();
   const space = useSpaceApplicant();
-  const enabled = !USE_MOCKS && keyword.length > 0;
+  const enabled = !USE_MOCKS;
   const common = { staleTime: 60 * 1000, placeholderData: keepPreviousData } as const;
 
   const [notices, spaces, benefits, supports] = useQueries({
@@ -80,7 +81,7 @@ export function useSearch() {
         queryKey: ["search", "notices", keyword, judge.applicant] as const,
         queryFn: () =>
           api.post<SearchResponse>(endpoints.noticesSearch, {
-            filters: { keyword },
+            filters: { keyword: keyword || undefined },
             applicant: judge.applicant,
             includeIneligible: true,
             size: SIZE,
@@ -92,7 +93,7 @@ export function useSearch() {
         queryKey: ["search", "spaces", keyword, space.applicant] as const,
         queryFn: () =>
           api.post<ApiSpaceSearch>(endpoints.spacesSearch, {
-            filters: { keyword },
+            filters: { keyword: keyword || undefined },
             applicant: space.applicant,
             includeIneligible: true,
             size: SIZE,
@@ -104,7 +105,7 @@ export function useSearch() {
         queryKey: ["search", "benefits", keyword, judge.applicant] as const,
         queryFn: () =>
           api.post<ApiBenefitSearch>(endpoints.benefitsSearch, {
-            filters: { keyword },
+            filters: { keyword: keyword || undefined },
             applicant: judge.applicant,
             size: SIZE,
           }),
@@ -115,7 +116,7 @@ export function useSearch() {
         queryKey: ["search", "supports", keyword, space.applicant] as const,
         queryFn: () =>
           api.post<ApiSupportSearch>(endpoints.supportsSearch, {
-            filters: { keyword },
+            filters: { keyword: keyword || undefined },
             applicant: space.applicant,
             includeIneligible: true,
             size: SIZE,
@@ -128,7 +129,6 @@ export function useSearch() {
 
   const results: SearchResult[] = useMemo(() => {
     if (USE_MOCKS) return searchData.results;
-    if (!keyword) return [];
     return [
       ...(notices.data?.items ?? []).map((it): SearchResult => {
         const l = toListing(it);
@@ -177,7 +177,24 @@ export function useSearch() {
         };
       }),
     ];
-  }, [keyword, notices.data, spaces.data, benefits.data, supports.data]);
+  }, [notices.data, spaces.data, benefits.data, supports.data]);
+
+  const sum = (c?: { eligible: number; needsInput: number; ineligible: number }) =>
+    c ? c.eligible + c.needsInput + c.ineligible : 0;
+  /** 종류별 전체 수 (받은 것보다 많을 수 있어요). 혜택 정책은 지원 불가를 빼고 줘요 */
+  const totals: Record<SearchType, number> = USE_MOCKS
+    ? {
+        공고: results.filter((r) => r.type === "공고").length,
+        혜택: results.filter((r) => r.type === "혜택").length,
+        지역: results.filter((r) => r.type === "지역").length,
+      }
+    : {
+        공고: sum(notices.data?.counts) + sum(spaces.data?.counts),
+        혜택:
+          (benefits.data ? benefits.data.summary.eligible + benefits.data.summary.needsInput : 0) +
+          sum(supports.data?.counts),
+        지역: 0,
+      };
 
   const queries = [notices, spaces, benefits, supports];
   /** 고른 검색어를 최근 검색어 맨 앞에 둬요 (이 기기에만) */
@@ -201,6 +218,13 @@ export function useSearch() {
     remember,
     terms: USE_MOCKS ? searchData.terms : keyword.split(/\s+/).filter(Boolean),
     results,
+    totals,
+    /** 받은 것보다 더 있는 종류 (검색어로 좁혀 달라고 해요) */
+    more: {
+      공고: Boolean(notices.data?.hasNext || spaces.data?.hasNext),
+      혜택: Boolean(benefits.data?.hasNext || supports.data?.hasNext),
+      지역: false,
+    } as Record<SearchType, boolean>,
     loading: enabled && queries.some((q) => q.isFetching),
     error: enabled && queries.some((q) => q.isError),
   };
@@ -219,10 +243,14 @@ export function splitTitle(text: string, terms: string[]) {
 }
 
 /** 분류 탭에 맞는 섹션들 */
-export function groupResults(results: SearchResult[], tab: SearchTab) {
+export function groupResults(
+  results: SearchResult[],
+  tab: SearchTab,
+  totals: Record<SearchType, number>,
+) {
   const types = tab === "전체" ? searchTypes : [tab];
   return types.map((type) => {
     const rows = results.filter((r) => r.type === type);
-    return { type, count: rows.length, rows };
+    return { type, count: Math.max(totals[type], rows.length), rows };
   });
 }
