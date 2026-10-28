@@ -501,12 +501,12 @@ function UserPanel({
     const free = items.filter((p) => !lockOf(p));
     return free.length > 0 && free.every((p) => picked.includes(p));
   };
-  // 누르면 그 묶음만 골라요. 이미 다 골라져 있으면 그 묶음의 권한을 빼요(다른 권한은 그대로)
+  // 누르면 그 묶음 권한을 더해요(여러 묶음을 같이 고를 수 있어요). 이미 다 골라져 있으면 그 묶음 권한을 빼요
   const preset = (items: AdminPermission[]) =>
     setPicked(
       presetOn(items)
         ? picked.filter((p) => lockOf(p) || !items.includes(p))
-        : [...picked.filter((p) => lockOf(p)), ...items.filter((p) => !lockOf(p))],
+        : [...picked, ...items.filter((p) => !lockOf(p) && !picked.includes(p))],
     );
 
   const dismissBlock = wholeBlock(me, u, "해제");
