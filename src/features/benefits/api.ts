@@ -214,7 +214,7 @@ export function toBenefitDetail(
 }
 
 /** 판정 입력 (구간 값)과 찾아볼 지역 */
-function useJudgeInput() {
+export function useJudgeInput() {
   const stored = useConditions();
   const criteria = useCriteria();
   const ready = stored.status === "ready" && !criteria.isPending;
