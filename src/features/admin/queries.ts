@@ -142,7 +142,9 @@ export function useAdminSources() {
       queryKey: live(adminKeys.sources),
       queryFn: liveSources,
       staleTime: 0,
-      refetchInterval: 15000,
+      // 수집기가 꺼져 있으면(503) 바로 다시 묻지 않고 1분 뒤에 다시 봐요 (서버 오류 기록이 쌓이지 않게)
+      retry: false,
+      refetchInterval: (query) => (query.state.status === "error" ? 60_000 : 15_000),
     });
     return {
       ...q,
