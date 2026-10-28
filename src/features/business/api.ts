@@ -64,7 +64,7 @@ type ApiSpaceItem = {
   applyNote?: string | null;
 };
 
-type ApiSpaceSearch = {
+export type ApiSpaceSearch = {
   counts: { eligible: number; needsInput: number; ineligible: number };
   typeCounts: Record<ApiSpaceType, number>;
   items: ApiSpaceItem[];
@@ -156,7 +156,7 @@ type ApiSupportItem = {
   applyNote?: string | null;
 };
 
-type ApiSupportSearch = {
+export type ApiSupportSearch = {
   counts: { eligible: number; needsInput: number; ineligible: number };
   subFieldCounts: Record<ApiSubField, number>;
   items: ApiSupportItem[];
@@ -299,7 +299,7 @@ export function useRegionScope() {
 
 export type RegionScope = ReturnType<typeof useRegionScope>;
 
-function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
+export function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
   const stored = useConditions();
   const biz = useBizProfileInput();
   return useMemo(
