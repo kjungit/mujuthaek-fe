@@ -143,7 +143,7 @@ export function AdminWebReview() {
               })}
             </div>
           </div>
-          <div className="flex min-h-0 flex-col overflow-y-auto overscroll-contain">
+          <div className="flex min-h-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain [overflow-wrap:anywhere]">
             {shown.map((q) => {
               const on = q.id === selId;
               const r = REASON[q.reason];
@@ -230,7 +230,7 @@ export function AdminWebReview() {
                     </span>
                   </span>
                 </div>
-                <div className="-mr-[12px] flex min-h-0 flex-col gap-[12px] overflow-y-auto overscroll-contain pr-[12px]">
+                <div className="-mr-[12px] flex min-h-0 flex-col gap-[12px] overflow-x-hidden overflow-y-auto overscroll-contain pr-[12px] [overflow-wrap:anywhere]">
                   {cur.paras.map((p) => (
                     <p key={p.head} className="text-text-body-long m-0 text-[15px] leading-[1.85]">
                       <strong className="text-text">{p.head}</strong>{" "}
@@ -254,7 +254,7 @@ export function AdminWebReview() {
                   </h3>
                   <span className="text-text-sub text-[13px]">상태</span>
                 </div>
-                <div className="-mr-[12px] flex min-h-0 flex-col gap-[12px] overflow-y-auto overscroll-contain py-[2px] pr-[12px]">
+                <div className="-mr-[12px] flex min-h-0 flex-col gap-[12px] overflow-x-hidden overflow-y-auto overscroll-contain py-[2px] pr-[12px] [overflow-wrap:anywhere]">
                   {cur.fields.map((f) => {
                     // 신뢰도 숫자 대신 백엔드 칸 상태(보류·확인 필요)로 표시해요
                     const low = f.status ? true : f.conf < 0.7;
