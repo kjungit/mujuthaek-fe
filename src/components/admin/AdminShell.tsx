@@ -49,7 +49,7 @@ const menu: MenuItem[] = [
     href: routes.adminReports,
     label: "제보·신고",
     icon: Flag,
-    count: { keys: ["newReports", "chatReports"], tone: "wait" },
+    count: { keys: ["newReports", "chatReports", "policyDuplicates"], tone: "wait" },
   },
   { href: routes.adminTraffic, label: "트래픽", icon: Activity },
   { href: routes.adminCriteria, label: "기준값", icon: SlidersHorizontal },

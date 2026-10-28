@@ -21,6 +21,7 @@ import {
   liveBotTraffic,
   liveActivity,
   liveNotificationStats,
+  livePolicyDuplicates,
   liveRealtime,
   liveAdminChanges,
   liveUsers,
@@ -36,6 +37,7 @@ import { chatReportTitlesMock, chatReportsMock, type ChatReviewStatus } from "@/
 import { adminChangesMock, adminUsersMock, type AdminUserFilter } from "@/mocks/admin-users";
 import { activityMock } from "@/mocks/admin-activity";
 import { notificationStatsMock } from "@/mocks/admin-notifications";
+import { duplicatesMock, type DuplicateStatus } from "@/mocks/admin-duplicates";
 
 export const adminKeys = {
   counts: ["admin", "counts"] as const,
@@ -52,7 +54,13 @@ export const adminKeys = {
  */
 const LIVE = !USE_MOCKS;
 const live = (key: readonly string[]) => ["admin", "live", ...key.slice(1)] as const;
-const ZERO: AdminCounts = { reviewPending: 0, sourceIssues: 0, newReports: 0, chatReports: 0 };
+const ZERO: AdminCounts = {
+  reviewPending: 0,
+  sourceIssues: 0,
+  newReports: 0,
+  chatReports: 0,
+  policyDuplicates: 0,
+};
 
 /** 사이드바 메뉴 옆 숫자 */
 export function useAdminCounts() {
@@ -278,6 +286,21 @@ export function useAdminChanges(days: number, enabled = true) {
     queryKey: ["admin", LIVE ? "live" : "mock", "admin-changes", days],
     queryFn: () => (LIVE ? liveAdminChanges(days) : Promise.resolve(adminChangesMock)),
     enabled,
+    staleTime: 0,
+  });
+}
+
+/** 제보·신고 「중복 의심」: 출처에 두 번 올라온 것 같은 사업 쌍 */
+export function useAdminPolicyDuplicates(status: DuplicateStatus) {
+  return useQuery({
+    queryKey: ["admin", LIVE ? "live" : "mock", "policy-duplicates", status],
+    queryFn: () =>
+      LIVE
+        ? livePolicyDuplicates(status)
+        : Promise.resolve({
+            ...duplicatesMock,
+            items: duplicatesMock.items.filter((d) => d.status === status),
+          }),
     staleTime: 0,
   });
 }
