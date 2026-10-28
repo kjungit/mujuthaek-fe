@@ -591,6 +591,19 @@ const REJECT: Record<string, string> = {
 };
 
 // ---------- 제보 ----------
+const reportTargetLabel: Record<string, string> = {
+  NOTICE: "공고",
+  BENEFIT: "혜택 정책",
+  PROGRAM: "창업지원·사업공간",
+  GENERAL: "일반 제보",
+};
+/** 일반 제보 종류 (백엔드 field) */
+const generalKindLabel: Record<string, string> = {
+  MISSING_NOTICE: "빠진 공고·정책",
+  WRONG_INFO: "틀린 정보",
+  APP_ERROR: "화면 오류",
+  ETC: "기타",
+};
 type ReportList = {
   counts: { newCount: number; doing: number; done: number };
   items: {
@@ -605,7 +618,8 @@ type ReportList = {
     benefitPolicyId: string | null;
     /** 혜택 화면(/benefits/{id})용 혜택 ID. 원본 정책 ID와 달라요. 아직 저장 전이면 null */
     benefitId: string | null;
-    noticeTitle: string;
+    /** 일반 제보(GENERAL)는 null */
+    noticeTitle: string | null;
     field: string;
     currentValue: string | null;
     reportedValue: string | null;
@@ -636,9 +650,13 @@ export async function liveReports(): Promise<{
     at: r.createdAt,
     id: r.id,
     st: STATUS[r.status] ?? "new",
-    where: `${r.screen ?? "-"} · ${r.targetType === "BENEFIT" ? "혜택 정책" : r.targetType === "PROGRAM" ? "창업지원" : "공고"}`,
-    target: r.noticeTitle,
-    field: r.field,
+    where: `${r.screen ?? "-"} · ${reportTargetLabel[r.targetType] ?? "공고"}`,
+    target:
+      r.targetType === "GENERAL"
+        ? (generalKindLabel[r.field] ?? "일반 제보")
+        : (r.noticeTitle ?? "-"),
+    field: r.targetType === "GENERAL" ? (generalKindLabel[r.field] ?? r.field) : r.field,
+    general: r.targetType === "GENERAL",
     current: r.currentValue ?? "-",
     reported: r.reportedValue ?? "-",
     source: details[i].note ?? r.summary ?? "-", // 화면에서는 「제보 설명」으로 보여요(기관 원문이 아님)
@@ -654,7 +672,7 @@ export async function liveReports(): Promise<{
           : routes.benefits
         : r.programId
           ? `${routes.bizSupport}/${r.programId}`
-          : routes.adminReports,
+          : "",
     notes: (details[i].notes ?? []).map((n) => ({
       text: n.text,
       meta: `사용자 · ${when(n.createdAt)}`,
