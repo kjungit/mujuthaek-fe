@@ -80,6 +80,15 @@ export function availableCashWon(session: SessionConditions | null) {
   return session ? manWon(session.available) : null;
 }
 
+/**
+ * 판정에 보낼 사는 곳 코드 (5자리). 시·도만 골랐으면 "41" → "41000"(시·도 전체)으로 보내요.
+ * 판정 API는 5자리만 받아요. 비어 있으면 없음
+ */
+export function judgeRegionCode(code: string | null | undefined) {
+  if (!code) return undefined;
+  return /^\d{2}$/.test(code) ? `${code}000` : code;
+}
+
 /** "1997.03.15" → "1997-03". 해·달을 다 모르면 없음 */
 export function birthMonthOf(birth: string) {
   const [y = "", m = ""] = birth.split(".");
@@ -124,7 +133,7 @@ export function toApplicant(
   const payments = device.paymentCount.replace(/\D/g, "");
   const a: Applicant = {
     birthMonth: birthMonthOf(device.birth),
-    regionCode: device.regionCode || undefined,
+    regionCode: judgeRegionCode(device.regionCode),
     householdHead: device.head === "head",
     householdSize: size,
     targetGroups: device.statuses.map((s) => targetGroups[s]).filter(Boolean),
