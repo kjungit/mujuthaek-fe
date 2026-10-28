@@ -4,6 +4,8 @@ export const endpoints = {
   authLogout: "/api/auth/logout",
   /** 내 정보. 로그인하지 않았으면 401 (로그인 여부 확인에도 써요) */
   usersMe: "/api/users/me",
+  /** 연락용 이메일 등록·변경(PUT {email, consentVersion}) · 삭제(DELETE). 둘 다 204 */
+  usersMeEmail: "/api/users/me/email",
   regions: "/api/v1/regions",
   /** 판정 기준값 (기준 소득 월액, 자산·자동차 구간 경계, 순위 요건) */
   eligibilityCriteria: "/api/v1/eligibility/criteria",

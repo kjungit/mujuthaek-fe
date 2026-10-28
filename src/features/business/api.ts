@@ -305,8 +305,9 @@ function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
 /** 사업 정보 입력 화면의 "지금 조건으로": 고치는 중인 값으로 공간 · 지원 개수를 바로 세요 */
 export function useApiBusinessPreview(draft: BizProfileInput, session: BizSession) {
   const stored = useConditions();
+  // 저장값을 읽은 뒤(브라우저)에만 만들어요. 판정 입력이 오늘 날짜(업력)를 써서 빌드 때 미리 그리면 안 돼요
   const applicant = useMemo(
-    () => applicantOf(stored.status === "ready" ? stored.device : null, draft, session),
+    () => (stored.status === "ready" ? applicantOf(stored.device, draft, session) : {}),
     [stored, draft, session],
   );
   const regionCodes = draft.regionCode ? [draft.regionCode] : undefined;
@@ -441,11 +442,14 @@ export function useApiSupportList(scope?: RegionScope) {
     const items = q.data?.items ?? [];
     return {
       count: q.data?.counts.eligible ?? 0,
-      baseDate: new Intl.DateTimeFormat("ko-KR", {
-        month: "long",
-        day: "numeric",
-        timeZone: "Asia/Seoul",
-      }).format(new Date()),
+      // 받은 뒤(브라우저)에만 오늘 날짜를 써요 (빌드 때 미리 그리는 화면에는 날짜를 넣지 않아요)
+      baseDate: q.data
+        ? new Intl.DateTimeFormat("ko-KR", {
+            month: "long",
+            day: "numeric",
+            timeZone: "Asia/Seoul",
+          }).format(new Date())
+        : "",
       items: items.map(toSupportItem),
       missingSiteCount: items.filter((i) =>
         i.missingInputs.some((m) => m.field.includes("siteRegionCode")),

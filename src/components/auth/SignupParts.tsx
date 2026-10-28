@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ContactEmailFields } from "@/components/auth/ContactEmailParts";
 import { CheckBox } from "@/components/auth/parts";
 import { signupTerms, type useSignupForm } from "@/features/auth/useSignupForm";
 import { cn } from "@/lib/cn";
@@ -78,8 +79,8 @@ export function StoredInfo({ className }: { className?: string }) {
       <span className="text-[17px] font-extrabold">어떤 정보를 저장하나요?</span>
       <ul className="text-text-sub m-0 flex list-none flex-col gap-[8px] p-0 text-[14px] leading-[1.6]">
         <li>
-          계정에는 간편 로그인 회원번호·닉네임과 관심 공고·알림 설정만 저장하고, 탈퇴하면 바로
-          지워요. 비밀번호는 받지 않아요
+          계정에는 간편 로그인 회원번호·닉네임, 적었다면 연락용 이메일, 관심 공고·알림 설정만
+          저장하고, 탈퇴하면 바로 지워요. 비밀번호는 받지 않아요
         </li>
         <li>입력한 조건은 계정과 상관없이 이 기기에만 30일 동안 저장해요</li>
         <li className="text-brand-strong font-bold">소득·자산은 어디에도 저장하지 않아요</li>
@@ -88,21 +89,35 @@ export function StoredInfo({ className }: { className?: string }) {
   );
 }
 
-/** 가입 버튼: 필수 약관에 동의하면 가입 완료로 */
+/** 연락용 이메일 (선택) */
+export function SignupEmail({ form, className }: { form: Form; className?: string }) {
+  return (
+    <section aria-label="연락용 이메일" className={cn("rounded-card bg-surface", className)}>
+      <ContactEmailFields
+        email={form.email}
+        onEmail={form.setEmail}
+        consent={form.emailConsent}
+        onConsent={form.setEmailConsent}
+        error={form.emailError}
+      />
+    </section>
+  );
+}
+
+/** 가입 버튼: 필수 약관에 동의하고 이메일(적었다면)이 맞으면 저장한 뒤 가입 완료로 */
 export function SignupSubmit({ form, className }: { form: Form; className?: string }) {
   const cls = cn(
-    "flex items-center justify-center rounded-[16px] font-extrabold no-underline",
-    form.ready
-      ? "bg-brand text-white hover:text-white"
-      : "bg-line text-text-sub hover:text-text-sub cursor-default",
+    "flex w-full items-center justify-center rounded-[16px] border-0 font-extrabold",
+    form.ready ? "bg-brand cursor-pointer text-white" : "bg-line text-text-sub cursor-default",
     className,
   );
-  return form.ready ? (
-    <Link href={routes.welcome} className={cls}>
-      {form.submitText}
-    </Link>
-  ) : (
-    <button type="button" aria-disabled="true" className={cn(cls, "w-full border-0")}>
+  return (
+    <button
+      type="button"
+      aria-disabled={form.ready ? undefined : "true"}
+      onClick={form.submit}
+      className={cls}
+    >
       {form.submitText}
     </button>
   );

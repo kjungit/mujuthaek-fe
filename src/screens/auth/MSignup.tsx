@@ -1,6 +1,6 @@
 "use client";
 
-import { SignupSubmit, StoredInfo, TermsList } from "@/components/auth/SignupParts";
+import { SignupEmail, SignupSubmit, StoredInfo, TermsList } from "@/components/auth/SignupParts";
 import { useSignupForm } from "@/features/auth/useSignupForm";
 
 /** 가입 마무리: 처음 간편 로그인한 뒤 약관 동의 */
@@ -22,6 +22,8 @@ export function MSignup() {
         </div>
 
         <StoredInfo className="p-[20px]" />
+
+        <SignupEmail form={form} className="p-[20px]" />
 
         <section
           aria-label="약관 동의"
