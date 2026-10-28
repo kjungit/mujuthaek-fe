@@ -47,7 +47,7 @@ export function MMe() {
 
   return (
     <MPage>
-      <MTopBar mode="home" unread={3} />
+      <MTopBar mode="home" />
       <main className="flex flex-1 flex-col gap-[12px] px-[16px] pt-[20px] pb-[28px]">
         <section
           aria-label="계정"

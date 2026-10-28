@@ -30,7 +30,7 @@ export function WebBizSupport() {
 
   return (
     <WebPage>
-      <WebHeader mode="business" current={routes.bizSupport} unread={3} />
+      <WebHeader mode="business" current={routes.bizSupport} />
       <WebMain>
         <div className="flex flex-wrap items-end justify-between gap-[16px]">
           <div className="flex flex-col gap-[6px]">

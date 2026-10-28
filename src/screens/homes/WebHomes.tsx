@@ -1,8 +1,9 @@
 "use client";
 
+import { CardFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { Building, Heart, House } from "lucide-react";
+import { Building, House } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { RankChip, VerdictBadge } from "@/components/ui/Badge";
@@ -30,13 +31,12 @@ import type { HomeListing } from "@/mocks/homes";
 function ListingCard({
   item,
   regionLabel,
-  liked,
-  onToggleLike,
+  onLike,
 }: {
   item: HomeListing;
   regionLabel: string;
-  liked: boolean;
-  onToggleLike: () => void;
+  /** 관심 등록할 때 (GA 기록) */
+  onLike: () => void;
 }) {
   const Icon = item.findYourOwn ? House : Building;
   return (
@@ -58,18 +58,12 @@ function ListingCard({
           )}
           {item.rank && <RankChip rank={item.rank} />}
         </span>
-        <button
-          type="button"
-          aria-label={liked ? "관심 해제" : "관심 등록"}
-          aria-pressed={liked}
-          onClick={onToggleLike}
-          className={cn(
-            "rounded-pill bg-surface absolute top-[10px] right-[10px] flex size-[40px] cursor-pointer items-center justify-center border-0",
-            liked ? "text-brand" : "text-text-sub",
-          )}
-        >
-          <Heart size={20} fill={liked ? "currentColor" : "none"} aria-hidden />
-        </button>
+        <CardFavoriteHeart
+          type="NOTICE"
+          id={item.id}
+          onAdd={onLike}
+          className="absolute top-[10px] right-[10px]"
+        />
       </div>
       <Link
         href={routes.notice(item.id)}
@@ -120,23 +114,11 @@ export function WebHomes() {
   const [view, setView] = useState<"list" | "map">("list");
   const verdicts = useMemo(() => new Map(visible.map((l) => [l.id, l.verdict])), [visible]);
   const verdictOf = useCallback((id: string) => verdicts.get(id), [verdicts]);
-  // 관심 공고는 로그인 연결 때 서버 값으로 바꿔요 (지금은 이 화면 안에서만)
-  const [liked, setLiked] = useState(
-    () => new Set(visible.filter((l) => l.liked).map((l) => l.id)),
-  );
-
-  const toggleLike = (id: string) => {
-    if (!liked.has(id)) {
-      // 목록의 org는 「LH · 행복주택」처럼 유형이 붙어 있어요. 상세 화면과 같게 기관 이름만 보내요
-      const org = visible.find((l) => l.id === id)?.org.split(" · ")[0];
-      track("notice_bookmark", { notice_kind: "standard", agency: org || "-", via: "list" });
-    }
-    setLiked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  // 관심 등록은 카드의 하트가 서버에 저장해요 (features/favorites). 여기서는 GA 기록만
+  const trackLike = (id: string) => {
+    // 목록의 org는 「LH · 행복주택」처럼 유형이 붙어 있어요. 상세 화면과 같게 기관 이름만 보내요
+    const org = visible.find((l) => l.id === id)?.org.split(" · ")[0];
+    track("notice_bookmark", { notice_kind: "standard", agency: org || "-", via: "list" });
   };
 
   const resetFilters = () => {
@@ -147,7 +129,7 @@ export function WebHomes() {
 
   return (
     <WebPage>
-      <WebHeader mode="home" current={routes.homes} unread={3} />
+      <WebHeader mode="home" current={routes.homes} />
       <WebMain>
         <div className="flex flex-wrap items-end justify-between gap-[16px]">
           <div className="flex flex-col gap-[6px]">
@@ -304,8 +286,7 @@ export function WebHomes() {
                   key={item.id}
                   item={item}
                   regionLabel={region.regionLabelOf(item)}
-                  liked={liked.has(item.id)}
-                  onToggleLike={() => toggleLike(item.id)}
+                  onLike={() => trackLike(item.id)}
                 />
               ))}
             </div>

@@ -591,6 +591,7 @@ function policyDetail(
   const source = e.source ? sourceLabel[e.source] : "원문";
   return {
     id: e.id,
+    favoriteType: "SPACE_RECRUITMENT",
     verdict: e.judgment ? verdictOf[e.judgment.result] : "check",
     due: dueOf(e),
     tag: statusLabel[e.status],
@@ -662,6 +663,7 @@ export function useApiSpaceDetail(id: string) {
     }));
     return {
       id: n.id,
+      favoriteType: "NOTICE",
       verdict: j ? verdictOf[j.result] : "check",
       due: n.dueLabel ?? "",
       tag: n.tags[0] ?? "",

@@ -1,8 +1,8 @@
 "use client";
 
+import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Heart } from "lucide-react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
@@ -136,7 +136,6 @@ export function MDetail({ id }: { id: string }) {
   const { data, loading, error } = useNotice(id);
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
-  const [fav, setFav] = useState(false);
   const pdf = usePdfViewer();
   useJudgmentViewed(id, n);
   if (!n) {
@@ -283,21 +282,11 @@ export function MDetail({ id }: { id: string }) {
         </button>
       </main>
       <MBottomActions>
-        <button
-          type="button"
-          aria-pressed={fav}
-          aria-label={fav ? "관심 해제" : "관심 등록하고 마감 알림 받기"}
-          onClick={() => {
-            if (!fav) track("notice_bookmark", noticeParams(n));
-            setFav(!fav);
-          }}
-          className={cn(
-            "rounded-control bg-fill flex min-h-[56px] w-[56px] flex-none cursor-pointer items-center justify-center border-0",
-            fav ? "text-brand" : "text-text-sub",
-          )}
-        >
-          <Heart size={24} fill={fav ? "currentColor" : "none"} aria-hidden />
-        </button>
+        <MFavoriteHeart
+          type="NOTICE"
+          id={n.id}
+          onAdd={() => track("notice_bookmark", noticeParams(n))}
+        />
         <button
           type="button"
           onClick={() => openOriginal()}

@@ -1,17 +1,8 @@
 "use client";
 
+import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
-import {
-  Bell,
-  Building,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  Flag,
-  X,
-} from "lucide-react";
-import { useState } from "react";
+import { Building, Check, ChevronLeft, ChevronRight, ExternalLink, Flag, X } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
@@ -177,7 +168,7 @@ function WebBizDetail({
   if (!data) {
     return (
       <WebPage>
-        <WebHeader mode="business" current={back.href} unread={3} />
+        <WebHeader mode="business" current={back.href} />
         <WebMain className="pt-[24px]">
           {(loading || error) && (
             <div
@@ -206,7 +197,6 @@ function WebSpaceDetailView({
   onAnswer?: OnAnswer;
 }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
-  const [fav, setFav] = useState(false);
   // 모집 정책은 공간 정보 대신 자격 조건이 많아서 넓은 칸에 보여줘요
   const wideRules = data.rules.length > 0 && Boolean(data.summaryNote);
   const met = data.rules.filter((r) => r.met).length;
@@ -215,7 +205,7 @@ function WebSpaceDetailView({
 
   return (
     <WebPage>
-      <WebHeader mode="business" current={back.href} unread={3} />
+      <WebHeader mode="business" current={back.href} />
       <WebMain className="gap-[16px] pt-[24px]">
         <Link
           href={back.href}
@@ -447,21 +437,12 @@ function WebSpaceDetailView({
             </section>
 
             <section aria-label="신청" className={cn(card, "gap-[10px] p-[22px]")}>
-              <button
-                type="button"
-                aria-pressed={fav}
-                onClick={() => {
-                  if (!fav) track("notice_bookmark", { notice_kind: "space" });
-                  setFav((v) => !v);
-                }}
-                className={cn(
-                  "rounded-control flex min-h-[56px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[17px] font-extrabold",
-                  fav ? "bg-brand-soft text-brand-strong" : "bg-brand text-white",
-                )}
-              >
-                <Bell size={20} aria-hidden />
-                {fav ? "마감 알림 받는 중" : "관심 등록 · 마감 알림"}
-              </button>
+              <WebFavoriteButton
+                type={data.favoriteType ?? "SPACE_RECRUITMENT"}
+                id={data.id}
+                onAdd={() => track("notice_bookmark", { notice_kind: "space" })}
+                className="rounded-control min-h-[56px] text-[17px]"
+              />
               <a
                 href={data.sourceUrl ?? "#"}
                 target={data.sourceUrl ? "_blank" : undefined}

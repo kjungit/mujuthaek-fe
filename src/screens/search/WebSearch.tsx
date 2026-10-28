@@ -25,7 +25,7 @@ export function WebSearch() {
 
   return (
     <WebPage>
-      <WebHeader mode="home" active="search" unread={3} />
+      <WebHeader mode="home" active="search" />
       <WebMain className="max-w-[920px] gap-[20px]">
         <div role="search" className="flex flex-col gap-[14px]">
           <label className="relative flex">

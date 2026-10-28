@@ -203,7 +203,7 @@ export function WebBenefits({ initialId }: { initialId?: string }) {
 
   return (
     <WebPage>
-      <WebHeader mode="home" current={routes.benefits} unread={3} />
+      <WebHeader mode="home" current={routes.benefits} />
       <WebMain>
         <div className="flex flex-wrap items-end justify-between gap-[16px]">
           <div className="flex flex-col gap-[6px]">

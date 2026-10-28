@@ -44,4 +44,23 @@ export const endpoints = {
   /** 알림함: 목록(GET ?cursor&size&unread) · /unread-count · /{id}/read · /read-all */
   notifications: "/api/users/me/notifications",
   notificationSettings: "/api/users/me/notification-settings",
+  /** 읽지 않은 알림 수 {count} */
+  notificationsUnreadCount: "/api/users/me/notifications/unread-count",
+  /** 관심 공고: 목록(GET ?targetType&cursor&size) */
+  favorites: "/api/users/me/favorites",
+  /** 관심 공고 저장(PUT)·지우기(DELETE). type: notice · benefit · startup-support · space-recruitment */
+  favorite: (type: string, id: string) =>
+    `/api/users/me/favorites/${encodeURIComponent(type)}/${encodeURIComponent(id)}`,
+  /** 관심 조건 GET·PUT·DELETE. kind: housing · business · support */
+  interests: (kind: "housing" | "business" | "support") => `/api/users/me/interests/${kind}`,
+  /** 내 제보 (공고·혜택·사업·생활권·일반, 최근 100건) */
+  myReports: "/api/users/me/reports",
+  /** 회원 탈퇴 시작 → {reauthUrl} 로 이동 */
+  withdrawal: "/api/users/me/withdrawal",
+  /** 일반 제보 (공고에 묶이지 않은 제보) */
+  generalReports: "/api/v1/reports",
+  /** 공고 · 혜택 · 창업지원 사업(사업공간 포함) 제보 */
+  noticeReports: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}/reports`,
+  benefitReports: (id: string) => `/api/v1/benefits/${encodeURIComponent(id)}/reports`,
+  programReports: (id: string) => `/api/v1/programs/${encodeURIComponent(id)}/reports`,
 } as const;

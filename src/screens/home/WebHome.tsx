@@ -72,7 +72,7 @@ export function WebHome() {
 
   return (
     <WebPage>
-      <WebHeader mode="home" current={routes.home} unread={3} />
+      <WebHeader mode="home" current={routes.home} />
       <WebMain>
         {conditions.status === "loading" ? null : !conditions.hasConditions ? (
           <WebNoConditionsState />

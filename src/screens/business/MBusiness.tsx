@@ -25,7 +25,7 @@ export function MBusiness() {
 
   return (
     <MPage>
-      <MTopBar mode="business" unread={3} />
+      <MTopBar mode="business" />
       <main className="flex flex-1 flex-col gap-[12px] px-[16px] pt-[20px] pb-[28px]">
         <div className="flex flex-col gap-[4px] px-[4px]">
           <h1 className="tracking-h1 m-0 text-[26px] font-extrabold">사업공간</h1>

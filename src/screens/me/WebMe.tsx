@@ -109,7 +109,7 @@ export function WebMe() {
 
   return (
     <WebPage>
-      <WebHeader mode="home" active="me" unread={3} />
+      <WebHeader mode="home" active="me" />
       <main className="mx-auto box-border flex w-full max-w-[1200px] flex-1 flex-wrap items-start gap-[24px] px-[32px] pt-[40px] pb-[72px]">
         <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-[16px]">
           <section

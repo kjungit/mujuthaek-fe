@@ -1,5 +1,6 @@
 "use client";
 
+import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -7,7 +8,6 @@ import {
   Building,
   ChevronRight,
   FileText,
-  Heart,
   MapPin,
   MessageSquareWarning,
 } from "lucide-react";
@@ -375,7 +375,7 @@ export function WebDetail({ id }: { id: string }) {
   if (!n) {
     return (
       <WebPage>
-        <WebHeader mode="home" current={routes.homes} unread={3} />
+        <WebHeader mode="home" current={routes.homes} />
         <WebMain className="pt-[24px] pb-[80px]">
           {(loading || error) && (
             <div
@@ -410,7 +410,7 @@ export function WebDetail({ id }: { id: string }) {
   return (
     <WebPage>
       <div className={cn("flex flex-1 flex-col", pdf.open && pdfUrl && "pl-[min(46vw,680px)]")}>
-        <WebHeader mode="home" current={routes.homes} unread={3} />
+        <WebHeader mode="home" current={routes.homes} />
         <WebMain className="gap-[20px] pt-[24px] pb-[80px]">
           <nav
             aria-label="위치"
@@ -568,14 +568,11 @@ export function WebDetail({ id }: { id: string }) {
                 </section>
               )}
 
-              <button
-                type="button"
-                onClick={() => track("notice_bookmark", noticeParams(n))}
-                className="bg-brand rounded-tile flex min-h-[60px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[18px] font-extrabold text-white"
-              >
-                <Heart size={20} strokeWidth={2.2} aria-hidden />
-                관심 등록하고 마감 알림 받기
-              </button>
+              <WebFavoriteButton
+                type="NOTICE"
+                id={n.id}
+                onAdd={() => track("notice_bookmark", noticeParams(n))}
+              />
               <button
                 type="button"
                 aria-pressed={pdfUrl ? pdf.open : undefined}
