@@ -9,6 +9,8 @@ export type AdminCounts = {
   newReports: number | null;
   /** 검토 전 채팅 신고가 있는 메시지 수 */
   chatReports: number | null;
+  /** 처리 전 중복 의심 사업 수 */
+  policyDuplicates: number | null;
 };
 
 export const adminCounts: AdminCounts = {
@@ -16,6 +18,7 @@ export const adminCounts: AdminCounts = {
   sourceIssues: 2,
   newReports: 5,
   chatReports: 2,
+  policyDuplicates: 1,
 };
 
 export const adminOperator = "김○○";
