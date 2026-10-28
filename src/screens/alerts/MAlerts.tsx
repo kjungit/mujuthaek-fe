@@ -88,7 +88,7 @@ export function MAlerts() {
               <button
                 key={a.id}
                 type="button"
-                onClick={() => alerts.markRead(a.id)}
+                onClick={() => alerts.open(a)}
                 aria-label={`${a.isRead ? "" : "읽지 않음, "}${a.kind}, ${a.short?.title ?? a.title}`}
                 className={cn(
                   "text-text flex w-full cursor-pointer gap-[12px] border-0 px-[20px] py-[14px] text-left",

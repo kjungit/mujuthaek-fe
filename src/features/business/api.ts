@@ -13,7 +13,7 @@ import {
   type BizSession,
   type BusinessApplicant,
 } from "@/features/business/profile";
-import { birthMonthOf } from "@/features/conditions/applicant";
+import { birthMonthOf, judgeRegionCode } from "@/features/conditions/applicant";
 import { useConditions } from "@/features/conditions/store";
 import type { DeviceConditions } from "@/features/conditions/types";
 import { formatPeriod } from "@/features/notice/format";
@@ -262,7 +262,7 @@ function applicantOf(
 ): SpaceApplicant {
   return {
     birthMonth: device ? birthMonthOf(device.birth) : undefined,
-    residenceRegionCode: device?.regionCode || undefined,
+    residenceRegionCode: judgeRegionCode(device?.regionCode),
     business: profile ? toBusinessApplicant(profile, session.revenue) : undefined,
     restrictions: session.restrictions ?? undefined,
     statuses: profile?.statuses ?? undefined,
