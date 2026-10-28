@@ -1,6 +1,10 @@
 import { endpoints } from "./endpoints";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+/**
+ * 백엔드 주소. 기본은 빈 값(이 사이트와 같은 주소): Vercel이 /api/**·/oauth2/**·/login/oauth2/**를 백엔드로 넘겨요(next.config.ts API_ORIGIN).
+ * 로컬 개발은 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080으로 백엔드를 바로 불러요
+ */
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 /** 백엔드 오류 응답 (Problem Details + 화면이 문구를 고를 code) */
 export type Problem = {

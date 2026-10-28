@@ -34,8 +34,8 @@ export function proxy(request: NextRequest, event: NextFetchEvent) {
 export const config = {
   matcher: [
     {
-      // 정적 파일·이미지·서비스 워커·메타 파일은 빼요(점이 들어간 경로는 파일)
-      source: "/((?!_next/|api/|.*\\..*).*)",
+      // 정적 파일·이미지·서비스 워커·메타 파일은 빼요(점이 들어간 경로는 파일). 백엔드로 넘기는 경로(api·OAuth)도 빼요
+      source: "/((?!_next/|api/|oauth2/|login/oauth2/|.*\\..*).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },
