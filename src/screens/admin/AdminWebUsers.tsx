@@ -612,7 +612,6 @@ function UserPanel({
                     key={p.label}
                     type="button"
                     aria-pressed={on}
-                    title={on ? "다시 누르면 이 묶음의 권한을 빼요" : undefined}
                     onClick={() => preset(p.items)}
                     className={cn(
                       "rounded-pill min-h-[34px] cursor-pointer border border-solid px-[12px] text-[13px] font-bold",
