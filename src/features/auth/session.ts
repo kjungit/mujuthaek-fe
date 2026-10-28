@@ -16,6 +16,8 @@ export type Session = {
   /** 연결된 간편 로그인 (KAKAO · NAVER · GOOGLE) */
   providers: string[];
   joinedAt: string;
+  /** 계정 연락용 이메일 (선택). 등록하지 않았으면 null */
+  email: string | null;
 };
 
 export const sessionKey = ["auth", "me"] as const;
@@ -26,6 +28,7 @@ const MOCK_SESSION: Session = {
   role: "USER",
   providers: ["KAKAO"],
   joinedAt: "2026-10-01T00:00:00Z",
+  email: null,
 };
 
 async function fetchSession(): Promise<Session | null> {
