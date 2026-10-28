@@ -15,7 +15,8 @@ export type HomeNewsItem = {
 export type HomeDeadline = { id: string; title: string; meta: string; dday: number };
 
 export type HomeSummary = {
-  homes: { count: number; newThisWeek: number; closingSoon: number };
+  /** count 지원 가능 · needCheck 확인 필요 공고 수 */
+  homes: { count: number; needCheck?: number; newThisWeek: number; closingSoon: number };
   /** 혜택 요약. 받기 전이면 null */
   benefits: { yearlyAmount: string; count: number; needCheck: number } | null;
   news: HomeNewsItem[];

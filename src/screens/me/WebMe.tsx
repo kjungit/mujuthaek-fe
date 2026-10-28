@@ -11,7 +11,9 @@ import { usePush } from "@/features/alerts/usePush";
 import { daysLeft } from "@/features/conditions/format";
 import { DEVICE_TTL_MS, clearConditions, setSaveOnDevice } from "@/features/conditions/store";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
-import { useMe } from "@/features/me/queries";
+import { useFavoriteActions } from "@/features/favorites/api";
+import { useMyFavorites } from "@/features/me/favorites";
+import { useAccount, useMe } from "@/features/me/queries";
 import { cn } from "@/lib/cn";
 import { useLogout } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
@@ -76,13 +78,15 @@ export function WebMe() {
       : conditions.savedAt
         ? `이 기기 · ${daysLeft(conditions.savedAt, DEVICE_TTL_MS)}일 뒤 삭제`
         : "이번 탭에서만";
-  const [favIds, setFavIds] = useState(() => data.favorites.map((f) => f.id));
+  const account = useAccount();
+  const myFavorites = useMyFavorites();
+  const favorite = useFavoriteActions();
   const [notif, setNotif] = useState(data.notif);
   const [channels, setChannels] = useState(data.channels);
   const [reportKind, setReportKind] = useState(data.report.kinds[0]);
   const [reported, setReported] = useState(false);
 
-  const favs = data.favorites.filter((f) => favIds.includes(f.id));
+  const favs = myFavorites.items;
 
   const toggleChannel = async (key: MeChannelKey) => {
     const next = !channels[key];
@@ -99,7 +103,7 @@ export function WebMe() {
 
   const menu: { key: Tab; label: string; count: string }[] = [
     { key: "cond", label: "내 조건", count: "" },
-    { key: "fav", label: "관심 공고", count: `${favs.length}개` },
+    { key: "fav", label: "관심 공고", count: `${myFavorites.total}개` },
     { key: "notif", label: "알림 설정", count: "" },
     { key: "privacy", label: "개인정보 설정", count: "" },
     { key: "report", label: "제보하기", count: "" },
@@ -119,13 +123,15 @@ export function WebMe() {
                 <User size={26} strokeWidth={1.8} aria-hidden />
               </span>
               <span className="flex min-w-0 flex-col gap-[2px]">
-                <span className="text-[18px] font-extrabold">{data.account.name}</span>
-                <span className="text-text-sub truncate text-[14px]">{data.account.email}</span>
+                <span className="text-[18px] font-extrabold">
+                  {account?.name ?? "로그인 확인 중"}
+                </span>
+                <span className="text-text-sub truncate text-[14px]">{account?.joined}</span>
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="rounded-badge bg-fill text-text-sub px-[10px] py-[5px] text-[13px] font-semibold">
-                {data.account.provider}로 로그인
+                {account?.provider ?? "간편 로그인"}로 로그인
               </span>
               <button
                 type="button"
@@ -238,7 +244,7 @@ export function WebMe() {
                   className="border-line-soft flex items-center gap-[14px] border-b border-solid py-[16px]"
                 >
                   <Link
-                    href={routes.notice(f.id)}
+                    href={f.href}
                     className="text-text hover:text-text flex min-w-0 flex-1 flex-col gap-[3px] no-underline"
                   >
                     <span className="text-[17px] font-bold">{f.title}</span>
@@ -255,14 +261,19 @@ export function WebMe() {
                   <button
                     type="button"
                     aria-label={`${f.title} 관심 해제`}
-                    onClick={() => setFavIds((ids) => ids.filter((x) => x !== f.id))}
+                    onClick={() => favorite.set(f.type, f.id, false)}
                     className="bg-fill text-brand flex size-[44px] flex-none cursor-pointer items-center justify-center rounded-sm border-0"
                   >
                     <Heart size={20} fill="currentColor" aria-hidden />
                   </button>
                 </div>
               ))}
-              {favs.length === 0 && (
+              {myFavorites.loading && favs.length === 0 && (
+                <span className="text-text-sub py-[40px] text-center text-[15px]">
+                  관심 공고를 불러오는 중이에요
+                </span>
+              )}
+              {!myFavorites.loading && favs.length === 0 && (
                 <div className="flex flex-col items-center gap-[12px] py-[40px] text-center">
                   <span className="text-[17px] font-bold">관심 공고가 없어요</span>
                   <Link

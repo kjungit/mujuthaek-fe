@@ -44,4 +44,13 @@ export const endpoints = {
   /** 알림을 봤는지·눌렀는지 알리기 (/{id}/shown · /{id}/clicked, 로그인 없이) */
   notificationEvents: "/api/v1/notifications",
   notificationSettings: "/api/users/me/notification-settings",
+  /** 관심 공고·정책 목록 (GET ?targetType&cursor&size) */
+  favorites: "/api/users/me/favorites",
+  /** 관심 저장(PUT)·해제(DELETE). targetType: NOTICE · BENEFIT · STARTUP_SUPPORT · SPACE_RECRUITMENT */
+  favorite: (type: string, id: string) =>
+    `/api/users/me/favorites/${encodeURIComponent(type)}/${encodeURIComponent(id)}`,
+  /** 공고 제보 (로그인) */
+  noticeReports: (id: string) => `/api/v1/notices/${encodeURIComponent(id)}/reports`,
+  /** 창업 지원 사업·입주 모집 제보 (로그인) */
+  programReports: (id: string) => `/api/v1/programs/${encodeURIComponent(id)}/reports`,
 } as const;
