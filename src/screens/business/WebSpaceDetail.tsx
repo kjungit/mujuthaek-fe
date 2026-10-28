@@ -1,8 +1,9 @@
 "use client";
 
+import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
-import { Building, Check, ChevronLeft, ChevronRight, ExternalLink, Flag, X } from "lucide-react";
+import { Building, Check, ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
@@ -458,13 +459,14 @@ function WebSpaceDetailView({
               </span>
             </section>
 
-            <a
-              href="#"
-              className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[6px] self-center text-[14px] font-semibold no-underline"
-            >
-              <Flag size={16} aria-hidden />
-              정보가 틀렸어요 · 제보하기
-            </a>
+            <ReportButton
+              target={
+                data.favoriteType === "NOTICE"
+                  ? { kind: "notice", id: data.id }
+                  : { kind: "program", id: data.id }
+              }
+              screen="사업공간 상세"
+            />
           </aside>
         </div>
       </WebMain>

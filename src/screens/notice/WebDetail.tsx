@@ -1,16 +1,10 @@
 "use client";
 
+import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Building,
-  ChevronRight,
-  FileText,
-  MapPin,
-  MessageSquareWarning,
-} from "lucide-react";
+import { ArrowRight, Building, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
@@ -586,13 +580,12 @@ export function WebDetail({ id }: { id: string }) {
                 <span className="text-text-sub text-[13px]">
                   판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
                 </span>
-                <button
-                  type="button"
-                  className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[13px] font-bold"
-                >
-                  <MessageSquareWarning size={15} aria-hidden />
-                  정보가 틀렸어요 · 제보하기
-                </button>
+                <ReportButton
+                  target={{ kind: "notice", id: n.id }}
+                  screen="공고 상세"
+                  className="self-stretch"
+                  buttonClassName="text-[13px]"
+                />
               </div>
             </aside>
           </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { ReportButton } from "@/components/report/ReportButton";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -274,12 +275,11 @@ export function MDetail({ id }: { id: string }) {
         <span className="text-text-sub px-[16px] pt-[4px] text-center text-[13px]">
           판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
         </span>
-        <button
-          type="button"
-          className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center self-center border-0 bg-transparent p-0 text-[14px] font-semibold"
-        >
-          정보가 틀렸어요 · 제보하기
-        </button>
+        <ReportButton
+          target={{ kind: "notice", id: n.id }}
+          screen="공고 상세 (모바일)"
+          className="px-[16px]"
+        />
       </main>
       <MBottomActions>
         <MFavoriteHeart
