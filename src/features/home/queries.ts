@@ -1,9 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { toApplicant } from "@/features/conditions/applicant";
 import { useConditions } from "@/features/conditions/store";
+import type { DeviceConditions, SessionConditions } from "@/features/conditions/types";
 import { useCriteria } from "@/features/eligibility/criteria";
 import { mockQuery } from "@/features/mock-query";
 import { api } from "@/lib/api/client";
@@ -79,6 +80,7 @@ export function toHomeSummary(s: ApiSummary, today: Date): HomeSummary {
   return {
     homes: {
       count: s.homes.eligible,
+      needCheck: s.homes.needsInput,
       newThisWeek: s.homes.newThisWeek,
       closingSoon: s.homes.closingSoon,
     },
@@ -135,6 +137,31 @@ function useApiHomeSummary() {
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
+}
+
+/**
+ * 조건 입력 중 미리보기: 아직 저장하지 않은 입력값으로 홈 요약을 받아요 (지원 가능 · 확인 필요 공고 수, 혜택 수).
+ * 입력이 바뀌는 동안엔 앞 결과를 그대로 보여줘요
+ */
+export function useHomeSummaryPreview(device: DeviceConditions, session: SessionConditions) {
+  const criteria = useCriteria();
+  const body = useMemo(
+    () => ({
+      filters: device.searchRegionCodes.length ? { regionCodes: device.searchRegionCodes } : {},
+      applicant: toApplicant(device, session, criteria.data),
+    }),
+    [device, session, criteria.data],
+  );
+  const q = useQuery({
+    queryKey: [...homeKeys.summary, "preview", body] as const,
+    queryFn: async () =>
+      toHomeSummary(await api.post<ApiSummary>(endpoints.homeSummary, body), new Date()),
+    enabled: !USE_MOCKS && !criteria.isPending,
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+  return q.data;
 }
 
 function useMockHomeSummary() {

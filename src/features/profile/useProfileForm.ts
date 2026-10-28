@@ -9,6 +9,8 @@ import {
   useConditions,
 } from "@/features/conditions/store";
 import type { DeviceConditions, SessionConditions } from "@/features/conditions/types";
+import { useHomeSummaryPreview } from "@/features/home/queries";
+import { USE_MOCKS } from "@/lib/api/config";
 import { routes } from "@/lib/routes";
 import type { ProfileFormData, RankCriteria } from "@/mocks/profile";
 import { useProfileFormData } from "./queries";
@@ -80,6 +82,7 @@ export function useProfileForm() {
   const [step, setStep] = useState(1);
   const [device, setDevice] = useState<DeviceConditions>(() => defaultDevice(data));
   const [sess, setSess] = useState<SessionConditions>(emptySession);
+  const summary = useHomeSummaryPreview(device, sess);
   const [loaded, setLoaded] = useState(false);
 
   // 저장소를 읽을 수 있게 되면 한 번만 이어서 채워요 (렌더 중 상태 맞추기)
@@ -109,7 +112,14 @@ export function useProfileForm() {
     prev: () => setStep((s) => Math.max(1, s - 1)),
     next: () => setStep((s) => Math.min(3, s + 1)),
     isLast: step === 3,
-    preview: data.previewByStep[step - 1],
+    // 지금까지 넣은 조건(저장 전)으로 판정한 홈 요약 (목업이면 단계별 예시)
+    preview: USE_MOCKS
+      ? data.previewByStep[step - 1]
+      : {
+          homes: summary?.homes.count ?? 0,
+          benefits: summary?.benefits?.count ?? 0,
+          needCheck: summary?.homes.needCheck ?? 0,
+        },
     field,
     sessionField,
     /** 사는 곳 시·도를 바꾸면 시·군·구는 다시 골라요 */

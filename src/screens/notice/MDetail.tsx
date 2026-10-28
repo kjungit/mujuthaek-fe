@@ -11,7 +11,9 @@ import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { MRankCard } from "@/components/notice/RankCard";
+import { ReportButton } from "@/components/report/ReportButton";
 import { VerdictBadge } from "@/components/ui/Badge";
+import { useFavorite } from "@/features/favorites/api";
 import { dueText, formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
 import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/notice/judgment";
 import { bySite, toUnit, useNoticeUnits } from "@/features/notice/units";
@@ -136,7 +138,8 @@ export function MDetail({ id }: { id: string }) {
   const { data, loading, error } = useNotice(id);
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
-  const [fav, setFav] = useState(false);
+  const favorite = useFavorite("NOTICE", id);
+  const fav = favorite.on;
   const pdf = usePdfViewer();
   useJudgmentViewed(id, n);
   if (!n) {
@@ -275,12 +278,7 @@ export function MDetail({ id }: { id: string }) {
         <span className="text-text-sub px-[16px] pt-[4px] text-center text-[13px]">
           판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
         </span>
-        <button
-          type="button"
-          className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center self-center border-0 bg-transparent p-0 text-[14px] font-semibold"
-        >
-          정보가 틀렸어요 · 제보하기
-        </button>
+        <ReportButton target={{ kind: "notice", id }} screen="공고 상세" className="px-[16px]" />
       </main>
       <MBottomActions>
         <button
@@ -289,7 +287,7 @@ export function MDetail({ id }: { id: string }) {
           aria-label={fav ? "관심 해제" : "관심 등록하고 마감 알림 받기"}
           onClick={() => {
             if (!fav) track("notice_bookmark", noticeParams(n));
-            setFav(!fav);
+            favorite.toggle();
           }}
           className={cn(
             "rounded-control bg-fill flex min-h-[56px] w-[56px] flex-none cursor-pointer items-center justify-center border-0",

@@ -9,7 +9,8 @@ import { MPage } from "@/components/layout/Responsive";
 import { Toggle } from "@/components/ui/Toggle";
 import { clearConditions, setSaveOnDevice } from "@/features/conditions/store";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
-import { useMe } from "@/features/me/queries";
+import { useMyFavorites } from "@/features/me/favorites";
+import { useAccount, useMe } from "@/features/me/queries";
 import { cn } from "@/lib/cn";
 import { useLogout } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
@@ -40,6 +41,8 @@ export function MMe() {
   const logout = useLogout();
   const router = useRouter();
   const { data } = useMe();
+  const account = useAccount();
+  const myFavorites = useMyFavorites();
   const conditions = useConditionSummary();
   const saveOnDevice = conditions.status === "ready" ? conditions.saveOnDevice : true;
 
@@ -55,9 +58,9 @@ export function MMe() {
             <User size={26} aria-hidden />
           </span>
           <span className="flex min-w-0 flex-1 flex-col gap-[2px]">
-            <span className="text-[19px] font-extrabold">{data.account.name}</span>
+            <span className="text-[19px] font-extrabold">{account?.name ?? "로그인 확인 중"}</span>
             <span className="text-text-sub text-[14px]">
-              {data.account.email} · {data.account.provider}
+              {account ? `${account.provider} · ${account.joined}` : ""}
             </span>
           </span>
         </section>
@@ -100,7 +103,7 @@ export function MMe() {
 
         <nav aria-label="내 정보 메뉴" className="rounded-card bg-surface flex flex-col p-[6px]">
           <Link href={routes.homes} className={row}>
-            <RowInner label="관심 공고" value={String(data.favorites.length)} />
+            <RowInner label="관심 공고" value={String(myFavorites.total)} />
           </Link>
           <Link href={routes.alerts} className={row}>
             <RowInner label="알림 설정" value={data.mobileMenu.notif} />

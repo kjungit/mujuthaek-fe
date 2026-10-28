@@ -263,6 +263,8 @@ export type SpaceDetail = {
   summaryNote?: string;
   /** 공고 안내: 출처 요약 · 기관 · 문의처 · 접수 방법 · 링크 (모집 정책 · 사업 지원, 실제 API) */
   about?: { summary?: string; rows: { label: string; value: string; href?: string }[] };
+  /** 관심 등록·제보 대상 (실제 API). 사업공간 공고는 공고, 입주 모집·사업 지원은 사업 */
+  target?: { type: "NOTICE" | "SPACE_RECRUITMENT" | "STARTUP_SUPPORT"; id: string };
 };
 
 export const spaceDetails: SpaceDetail[] = [

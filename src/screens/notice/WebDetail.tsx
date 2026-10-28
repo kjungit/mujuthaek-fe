@@ -2,15 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Building,
-  ChevronRight,
-  FileText,
-  Heart,
-  MapPin,
-  MessageSquareWarning,
-} from "lucide-react";
+import { ArrowRight, Building, ChevronRight, FileText, Heart, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
@@ -20,7 +12,9 @@ import { WebUnitFilter } from "@/components/notice/UnitFilter";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { PdfViewer } from "@/components/notice/PdfViewer";
 import { WebRankCard } from "@/components/notice/RankCard";
+import { ReportButton } from "@/components/report/ReportButton";
 import { VerdictBadge } from "@/components/ui/Badge";
+import { useFavorite } from "@/features/favorites/api";
 import { dueText, formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
 import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/notice/judgment";
 import { bySite, toUnit, useNoticeUnits } from "@/features/notice/units";
@@ -372,6 +366,7 @@ export function WebDetail({ id }: { id: string }) {
   const pdf = usePdfViewer();
   useJudgmentViewed(id, n);
   const [lifeSite, setLifeSite] = useState<string>();
+  const favorite = useFavorite("NOTICE", id);
   if (!n) {
     return (
       <WebPage>
@@ -570,11 +565,23 @@ export function WebDetail({ id }: { id: string }) {
 
               <button
                 type="button"
-                onClick={() => track("notice_bookmark", noticeParams(n))}
-                className="bg-brand rounded-tile flex min-h-[60px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[18px] font-extrabold text-white"
+                aria-pressed={favorite.on}
+                onClick={() => {
+                  if (!favorite.on) track("notice_bookmark", noticeParams(n));
+                  favorite.toggle();
+                }}
+                className={cn(
+                  "rounded-tile flex min-h-[60px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[18px] font-extrabold",
+                  favorite.on ? "bg-brand-soft text-brand-strong" : "bg-brand text-white",
+                )}
               >
-                <Heart size={20} strokeWidth={2.2} aria-hidden />
-                관심 등록하고 마감 알림 받기
+                <Heart
+                  size={20}
+                  strokeWidth={2.2}
+                  fill={favorite.on ? "currentColor" : "none"}
+                  aria-hidden
+                />
+                {favorite.on ? "관심 공고 · 마감 알림 받는 중" : "관심 등록하고 마감 알림 받기"}
               </button>
               <button
                 type="button"
@@ -589,13 +596,7 @@ export function WebDetail({ id }: { id: string }) {
                 <span className="text-text-sub text-[13px]">
                   판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
                 </span>
-                <button
-                  type="button"
-                  className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[13px] font-bold"
-                >
-                  <MessageSquareWarning size={15} aria-hidden />
-                  정보가 틀렸어요 · 제보하기
-                </button>
+                <ReportButton target={{ kind: "notice", id }} screen="공고 상세" />
               </div>
             </aside>
           </div>

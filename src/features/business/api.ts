@@ -60,9 +60,11 @@ type ApiSpaceItem = {
   reason: string | null;
   detailUrl: string | null;
   tags: string[];
+  /** 마감일 대신 쓰는 신청 기간 안내 (「예산 소진 시까지」). 없으면 null */
+  applyNote?: string | null;
 };
 
-type ApiSpaceSearch = {
+export type ApiSpaceSearch = {
   counts: { eligible: number; needsInput: number; ineligible: number };
   typeCounts: Record<ApiSpaceType, number>;
   items: ApiSpaceItem[];
@@ -126,6 +128,8 @@ type ApiPolicyInfo = {
   applyUrl: string | null;
   guideUrl: string | null;
   amountText: string | null;
+  /** 마감일 대신 쓰는 신청 기간 안내 (「예산 소진 시까지」). 없으면 null */
+  applyNote?: string | null;
 };
 
 type ApiSupportItem = {
@@ -148,9 +152,11 @@ type ApiSupportItem = {
   groups: string[];
   missingInputs: { field: string; label: string }[];
   detailUrl: string | null;
+  /** 마감일 대신 쓰는 신청 기간 안내 (「예산 소진 시까지」). 없으면 null */
+  applyNote?: string | null;
 };
 
-type ApiSupportSearch = {
+export type ApiSupportSearch = {
   counts: { eligible: number; needsInput: number; ineligible: number };
   subFieldCounts: Record<ApiSubField, number>;
   items: ApiSupportItem[];
@@ -222,10 +228,16 @@ const CLOSING_SOON_DAYS = 7;
 /** 사업공간은 많지 않아서 한 번에 받아요 */
 const PAGE_SIZE = 100;
 
-function dueOf(it: Pick<ApiSpaceItem, "dday" | "status">) {
+function dueOf(it: Pick<ApiSpaceItem, "dday" | "status">, applyNote?: string | null) {
   if (it.dday === 0) return "오늘 마감";
   if (it.dday !== null) return `D-${it.dday}`;
+  if (applyNote) return "예산 소진 시";
   return it.status === "ALWAYS" ? "상시" : "마감일 확인";
+}
+
+/** 신청 상태 글: 마감일 대신 「예산 소진 시까지」가 있으면 「상시 모집」 대신 그 글 */
+function statusText(status: ApiSpaceItem["status"], applyNote?: string | null) {
+  return status === "ALWAYS" && applyNote ? applyNote : statusLabel[status];
 }
 
 /** 응답 한 줄 → 공간 카드. 모집 정책은 출처(K-Startup · 기업마당)와 지역을 보여줘요 */
@@ -245,13 +257,13 @@ export function toSpaceItem(it: ApiSpaceItem): SpaceItem {
     title: it.title,
     info:
       it.reason === "CONDITIONS_NOT_READY"
-        ? `${statusLabel[it.status]} · 자격 조건 정리 중`
-        : [statusLabel[it.status], formatPeriod(it.applyStart, it.applyEnd)]
+        ? `${statusText(it.status, it.applyNote)} · 자격 조건 정리 중`
+        : [statusText(it.status, it.applyNote), formatPeriod(it.applyStart, it.applyEnd)]
             .filter(Boolean)
             .join(" · "),
     tags: it.tags.map((t) => tagLabel[t]).filter(Boolean),
     money: it.policy ? "입주 조건은 원문에서 확인" : "",
-    due: dueOf(it),
+    due: dueOf(it, it.applyNote),
   };
 }
 
@@ -287,7 +299,7 @@ export function useRegionScope() {
 
 export type RegionScope = ReturnType<typeof useRegionScope>;
 
-function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
+export function useSpaceApplicant(): { ready: boolean; applicant: SpaceApplicant } {
   const stored = useConditions();
   const biz = useBizProfileInput();
   return useMemo(
@@ -422,14 +434,16 @@ export function toSupportItem(it: ApiSupportItem): SupportItem {
     mOrg: org,
     body:
       [it.supportArea, it.amountText].filter(Boolean).join(" · ") || "지원 내용은 원문에서 확인",
-    note: period ? `${statusLabel[it.status]} · ${period}` : statusLabel[it.status],
+    note: period
+      ? `${statusText(it.status, it.applyNote)} · ${period}`
+      : statusText(it.status, it.applyNote),
     mBody:
       [it.supportArea, it.amountText ?? period].filter(Boolean).join(" · ") ||
-      statusLabel[it.status],
+      statusText(it.status, it.applyNote),
     reason,
     mReason: reason,
     summary: [org, period].filter(Boolean).join(" · "),
-    due: dueOf(it),
+    due: dueOf(it, it.applyNote),
     href: `${routes.bizSupport}/${encodeURIComponent(it.id)}`,
   };
 }
@@ -471,10 +485,14 @@ export function useApiSupportDetail(id: string) {
   const data = useMemo(
     () =>
       q.data &&
-      policyDetail(q.data, {
-        kind: supportKindLabel[q.data.subField],
-        note: "지원 금액 · 신청 방법 · 제출 서류는 원문에서 확인해 주세요",
-      }),
+      policyDetail(
+        q.data,
+        {
+          kind: supportKindLabel[q.data.subField],
+          note: "지원 금액 · 신청 방법 · 제출 서류는 원문에서 확인해 주세요",
+        },
+        "STARTUP_SUPPORT",
+      ),
     [q.data],
   );
   return { data, loading: !q.isError && q.isPending, error: q.isError, answer };
@@ -581,6 +599,7 @@ function policyDetail(
     kind: "입주기업 모집",
     note: "입주 공간 · 기간 · 비용 · 준비 서류는 원문에서 확인해 주세요",
   },
+  type: "SPACE_RECRUITMENT" | "STARTUP_SUPPORT" = "SPACE_RECRUITMENT",
 ): SpaceDetail {
   const period = formatPeriod(e.applyStart, e.applyEnd);
   const region = regionLabelOf(e.regionCodes);
@@ -588,14 +607,18 @@ function policyDetail(
   return {
     id: e.id,
     verdict: e.judgment ? verdictOf[e.judgment.result] : "check",
-    due: dueOf(e),
-    tag: statusLabel[e.status],
+    due: dueOf(e, e.info?.applyNote),
+    tag: statusText(e.status, e.info?.applyNote),
     title: e.title,
     kind: text.kind,
     host: e.source ? sourceLabel[e.source] : "",
     area: region ?? "",
     facts: [
-      { label: "접수 기간", value: period ?? "원문 확인", mValue: period ?? "원문 확인" },
+      {
+        label: "접수 기간",
+        value: period ?? e.info?.applyNote ?? "원문 확인",
+        mValue: period ?? e.info?.applyNote ?? "원문 확인",
+      },
       { label: "지역", value: region ?? "원문 확인", mValue: region ?? "원문 확인" },
       { label: "출처", value: source, mValue: source },
       ...(e.info?.supportArea
@@ -614,6 +637,7 @@ function policyDetail(
     notReady: !e.judgment,
     summaryNote: text.note,
     about: aboutOf(e.info),
+    target: { type, id: e.id },
   };
 }
 
@@ -680,6 +704,7 @@ export function useApiSpaceDetail(id: string) {
       rules: rulesOf(j),
       sourceUrl: n.doc.source.detailUrl || undefined,
       notReady: Boolean(e) && !j,
+      target: { type: "NOTICE", id: n.id },
     };
   }, [n, evaluation.data]);
   const loading =

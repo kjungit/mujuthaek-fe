@@ -9,7 +9,6 @@ import {
   ExternalLink,
   Flag,
   History,
-  MessageSquareWarning,
   Users,
   LayoutDashboard,
   SlidersHorizontal,
@@ -27,40 +26,41 @@ type MenuItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  count?: { key: keyof AdminCounts; tone: "wait" | "fail" };
+  /** 여러 개면 받은 숫자만 더해요 (권한이 없어 못 받은 숫자는 빼요) */
+  count?: { keys: (keyof AdminCounts)[]; tone: "wait" | "fail" };
 };
 
 const menu: MenuItem[] = [
   { href: routes.admin, label: "개요", icon: LayoutDashboard },
-  {
-    href: routes.adminReview,
-    label: "검수",
-    icon: ClipboardCheck,
-    count: { key: "reviewPending", tone: "wait" },
-  },
+  { href: routes.adminUsers, label: "회원", icon: Users },
   {
     href: routes.adminSources,
     label: "수집 현황",
     icon: Database,
-    count: { key: "sourceIssues", tone: "fail" },
+    count: { keys: ["sourceIssues"], tone: "fail" },
   },
-  { href: routes.adminCriteria, label: "기준값", icon: SlidersHorizontal },
+  {
+    href: routes.adminReview,
+    label: "검수",
+    icon: ClipboardCheck,
+    count: { keys: ["reviewPending"], tone: "wait" },
+  },
   {
     href: routes.adminReports,
-    label: "제보",
+    label: "제보·신고",
     icon: Flag,
-    count: { key: "newReports", tone: "wait" },
+    count: { keys: ["newReports", "chatReports", "policyDuplicates"], tone: "wait" },
   },
   { href: routes.adminTraffic, label: "트래픽", icon: Activity },
-  {
-    href: routes.adminChat,
-    label: "채팅 신고",
-    icon: MessageSquareWarning,
-    count: { key: "chatReports", tone: "wait" },
-  },
-  { href: routes.adminUsers, label: "회원", icon: Users },
+  { href: routes.adminCriteria, label: "기준값", icon: SlidersHorizontal },
   { href: routes.adminActivity, label: "처리 기록", icon: History },
 ];
+
+/** 메뉴 숫자: 받은 숫자만 더하고, 하나도 못 받았으면 null (0으로 보이지 않게) */
+function menuCount(counts: AdminCounts, keys: (keyof AdminCounts)[]) {
+  const got = keys.map((k) => counts[k]).filter((n): n is number => n != null);
+  return got.length ? got.reduce((a, b) => a + b, 0) : null;
+}
 
 /** 관리자 화면 틀: 왼쪽 232px 어두운 사이드바 + 본문 */
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -91,6 +91,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <nav aria-label="관리자 메뉴" className="flex flex-col gap-[4px]">
           {allowed.map(({ href, label, icon: Icon, count }) => {
             const current = pathname === href;
+            const n = count ? menuCount(counts, count.keys) : null;
             return (
               <Link
                 key={href}
@@ -105,7 +106,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon size={20} aria-hidden />
                 <span className="flex-1">{label}</span>
-                {count && counts[count.key] != null && (
+                {count && n != null && (
                   <span
                     className={cn(
                       "rounded-pill px-[8px] py-[2px] text-[12px] font-extrabold",
@@ -114,7 +115,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                         : "bg-check-bg text-check-text",
                     )}
                   >
-                    {counts[count.key]}
+                    {n}
                   </span>
                 )}
               </Link>

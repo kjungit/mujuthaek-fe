@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
+import { AdminTitleRow } from "@/components/admin/AdminShell";
 import { isAreaReport, reopenFromReport, resolveReport } from "@/features/admin/api";
 import { useAdminReports, useSetAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
@@ -21,7 +21,8 @@ type Finish = "fix" | "same";
 const secondary =
   "rounded-control bg-fill text-text hover:text-text min-h-[52px] px-[18px] text-[15px] font-bold";
 
-export function AdminWebReports() {
+/** 정보 제보 (제보·신고 화면의 한 갈래). head: 제목 줄 왼쪽 */
+export function AdminWebReports({ head }: { head: React.ReactNode }) {
   const { data } = useAdminReports();
   const setCounts = useSetAdminCounts();
   const items = data.items;
@@ -61,10 +62,7 @@ export function AdminWebReports() {
   return (
     <>
       <AdminTitleRow>
-        <AdminTitle
-          title="제보"
-          desc="사용자가 '정보가 틀렸어요'로 보낸 내용이에요 · 같은 곳을 가리키는 제보는 묶어서 보여드려요"
-        />
+        {head}
         <div role="group" aria-label="처리 상태" className="flex flex-wrap gap-[6px]">
           {TABS.map((t) => {
             const on = t.key === tab;

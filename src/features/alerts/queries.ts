@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { liveAlerts, markAlertRead, markAllAlertsRead } from "@/features/alerts/api";
+import {
+  liveAlerts,
+  markAlertClicked,
+  markAlertRead,
+  markAllAlertsRead,
+} from "@/features/alerts/api";
 import { mockQuery } from "@/features/mock-query";
 import { USE_MOCKS } from "@/lib/api/config";
 import {
@@ -91,8 +96,15 @@ export function useAlerts() {
     markRead,
     /** 알림을 누르면 읽음으로 바꾸고 그 화면으로 가요 (앱 안 경로만) */
     open: (a: AlertItem) => {
-      markRead(a.id);
-      if (a.linkPath?.startsWith("/") && !a.linkPath.startsWith("//")) router.push(a.linkPath);
+      const path = a.linkPath?.startsWith("/") && !a.linkPath.startsWith("//") ? a.linkPath : null;
+      if (!path) {
+        markRead(a.id);
+        return;
+      }
+      // 눌러서 이동: 읽음과 「눌렀어요」를 함께 남겨요
+      setReadNow((r) => ({ ...r, [a.id]: true }));
+      if (!USE_MOCKS) void markAlertClicked(a.id).then(refresh, refresh);
+      router.push(path);
     },
     readAll: () => {
       setReadNow(Object.fromEntries(data.items.map((a) => [a.id, true])));
