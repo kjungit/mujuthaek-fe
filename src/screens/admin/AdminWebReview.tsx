@@ -65,7 +65,16 @@ export function AdminWebReview() {
   const statusText = (id: string) =>
     done[id] === "ok" ? "승인함" : done[id] === "no" ? "반려함" : "대기 중";
 
+  /** 승인·반려는 되돌릴 수 없어 한 번 더 물어요 */
+  const confirmText = (kind: Done) => {
+    const changed = Object.keys(curEdits);
+    return kind === "ok"
+      ? `「${cur.title}」을(를) ${changed.length ? `고친 ${changed.length}칸(${changed.join(", ")})으로 ` : ""}승인할까요? 승인하면 사용자 화면에 반영돼요.`
+      : `「${cur.title}」을(를) ${rejectReason ? `「${rejectReason}」 사유로 ` : "사유 없이 "}반려할까요?`;
+  };
+
   const finish = async (kind: Done) => {
+    if (!window.confirm(confirmText(kind))) return;
     // 실제 백엔드에 승인·반려를 보내요(고친 칸은 칸별 수정으로). 목업이면 화면만 바꿔요
     if (reviewMeta.has(cur.id)) {
       setBusy(true);
