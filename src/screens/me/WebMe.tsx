@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Heart, Lock, User } from "lucide-react";
+import { ContactEmailCard } from "@/components/auth/ContactEmailParts";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebPage } from "@/components/layout/Responsive";
 import { Toggle } from "@/components/ui/Toggle";
@@ -13,7 +14,7 @@ import { DEVICE_TTL_MS, clearConditions, setSaveOnDevice } from "@/features/cond
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useMe } from "@/features/me/queries";
 import { cn } from "@/lib/cn";
-import { useLogout } from "@/features/auth/session";
+import { useLogout, useSession } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
 import type { MeChannelKey, MeNotifKey } from "@/mocks/me";
 
@@ -66,6 +67,7 @@ export function WebMe() {
   const logout = useLogout();
   const router = useRouter();
   const { data } = useMe();
+  const { data: session } = useSession();
   const push = usePush();
   const [tab, setTab] = useState<Tab>("cond");
   const conditions = useConditionSummary();
@@ -120,7 +122,9 @@ export function WebMe() {
               </span>
               <span className="flex min-w-0 flex-col gap-[2px]">
                 <span className="text-[18px] font-extrabold">{data.account.name}</span>
-                <span className="text-text-sub truncate text-[14px]">{data.account.email}</span>
+                <span className="text-text-sub truncate text-[14px]">
+                  {session?.email ?? "연락용 이메일 없음"}
+                </span>
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -349,6 +353,7 @@ export function WebMe() {
                   label="이 기기에 조건 저장"
                 />
               </div>
+              <ContactEmailCard className="border-line-soft border-b border-solid pb-[16px]" />
               <div className="flex flex-col">
                 <span className="mb-[4px] text-[16px] font-extrabold">저장된 정보</span>
                 <div className="border-line-soft flex justify-between gap-[12px] border-b border-solid py-[12px] text-[15px]">
@@ -359,9 +364,13 @@ export function WebMe() {
                   <span>소득 · 자산 · 순위 세부 조건</span>
                   <span className="text-brand-strong font-bold">저장 안 함</span>
                 </div>
-                <div className="flex justify-between gap-[12px] py-[12px] text-[15px]">
+                <div className="border-line-soft flex justify-between gap-[12px] border-b border-solid py-[12px] text-[15px]">
                   <span>관심 공고 · 알림 설정</span>
                   <span className="font-bold">계정에 저장</span>
+                </div>
+                <div className="flex justify-between gap-[12px] py-[12px] text-[15px]">
+                  <span>연락용 이메일 (선택)</span>
+                  <span className="font-bold">{session?.email ? "계정에 저장" : "없음"}</span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-[8px]">

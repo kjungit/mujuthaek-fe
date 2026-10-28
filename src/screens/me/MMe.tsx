@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Lock, User } from "lucide-react";
+import { ContactEmailCard } from "@/components/auth/ContactEmailParts";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
@@ -11,7 +12,7 @@ import { clearConditions, setSaveOnDevice } from "@/features/conditions/store";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useMe } from "@/features/me/queries";
 import { cn } from "@/lib/cn";
-import { useLogout } from "@/features/auth/session";
+import { useLogout, useSession } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
 
 const row =
@@ -40,6 +41,7 @@ export function MMe() {
   const logout = useLogout();
   const router = useRouter();
   const { data } = useMe();
+  const { data: session } = useSession();
   const conditions = useConditionSummary();
   const saveOnDevice = conditions.status === "ready" ? conditions.saveOnDevice : true;
 
@@ -57,10 +59,12 @@ export function MMe() {
           <span className="flex min-w-0 flex-1 flex-col gap-[2px]">
             <span className="text-[19px] font-extrabold">{data.account.name}</span>
             <span className="text-text-sub text-[14px]">
-              {data.account.email} · {data.account.provider}
+              {session?.email ?? "연락용 이메일 없음"} · {data.account.provider}
             </span>
           </span>
         </section>
+
+        <ContactEmailCard className="rounded-card bg-surface px-[20px] py-[18px]" />
 
         <section
           aria-labelledby="cond-h"
