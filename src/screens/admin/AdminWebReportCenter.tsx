@@ -7,15 +7,16 @@ import type { AdminPermission } from "@/features/admin/permissions";
 import { useAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import { AdminWebChatReports } from "@/screens/admin/AdminWebChatReports";
+import { AdminWebPolicyDuplicates } from "@/screens/admin/AdminWebPolicyDuplicates";
 import { AdminWebReports } from "@/screens/admin/AdminWebReports";
 
-type Kind = "reports" | "chat";
+type Kind = "reports" | "chat" | "duplicates";
 
 const KINDS: {
   key: Kind;
   label: string;
   permission: AdminPermission;
-  count: "newReports" | "chatReports";
+  count: "newReports" | "chatReports" | "policyDuplicates";
   desc: string;
 }[] = [
   {
@@ -31,6 +32,13 @@ const KINDS: {
     permission: "CHAT",
     count: "chatReports",
     desc: "공고 채팅에서 신고된 글이에요 · 같은 글에 들어온 신고는 묶어서 보여드려요 · 신고 3건이면 검토 전에 자동으로 가려져요",
+  },
+  {
+    key: "duplicates",
+    label: "중복 의심",
+    permission: "REPORTS",
+    count: "policyDuplicates",
+    desc: "출처에 두 번 올라온 것 같은 창업 지원·입주 모집 사업이에요 · 같은 분야 · 같은 이름 · 같은 지역이면 올라와요 · 자동으로 지우지 않아요",
   },
 ];
 
@@ -83,5 +91,7 @@ export function AdminWebReportCenter() {
     </div>
   );
 
-  return cur.key === "chat" ? <AdminWebChatReports head={head} /> : <AdminWebReports head={head} />;
+  if (cur.key === "chat") return <AdminWebChatReports head={head} />;
+  if (cur.key === "duplicates") return <AdminWebPolicyDuplicates head={head} />;
+  return <AdminWebReports head={head} />;
 }
