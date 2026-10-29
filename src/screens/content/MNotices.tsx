@@ -13,8 +13,12 @@ export function MNotices() {
   const [category, setCategory] = useState<AnnouncementFilter>("전체");
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const shown = data.filter((d) => category === "전체" || d.category === category);
-  const current = data.find((d) => d.id === openId);
+  // 중요 공지를 맨 위로 (웹과 같아요)
+  const shown = data
+    .filter((d) => category === "전체" || d.category === category)
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned));
+  const index = shown.findIndex((d) => d.id === openId);
+  const current = index >= 0 ? shown[index] : data.find((d) => d.id === openId);
 
   const open = (id: string | null) => {
     setOpenId(id);
@@ -38,6 +42,11 @@ export function MNotices() {
               <span className="rounded-badge bg-brand-soft text-brand-strong px-[9px] py-[4px] text-[13px] font-bold">
                 {current.category}
               </span>
+              {current.pinned && (
+                <span className="rounded-badge bg-check-bg text-check-text px-[9px] py-[4px] text-[13px] font-bold">
+                  중요
+                </span>
+              )}
             </span>
             <h2 className="tracking-h1 m-0 text-[22px] leading-[1.4] font-extrabold">
               {current.title}
@@ -45,11 +54,18 @@ export function MNotices() {
             <span className="border-line-soft text-text-sub border-b border-solid pb-[14px] text-[13px]">
               {current.date} · 무주택자들 팀
             </span>
-            {current.mobileBody.map((p) => (
+            {current.body.map((p) => (
               <p key={p} className="text-text-body-long m-0 text-[16px] leading-[1.8]">
                 {p}
               </p>
             ))}
+            {current.points.length > 0 && (
+              <ul className="bg-bg m-0 flex list-disc flex-col gap-[6px] rounded-[16px] py-[14px] pr-[16px] pl-[32px] text-[15px] leading-[1.6]">
+                {current.points.map((pt) => (
+                  <li key={pt}>{pt}</li>
+                ))}
+              </ul>
+            )}
             {current.cta && (
               <Link
                 href={current.cta.href}
@@ -57,6 +73,26 @@ export function MNotices() {
               >
                 {current.cta.label}
               </Link>
+            )}
+            {index >= 0 && shown.length > 1 && (
+              <div className="border-line-soft flex justify-between gap-[10px] border-t border-solid pt-[14px]">
+                <button
+                  type="button"
+                  disabled={index === 0}
+                  onClick={() => open(shown[index - 1].id)}
+                  className="text-text-sub min-h-[44px] cursor-pointer border-0 bg-transparent px-[4px] text-[14px] font-semibold disabled:opacity-40"
+                >
+                  ‹ 이전 공지
+                </button>
+                <button
+                  type="button"
+                  disabled={index === shown.length - 1}
+                  onClick={() => open(shown[index + 1].id)}
+                  className="text-text-sub min-h-[44px] cursor-pointer border-0 bg-transparent px-[4px] text-[14px] font-semibold disabled:opacity-40"
+                >
+                  다음 공지 ›
+                </button>
+              </div>
             )}
           </article>
         ) : (

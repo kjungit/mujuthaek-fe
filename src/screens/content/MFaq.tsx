@@ -7,13 +7,15 @@ import { MPage } from "@/components/layout/Responsive";
 import { FilterChip } from "@/components/ui/Chip";
 import { useFaq } from "@/features/content/queries";
 import { useFaqFilter } from "@/features/content/useFaqFilter";
+import { reportHref } from "@/features/me/tabs";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import { faqCategories } from "@/mocks/content";
 
 export function MFaq() {
   const { data } = useFaq();
-  const f = useFaqFilter(data.mobile, data.initiallyOpen);
+  // 웹과 같은 질문 목록 (모바일만 줄인 목록은 질문이 빠지고 번호가 달랐어요)
+  const f = useFaqFilter(data.web, data.initiallyOpen);
 
   return (
     <MPage>
@@ -93,7 +95,7 @@ export function MFaq() {
         })}
         {f.shown.length === 0 && (
           <div className="bg-surface text-text-sub rounded-[18px] px-[20px] py-[32px] text-center text-[15px]">
-            찾는 질문이 없어요
+            찾는 질문이 없어요. 다른 말로 찾아보거나 아래로 문의해 주세요
           </div>
         )}
         <section
@@ -110,6 +112,12 @@ export function MFaq() {
           >
             이메일로 문의
           </a>
+          <Link
+            href={reportHref({ kind: "WRONG_INFO", from: "자주 묻는 질문" })}
+            className="text-brand-deep-text hover:text-brand-deep-text inline-flex min-h-[44px] items-center justify-center text-[14px] font-bold no-underline"
+          >
+            정보가 틀렸다면 제보하기
+          </Link>
         </section>
       </main>
     </MPage>
