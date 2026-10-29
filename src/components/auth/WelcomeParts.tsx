@@ -26,7 +26,23 @@ export const setupCard = (done: boolean) =>
   cn("rounded-card bg-surface border-2 border-solid", done ? "border-brand" : "border-surface");
 
 export function AlertToggle({ setup }: { setup: Setup }) {
-  return <Toggle checked={setup.alert} onChange={setup.setAlert} label="마감 알림" />;
+  return (
+    <Toggle
+      checked={setup.alert}
+      onChange={(on) => !setup.alertPending && setup.setAlert(on)}
+      label="마감 알림"
+    />
+  );
+}
+
+/** 마감 알림을 켜지 못한 이유 (알림 차단·지원 안 함 등) */
+export function AlertError({ setup }: { setup: Setup }) {
+  if (!setup.alertError) return null;
+  return (
+    <span role="alert" className="text-danger-text text-[13px] font-bold">
+      {setup.alertError}
+    </span>
+  );
 }
 
 export function InterestChips({ setup, chipClassName }: { setup: Setup; chipClassName?: string }) {
