@@ -433,6 +433,20 @@ export function ReportPanel({
         <h2 className="m-0 text-[18px] font-extrabold">내 제보</h2>
         {reports.loading ? (
           <span className="text-text-sub py-[12px] text-[15px]">불러오는 중…</span>
+        ) : reports.failed ? (
+          <span
+            role="alert"
+            className="text-text-sub flex flex-wrap items-center gap-[8px] py-[12px] text-[15px]"
+          >
+            내 제보 목록을 불러오지 못했어요. 잠시 뒤 다시 해 주세요
+            <button
+              type="button"
+              onClick={reports.retry}
+              className="text-brand cursor-pointer border-0 bg-transparent p-0 text-[15px] font-bold"
+            >
+              다시 불러오기
+            </button>
+          </span>
         ) : reports.items.length === 0 ? (
           <span className="text-text-sub py-[12px] text-[15px]">아직 보낸 제보가 없어요</span>
         ) : (
