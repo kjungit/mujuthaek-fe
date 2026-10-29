@@ -216,12 +216,15 @@ function regionLabelOf(codes: string[] | null) {
 const criterionLabel: Record<string, string> = {
   AGE: "대표자 나이",
   APPLICANT_TYPE: "신청 자격 (개인 · 법인)",
+  BUSINESS_AGE: "업력",
   BUSINESS_CAREER: "업력",
   BUSINESS_REGISTRATION: "사업자 등록",
+  CLOSURE: "폐업 이력",
   EXCLUDED_STATUS: "신청 제한",
   INDUSTRY: "업종",
   NATIONALITY: "국적",
   REGION: "지역",
+  REVENUE: "매출",
   STATUS: "대상",
   ASK: "확인할 것",
 };
