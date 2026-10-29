@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, Lock, User } from "lucide-react";
 import { ContactEmailCard } from "@/components/auth/ContactEmailParts";
 import { WithdrawButton } from "@/components/me/WithdrawButton";
+import { StoredInfoList, saveOnDeviceNote } from "@/components/me/StoredInfo";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
@@ -144,7 +145,7 @@ export function MMe() {
           <div className={cn(row, "justify-between")}>
             <span className="flex flex-col gap-[2px]">
               <span className="text-[16px] font-semibold">이 기기에 조건 저장</span>
-              <span className="text-text-sub text-[13px]">소득·자산은 저장하지 않아요</span>
+              <span className="text-text-sub text-[13px]">{saveOnDeviceNote(saveOnDevice)}</span>
             </span>
             <Toggle checked={saveOnDevice} onChange={setSaveOnDevice} label="이 기기에 조건 저장" />
           </div>
@@ -168,6 +169,10 @@ export function MMe() {
             />
           </Link>
         </nav>
+
+        <section aria-label="저장된 정보" className="rounded-card bg-surface px-[18px] py-[14px]">
+          <StoredInfoList compact />
+        </section>
 
         <nav aria-label="고객센터" className="rounded-card bg-surface flex flex-col p-[6px]">
           {supportLinks.map((l) => (

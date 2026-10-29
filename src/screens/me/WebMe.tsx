@@ -12,10 +12,11 @@ import { FavoriteList, NotificationSettingsPanel, ReportPanel } from "@/componen
 import { WithdrawButton } from "@/components/me/WithdrawButton";
 import { Toggle } from "@/components/ui/Toggle";
 import { providerLabel, useLogout, useSession } from "@/features/auth/session";
-import { daysLeft } from "@/features/conditions/format";
-import { DEVICE_TTL_MS, clearConditions, setSaveOnDevice } from "@/features/conditions/store";
+import { clearConditions, setSaveOnDevice } from "@/features/conditions/store";
+import { StoredInfoList, saveOnDeviceNote } from "@/components/me/StoredInfo";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useFavorites } from "@/features/favorites/queries";
+import { useMyReports } from "@/features/me/api";
 import { meTabs, reportKindParam, type MeTab } from "@/features/me/tabs";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -46,6 +47,8 @@ export function WebMe({ initialTab }: { initialTab?: MeTab }) {
   const params = useSearchParams();
   const { data: session } = useSession();
   const favorites = useFavorites();
+  const reports = useMyReports();
+  const replies = reports.items.filter((r) => r.reply).length;
   const fromUrl = params.get("tab");
   const [tab, setTabState] = useState<MeTab>(
     initialTab ?? (meTabs.includes(fromUrl as MeTab) ? (fromUrl as MeTab) : "conditions"),
@@ -56,12 +59,6 @@ export function WebMe({ initialTab }: { initialTab?: MeTab }) {
   };
   const conditions = useConditionSummary();
   const saveOnDevice = conditions.status === "ready" ? conditions.saveOnDevice : true;
-  const deviceStatus =
-    conditions.status !== "ready" || !conditions.hasConditions
-      ? "없음"
-      : conditions.savedAt
-        ? `이 기기 · ${daysLeft(conditions.savedAt, DEVICE_TTL_MS)}일 뒤 삭제`
-        : "이번 탭에서만";
 
   const menu: { key: MeTab; label: string; count: string }[] = [
     { key: "conditions", label: "내 조건", count: "" },
@@ -73,7 +70,7 @@ export function WebMe({ initialTab }: { initialTab?: MeTab }) {
     { key: "interests", label: "관심 조건", count: "" },
     { key: "notifications", label: "알림 설정", count: "" },
     { key: "privacy", label: "개인정보 설정", count: "" },
-    { key: "reports", label: "제보하기", count: "" },
+    { key: "reports", label: "제보하기", count: replies ? `답변 ${replies}` : "" },
   ];
 
   return (
@@ -149,6 +146,14 @@ export function WebMe({ initialTab }: { initialTab?: MeTab }) {
                 </button>
               );
             })}
+            {/* 사업 정보는 따로 입력 화면이 있어요 (모바일 내 정보와 같은 바로가기) */}
+            <Link
+              href={routes.bizOnboarding}
+              className="rounded-control text-text hover:text-text flex min-h-[52px] items-center justify-between gap-[8px] px-[14px] text-[16px] font-semibold no-underline"
+            >
+              사업 정보
+              <span className="text-text-sub text-[14px]">사업공간 판정</span>
+            </Link>
           </nav>
 
           <nav
@@ -232,9 +237,7 @@ export function WebMe({ initialTab }: { initialTab?: MeTab }) {
                     이 기기에 조건 저장
                   </span>
                   <span className="text-brand-strong text-[14px] leading-[1.6]">
-                    {saveOnDevice
-                      ? "나이·지역·가족·주택 조건을 30일 동안 이 기기에만 저장해요"
-                      : "이 기기에 저장하지 않아요. 탭을 닫으면 입력한 조건이 지워져요"}
+                    {saveOnDeviceNote(saveOnDevice)}
                   </span>
                 </span>
                 <Toggle
@@ -244,25 +247,7 @@ export function WebMe({ initialTab }: { initialTab?: MeTab }) {
                 />
               </div>
               <ContactEmailCard className="border-line-soft border-b border-solid pb-[16px]" />
-              <div className="flex flex-col">
-                <span className="mb-[4px] text-[16px] font-extrabold">저장된 정보</span>
-                <div className="border-line-soft flex justify-between gap-[12px] border-b border-solid py-[12px] text-[15px]">
-                  <span>나이 · 지역 · 가족 · 주택 조건</span>
-                  <span className="font-bold">{deviceStatus}</span>
-                </div>
-                <div className="border-line-soft flex justify-between gap-[12px] border-b border-solid py-[12px] text-[15px]">
-                  <span>소득 · 자산 · 순위 세부 조건</span>
-                  <span className="text-brand-strong font-bold">저장 안 함</span>
-                </div>
-                <div className="border-line-soft flex justify-between gap-[12px] border-b border-solid py-[12px] text-[15px]">
-                  <span>관심 공고 · 관심 조건 · 알림 설정</span>
-                  <span className="font-bold">계정에 저장</span>
-                </div>
-                <div className="flex justify-between gap-[12px] py-[12px] text-[15px]">
-                  <span>연락용 이메일 (선택)</span>
-                  <span className="font-bold">{session?.email ? "계정에 저장" : "없음"}</span>
-                </div>
-              </div>
+              <StoredInfoList />
               <button
                 type="button"
                 onClick={clearConditions}
