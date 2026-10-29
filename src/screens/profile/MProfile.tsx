@@ -68,6 +68,7 @@ export function MProfile() {
             <BirthField
               value={form.field("birth").value}
               onChange={(birth) => form.field("birth").onChange({ target: { value: birth } })}
+              showProblem={form.birthBlocked}
               selectClassName={mSelect}
             />
             <SearchRegionsField form={form} selectClassName={mSelect} />

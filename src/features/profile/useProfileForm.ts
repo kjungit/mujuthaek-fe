@@ -9,6 +9,7 @@ import {
   useConditions,
 } from "@/features/conditions/store";
 import type { DeviceConditions, SessionConditions } from "@/features/conditions/types";
+import { birthProblem } from "@/components/profile/BirthField";
 import { routes, safeNext } from "@/lib/routes";
 import type { ProfileFormData, RankCriteria } from "@/mocks/profile";
 import { useConditionsPreview } from "./preview";
@@ -86,6 +87,8 @@ export function useProfileForm() {
   const [device, setDevice] = useState<DeviceConditions>(() => defaultDevice(data));
   const [sess, setSess] = useState<SessionConditions>(emptySession);
   const [loaded, setLoaded] = useState(false);
+  /** 생년월일이 맞지 않아 1단계에서 막혔는지 (그때부터 이유를 보여 줘요) */
+  const [birthBlocked, setBirthBlocked] = useState(false);
 
   // 저장소를 읽을 수 있게 되면 한 번만 이어서 채워요 (렌더 중 상태 맞추기)
   if (!loaded && stored.status === "ready") {
@@ -110,12 +113,29 @@ export function useProfileForm() {
     onChange: (e: { target: { value: string } }) => patchSess({ [key]: e.target.value }),
   });
 
+  /** 1단계를 넘어가려면 생년월일이 맞아야 해요. 막히면 1단계에 남아 이유를 보여 줘요 */
+  const canLeaveStep1 = () => {
+    const ok = birthProblem(device.birth) === null;
+    if (!ok) {
+      setBirthBlocked(true);
+      setStep(1);
+    }
+    return ok;
+  };
+
   return {
     data,
     step,
-    goTo: setStep,
+    goTo: (n: number) => {
+      if (n > 1 && !canLeaveStep1()) return;
+      setStep(n);
+    },
     prev: () => setStep((s) => Math.max(1, s - 1)),
-    next: () => setStep((s) => Math.min(3, s + 1)),
+    next: () => {
+      if (step === 1 && !canLeaveStep1()) return;
+      setStep((s) => Math.min(3, s + 1));
+    },
+    birthBlocked,
     isLast: step === 3,
     preview,
     field,
@@ -165,6 +185,7 @@ export function useProfileForm() {
     },
     /** 확인하기: 저장하고 결과(홈, 또는 ?next로 받은 곳)로 */
     submit: () => {
+      if (!canLeaveStep1()) return;
       saveConditions(device, sess);
       router.push(next);
     },
