@@ -17,6 +17,8 @@ export type SearchResult = {
   /** 모바일에서 줄여 쓰는 메타 */
   metaShort: string;
   badge: SearchBadge;
+  /** 상세 주소 (없으면 종류와 id로 정해요: 사업공간 · 사업 지원은 따로 줘요) */
+  href?: string;
 };
 
 export type SearchData = {

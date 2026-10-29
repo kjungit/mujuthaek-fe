@@ -496,8 +496,18 @@ function UserPanel({
     picked.length !== u.permissions.length || picked.some((p) => !u.permissions.includes(p));
   const toggle = (p: AdminPermission) =>
     setPicked(picked.includes(p) ? picked.filter((x) => x !== p) : [...picked, p]);
+  /** 묶음에서 내가 바꿀 수 있는 권한이 이미 다 골라져 있으면 (다시 누르면 빼요) */
+  const presetOn = (items: AdminPermission[]) => {
+    const free = items.filter((p) => !lockOf(p));
+    return free.length > 0 && free.every((p) => picked.includes(p));
+  };
+  // 누르면 그 묶음 권한을 더해요(여러 묶음을 같이 고를 수 있어요). 이미 다 골라져 있으면 그 묶음 권한을 빼요
   const preset = (items: AdminPermission[]) =>
-    setPicked([...picked.filter((p) => lockOf(p)), ...items.filter((p) => !lockOf(p))]);
+    setPicked(
+      presetOn(items)
+        ? picked.filter((p) => lockOf(p) || !items.includes(p))
+        : [...picked, ...items.filter((p) => !lockOf(p) && !picked.includes(p))],
+    );
 
   const dismissBlock = wholeBlock(me, u, "해제");
   const suspendBlock = !has(me, "USERS_SUSPEND")
@@ -595,16 +605,25 @@ function UserPanel({
           {!grantLock && (
             <div className="flex flex-wrap items-center gap-[6px]">
               <span className="text-text-sub mr-[4px] text-[13px] font-bold">빠른 선택</span>
-              {PERMISSION_PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  onClick={() => preset(p.items)}
-                  className="rounded-pill border-line bg-surface text-text hover:bg-fill min-h-[34px] cursor-pointer border border-solid px-[12px] text-[13px] font-bold"
-                >
-                  {p.label}
-                </button>
-              ))}
+              {PERMISSION_PRESETS.map((p) => {
+                const on = presetOn(p.items);
+                return (
+                  <button
+                    key={p.label}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => preset(p.items)}
+                    className={cn(
+                      "rounded-pill min-h-[34px] cursor-pointer border border-solid px-[12px] text-[13px] font-bold",
+                      on
+                        ? "border-brand bg-brand-soft text-brand-strong"
+                        : "border-line bg-surface text-text hover:bg-fill",
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
             </div>
           )}
           <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-[12px]">

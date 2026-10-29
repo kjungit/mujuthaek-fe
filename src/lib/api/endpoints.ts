@@ -39,6 +39,8 @@ export const endpoints = {
   noticeEvaluate: (id: string) => `/api/v1/eligibility/notices/${encodeURIComponent(id)}/evaluate`,
   /** 웹 푸시 기기 등록(PUT)·해제(DELETE). 본문은 subscription.toJSON() 그대로 */
   pushSubscriptions: "/api/users/me/push-subscriptions",
+  /** 알림을 봤는지·눌렀는지 알리기 (/{id}/shown · /{id}/clicked, 로그인 없이) */
+  notificationEvents: "/api/v1/notifications",
   /** 웹 푸시 VAPID 공개키 (로그인 없이) */
   pushPublicKey: "/api/v1/push/public-key",
   /** 알림함: 목록(GET ?cursor&size&unread) · /unread-count · /{id}/read · /read-all */

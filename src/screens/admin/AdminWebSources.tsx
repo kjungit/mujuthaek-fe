@@ -57,7 +57,7 @@ function SummaryTile({
 }
 
 export function AdminWebSources() {
-  const { data } = useAdminSources();
+  const { data, isError } = useAdminSources();
   const [sel, setSel] = useState("gh");
   // 다시 수집을 요청한 때의 기준 시각(asOf). 다음 새로고침(asOf가 바뀜)부터는 실제 상태를 보여요.
   // 예전엔 true로 남아 수집이 실패해도 「수집 중」이 계속 보였어요
@@ -89,7 +89,13 @@ export function AdminWebSources() {
         : r.st;
   const cur = data.rows.find((r) => r.id === sel) ?? data.rows[0];
   if (!cur)
-    return <div className="text-text-sub p-[24px] text-[15px]">수집 현황을 불러오는 중이에요…</div>;
+    return (
+      <div role={isError ? "alert" : undefined} className="text-text-sub p-[24px] text-[15px]">
+        {isError
+          ? "수집 현황을 불러오지 못했어요 (수집기 연결 안 됨) · 수집기가 켜지면 자동으로 다시 불러와요"
+          : "수집 현황을 불러오는 중이에요…"}
+      </div>
+    );
   const curSt = ST[stOf(cur)];
   const hasIssue = !!cur.issue && rerun[cur.id] !== data.asOf;
 
