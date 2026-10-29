@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { providerLabel } from "@/features/auth/session";
 import { goWithdrawal, startWithdrawal } from "@/features/me/api";
 import { cn } from "@/lib/cn";
@@ -9,10 +10,21 @@ import { cn } from "@/lib/cn";
  * 회원 탈퇴: 확인 → 본인 확인용으로 그 소셜에 다시 로그인 → 회원 삭제 → /withdrawn.
  * 함께 연결된 다른 소셜은 서버가 연결을 끊을 수 없어서 각 서비스에서 직접 해제하라고 알려요
  */
+/** 백엔드가 탈퇴 재인증에 실패하고 돌려보낸 이유 (/mypage?withdraw=… → /me?tab=privacy&withdraw=…) */
+const returned: Record<string, string> = {
+  expired: "본인 확인 시간이 지났어요. 회원 탈퇴를 다시 눌러 주세요",
+  account_mismatch: "지금 로그인한 계정과 다른 계정으로 확인했어요. 같은 계정으로 다시 해 주세요",
+  cancelled: "본인 확인을 취소해서 탈퇴하지 않았어요",
+  failed: "탈퇴하지 못했어요. 잠시 뒤 다시 해 주세요",
+};
+
 export function WithdrawButton({ className }: { className?: string }) {
+  const reason = useSearchParams().get("withdraw");
   const [step, setStep] = useState<"idle" | "confirm" | "going">("idle");
   const [others, setOthers] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    reason ? (returned[reason] ?? returned.failed) : null,
+  );
   const [start, setStart] = useState<Awaited<ReturnType<typeof startWithdrawal>> | null>(null);
 
   const begin = async () => {

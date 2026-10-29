@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   clearConditions,
@@ -9,7 +9,7 @@ import {
   useConditions,
 } from "@/features/conditions/store";
 import type { DeviceConditions, SessionConditions } from "@/features/conditions/types";
-import { routes } from "@/lib/routes";
+import { routes, safeNext } from "@/lib/routes";
 import type { ProfileFormData, RankCriteria } from "@/mocks/profile";
 import { useConditionsPreview } from "./preview";
 import { useProfileFormData } from "./queries";
@@ -79,6 +79,8 @@ type SessionTextKey = "income" | "asset" | "car" | "available";
 export function useProfileForm() {
   const { data } = useProfileFormData();
   const router = useRouter();
+  /** 확인하기 뒤 갈 곳 (?next=/homes). 없으면 홈 */
+  const next = safeNext(useSearchParams().get("next")) ?? routes.home;
   const stored = useConditions();
   const [step, setStep] = useState(1);
   const [device, setDevice] = useState<DeviceConditions>(() => defaultDevice(data));
@@ -161,10 +163,10 @@ export function useProfileForm() {
       setDevice(defaultDevice(data));
       setSess(emptySession);
     },
-    /** 확인하기: 저장하고 결과(홈)로 */
+    /** 확인하기: 저장하고 결과(홈, 또는 ?next로 받은 곳)로 */
     submit: () => {
       saveConditions(device, sess);
-      router.push(routes.home);
+      router.push(next);
     },
   };
 }

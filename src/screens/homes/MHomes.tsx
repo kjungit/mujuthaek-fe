@@ -15,6 +15,7 @@ import {
 } from "@/features/homes/filters";
 import { useHomeList } from "@/features/homes/list";
 import { HomesMap } from "@/components/homes/HomesMap";
+import { EditConditionsLink } from "@/components/homes/EditConditionsLink";
 import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useRegionFilter } from "@/features/homes/region";
 import { cn } from "@/lib/cn";
@@ -62,9 +63,12 @@ export function MHomes() {
         <div className="flex items-end justify-between gap-[10px] px-[4px]">
           <div className="flex flex-col gap-[4px]">
             <h1 className="tracking-h1 m-0 text-[26px] font-extrabold">내 집</h1>
-            <span className="text-text-sub text-[15px]">
-              지원할 수 있는 곳{" "}
-              <strong className="text-brand-strong">{list.eligibleCount}곳</strong>
+            <span className="text-text-sub flex flex-wrap items-center gap-x-[10px] text-[15px]">
+              <span>
+                지원할 수 있는 곳{" "}
+                <strong className="text-brand-strong">{list.eligibleCount}곳</strong>
+              </span>
+              <EditConditionsLink />
             </span>
           </div>
           <div role="group" aria-label="보기 방식" className="bg-surface flex rounded-sm p-[3px]">
