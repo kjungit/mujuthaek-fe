@@ -2,6 +2,7 @@
 
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
+import { NoticeChat } from "@/components/chat/NoticeChat";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
@@ -193,6 +194,8 @@ export function MDetailUnits({ id }: { id: string }) {
 
         <NoticeToc doc={doc} variant="mobile" />
         <NoticeSections doc={doc} variant="mobile" onOpenPage={pdfUrl ? openOriginal : undefined} />
+
+        <NoticeChat noticeId={n.id} variant="mobile" />
       </main>
       <MBottomActions>
         <div className="flex w-full flex-col gap-[6px]">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
+import { NoticeChat } from "@/components/chat/NoticeChat";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
@@ -328,6 +329,7 @@ export function WebDetailUnits({ id }: { id: string }) {
                 variant="web"
                 onOpenPage={pdfUrl ? openOriginal : undefined}
               />
+              <NoticeChat noticeId={n.id} variant="web" />
             </div>
 
             <aside className="flex min-w-0 flex-col gap-[12px]" style={{ flex: "1 1 360px" }}>
