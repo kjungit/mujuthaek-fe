@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePush } from "@/features/alerts/usePush";
 import { useConditions } from "@/features/conditions/store";
 import { interestKey, toInterestRegion, type InterestKind } from "@/features/me/api";
 import { api } from "@/lib/api/client";
@@ -30,7 +31,9 @@ function interestBodies(chosen: string[], regionCode: string) {
 
 /** 가입 완료 화면의 첫 설정 3가지 (PC/모바일 공통). 관심 분야는 고를 때마다 관심 조건으로 저장해요(새 공고 알림) */
 export function useWelcomeSetup() {
-  const [alert, setAlert] = useState(false);
+  // 마감 알림은 이 브라우저의 웹 푸시 구독이에요. 예전에는 켜짐 모양만 바꾸고 구독하지 않았어요(2026-10-29)
+  const push = usePush();
+  const alert = push.enabled;
   const [interests, setInterests] = useState<string[]>([]);
   const [cond, setCond] = useState(false);
   const conditions = useConditions();
@@ -55,7 +58,10 @@ export function useWelcomeSetup() {
 
   return {
     alert,
-    setAlert,
+    /** 켜면 브라우저 알림 허용을 묻고 구독해요. 실패하면 꺼진 채로 alertError에 이유를 남겨요 */
+    setAlert: (on: boolean) => void (on ? push.turnOn() : push.turnOff()),
+    alertError: push.error,
+    alertPending: push.pending,
     interests,
     interestDone,
     toggleInterest: (label: string) => {

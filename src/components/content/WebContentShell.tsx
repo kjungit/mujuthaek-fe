@@ -23,7 +23,7 @@ export function WebContentShell({
 }) {
   return (
     <div className="bg-bg text-text flex min-h-screen w-full flex-col">
-      <header className="border-line bg-surface border-b border-solid">
+      <header className="border-line bg-surface sticky top-0 z-20 border-b border-solid">
         <div className="mx-auto box-border flex min-h-[68px] w-full max-w-[1200px] flex-wrap items-center justify-between gap-x-[24px] gap-y-[12px] px-[32px]">
           <div className="flex items-center gap-[14px]">
             <Link

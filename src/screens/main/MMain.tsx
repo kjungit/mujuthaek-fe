@@ -83,7 +83,7 @@ export function MMain() {
 
   return (
     <div className="bg-surface text-text flex min-h-screen w-full flex-col">
-      <header className="border-line-soft flex h-[56px] items-center justify-between border-b border-solid pr-[8px] pl-[16px]">
+      <header className="border-line-soft bg-surface sticky top-0 z-[2] flex h-[56px] items-center justify-between border-b border-solid pr-[8px] pl-[16px]">
         <Link
           href={routes.main}
           aria-label="무주택자들 홈"
@@ -133,10 +133,12 @@ export function MMain() {
             어떻게 판정하나요?
           </a>
           <div className="text-text-sub flex flex-wrap justify-center gap-x-[16px] gap-y-[6px] text-[14px]">
-            <span className="inline-flex items-center gap-[5px]">
-              <CircleCheck size={16} className="text-brand" aria-hidden />
-              가입 없이 바로
-            </span>
+            {!session && (
+              <span className="inline-flex items-center gap-[5px]">
+                <CircleCheck size={16} className="text-brand" aria-hidden />
+                가입 없이 바로
+              </span>
+            )}
             <span className="inline-flex items-center gap-[5px]">
               <Lock size={16} className="text-brand" aria-hidden />
               소득·자산은 저장 안 해요
@@ -329,7 +331,9 @@ export function MMain() {
             지금 확인해보세요
           </span>
           <span className="text-brand-deep-text-2 text-[15px]">
-            가입 없이 바로, 받을 수 있는 집과 혜택부터
+            {session
+              ? "받을 수 있는 집과 혜택부터 바로"
+              : "가입 없이 바로, 받을 수 있는 집과 혜택부터"}
           </span>
           <Link
             href={links.start.href}

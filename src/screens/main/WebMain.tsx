@@ -172,7 +172,7 @@ export function WebMain() {
 
   return (
     <div className="bg-surface text-text flex min-h-screen w-full flex-col">
-      <header className="border-line-soft border-b border-solid">
+      <header className="border-line-soft bg-surface sticky top-0 z-20 border-b border-solid">
         <div
           className={cn(
             wrap,
@@ -261,10 +261,12 @@ export function WebMain() {
               </a>
             </div>
             <div className="text-text-sub flex flex-wrap gap-x-[20px] gap-y-[8px] text-[15px]">
-              <span className="inline-flex items-center gap-[6px]">
-                <CircleCheck size={18} className="text-brand" aria-hidden />
-                가입 없이 바로
-              </span>
+              {!session && (
+                <span className="inline-flex items-center gap-[6px]">
+                  <CircleCheck size={18} className="text-brand" aria-hidden />
+                  가입 없이 바로
+                </span>
+              )}
               <span className="inline-flex items-center gap-[6px]">
                 <Lock size={18} className="text-brand" aria-hidden />
                 소득·자산은 저장하지 않아요
@@ -593,7 +595,9 @@ export function WebMain() {
                 내 조건으로 지금 확인해보세요
               </span>
               <span className="text-brand-deep-text-2 text-[18px]">
-                가입 없이 바로, 받을 수 있는 집과 혜택부터
+                {session
+                  ? "받을 수 있는 집과 혜택부터 바로"
+                  : "가입 없이 바로, 받을 수 있는 집과 혜택부터"}
               </span>
             </div>
             <Link
