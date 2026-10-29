@@ -43,12 +43,20 @@ export function MAlerts() {
                   on ? "bg-text text-white" : "bg-fill text-text-sub",
                 )}
               >
-                {t}
+                {t} {alerts.countOf(t)}
               </button>
             );
           })}
         </div>
 
+        {push.enabled && (
+          <div className="bg-brand-soft text-brand-strong mx-[16px] my-[4px] flex flex-col gap-[4px] rounded-[20px] p-[16px]">
+            <span className="text-[15px] font-extrabold">이 기기에서 알림을 받고 있어요</span>
+            <span className="text-[13px] leading-[1.5]">
+              앱이나 이메일로도 받으려면 받는 알림 설정에서 바꿀 수 있어요
+            </span>
+          </div>
+        )}
         {!push.enabled && (
           <div className="bg-brand-soft mx-[16px] my-[4px] flex flex-col gap-[10px] rounded-[20px] p-[16px]">
             <span className="text-brand-strong text-[15px] font-extrabold">
@@ -143,12 +151,33 @@ export function MAlerts() {
           </section>
         ))}
 
-        <Link
-          href={routes.me}
-          className="inline-flex min-h-[44px] items-center self-center text-[14px] font-bold no-underline"
+        <section
+          aria-label="받는 알림"
+          className="bg-surface mx-[16px] mt-[8px] flex flex-col rounded-[20px] px-[18px] py-[14px]"
         >
-          받는 알림 설정
-        </Link>
+          <div className="flex items-center justify-between">
+            <h2 className="m-0 text-[16px] font-extrabold">받는 알림</h2>
+            <Link
+              href={`${routes.me}?tab=notifications`}
+              className="text-brand-strong hover:text-brand-strong inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
+            >
+              설정
+            </Link>
+          </div>
+          {alerts.data.settings.map((s) => (
+            <div key={s.label} className="flex justify-between py-[6px] text-[14px]">
+              <span>{s.label}</span>
+              {s.on ? (
+                <span className="text-brand-strong font-bold">켜짐</span>
+              ) : (
+                <span className="text-text-tertiary">꺼짐</span>
+              )}
+            </div>
+          ))}
+          <span className="border-line-soft text-text-sub mt-[6px] border-t border-solid pt-[10px] text-[13px]">
+            방해 금지 · {alerts.data.quietHours}
+          </span>
+        </section>
       </main>
     </div>
   );

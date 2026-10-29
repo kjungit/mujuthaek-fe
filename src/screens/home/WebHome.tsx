@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  BellRing,
   Building,
   CircleCheck,
   ChevronRight,
@@ -254,9 +253,11 @@ export function WebHome() {
                         : "–"
                 }
                 note={
-                  data.benefits
-                    ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
-                    : "받을 수 있는 혜택을 판정하고 있어요"
+                  error
+                    ? "혜택을 불러오지 못했어요"
+                    : data.benefits
+                      ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
+                      : "받을 수 있는 혜택을 판정하고 있어요"
                 }
               />
             </section>
