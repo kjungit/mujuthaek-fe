@@ -126,36 +126,6 @@ export function RegionScopeChips({
   );
 }
 
-/** 질문형 조건 답하기: 예 · 아니요 (다시 누르면 답을 지워요) */
-export function AnswerButtons({
-  questionId,
-  answer,
-  onAnswer,
-}: {
-  questionId: string;
-  answer?: "YES" | "NO";
-  onAnswer: (questionId: string, value: "YES" | "NO") => void;
-}) {
-  return (
-    <span role="group" aria-label="답하기" className="flex flex-none gap-[6px]">
-      {(["YES", "NO"] as const).map((v) => (
-        <button
-          key={v}
-          type="button"
-          aria-pressed={answer === v}
-          onClick={() => onAnswer(questionId, v)}
-          className={cn(
-            "min-h-[40px] cursor-pointer rounded-[10px] border-0 px-[14px] text-[14px] font-bold",
-            answer === v ? "bg-text text-white" : "bg-fill text-text-sub",
-          )}
-        >
-          {v === "YES" ? "예" : "아니요"}
-        </button>
-      ))}
-    </span>
-  );
-}
-
 /** 공고 안내: 출처가 준 요약 · 기관 · 문의처 · 접수 방법 · 링크 (모집 정책 · 사업 지원) */
 export function AboutSection({
   about,

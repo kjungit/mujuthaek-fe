@@ -4,7 +4,7 @@
 // 사업 지원: POST /api/v1/supports/search · POST /api/v1/supports/{id}/evaluate (창업지원 사업, 상세 API 없이 판정 응답으로)
 // 공간 상세: 공고면 공고 상세(GET /notices/{id}) + 판정, 모집 정책(K-Startup·기업마당)은 판정 응답(기간·지역·자격 조건)만으로
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import type { ListingVerdict } from "@/components/ui/Badge";
 import {
   toBusinessApplicant,
@@ -75,13 +75,6 @@ export type ApiSpaceSearch = {
 
 type PolicySource = "KSTARTUP" | "BIZINFO";
 type Verdict3 = "MET" | "NOT_MET" | "UNKNOWN";
-type ApiQuestion = {
-  id: string;
-  text: string;
-  answer: "YES" | "NO" | null;
-  /** ELIGIBILITY 자격 · PREFERENCE 우대 */
-  purpose: string;
-};
 type ApiCriterion = {
   id: string;
   kind: string;
@@ -114,7 +107,6 @@ type ApiSpaceEvaluation = {
     result: Overall;
     common: ApiCriterion[];
     groups: { id: string; name: string; result: Overall; criteria: ApiCriterion[] }[];
-    questions: ApiQuestion[];
   } | null;
 };
 
@@ -180,9 +172,6 @@ type SpaceApplicant = {
   /** 해당 유형 코드. 해당 없음이면 빈 목록, 안 골랐으면 보내지 않아요 */
   statuses?: string[];
 };
-
-/** 질문 id → 예 · 아니요 */
-type Answers = Record<string, "YES" | "NO">;
 
 const typeOf: Record<ApiSpaceType, SpaceType> = {
   STARTUP_SPACE: "startup",
@@ -359,14 +348,12 @@ export function useApiBusinessSummary(scope?: RegionScope) {
   const { ready, applicant } = useSpaceApplicant();
   const supports = useApiSupportSearch(scope);
   const regionCodes = scope?.regionCodes;
-  const answers = useAllAnswers();
   const q = useQuery({
-    queryKey: ["spaces", "search", applicant, regionCodes, answers] as const,
+    queryKey: ["spaces", "search", applicant, regionCodes] as const,
     queryFn: () =>
       api.post<ApiSpaceSearch>(endpoints.spacesSearch, {
         filters: { regionCodes },
         applicant,
-        answers,
         size: PAGE_SIZE,
       }),
     enabled: ready,
@@ -394,14 +381,12 @@ export function useApiBusinessSummary(scope?: RegionScope) {
 function useApiSupportSearch(scope?: RegionScope) {
   const { ready, applicant } = useSpaceApplicant();
   const regionCodes = scope?.regionCodes;
-  const answers = useAllAnswers();
   return useQuery({
-    queryKey: ["supports", "search", applicant, regionCodes, answers] as const,
+    queryKey: ["supports", "search", applicant, regionCodes] as const,
     queryFn: () =>
       api.post<ApiSupportSearch>(endpoints.supportsSearch, {
         filters: { regionCodes },
         applicant,
-        answers,
         size: PAGE_SIZE,
       }),
     enabled: ready,
@@ -482,11 +467,9 @@ export function useApiSupportList(scope?: RegionScope) {
 /** 사업 지원 상세: 상세 API가 없어서 판정 응답(기간 · 지역 · 자격 조건)과 원문으로 */
 export function useApiSupportDetail(id: string) {
   const { ready, applicant } = useSpaceApplicant();
-  const [answers, answer] = useAnswers(id);
   const q = useQuery({
-    queryKey: ["supports", "evaluate", id, applicant, answers] as const,
-    queryFn: () =>
-      api.post<ApiSupportEvaluation>(endpoints.supportEvaluate(id), { applicant, answers }),
+    queryKey: ["supports", "evaluate", id, applicant] as const,
+    queryFn: () => api.post<ApiSupportEvaluation>(endpoints.supportEvaluate(id), { applicant }),
     placeholderData: keepPreviousData,
     enabled: ready,
     staleTime: 60 * 1000,
@@ -501,7 +484,7 @@ export function useApiSupportDetail(id: string) {
       }),
     [q.data],
   );
-  return { data, loading: !q.isError && q.isPending, error: q.isError, answer };
+  return { data, loading: !q.isError && q.isPending, error: q.isError };
 }
 
 const supportKindLabel: Record<ApiSubField, string> = {
@@ -514,70 +497,12 @@ const supportKindLabel: Record<ApiSubField, string> = {
 const withRegionNames = (text: string) =>
   text.replace(/\b\d{10}\b/g, (code) => regionLabelOf([code]) ?? code);
 
-/**
- * 질문 답: 공간 · 사업 id → 질문 id → 예 · 아니요. 체납 · 제재처럼 민감한 답이라 이 탭(sessionStorage)에만 두고 서버에 저장하지 않아요.
- * 상세에서 답하면 목록 판정에도 같이 보내요
- */
-type AllAnswers = Record<string, Answers>;
-
-const ANSWERS_KEY = "mujuthaek:business:answers";
-const NO_ANSWERS: Answers = {};
-const NO_ALL_ANSWERS: AllAnswers = {};
-let allAnswers: AllAnswers | null = null;
-const answerListeners = new Set<() => void>();
-
-function getAllAnswers(): AllAnswers {
-  if (!allAnswers) {
-    try {
-      allAnswers = JSON.parse(window.sessionStorage.getItem(ANSWERS_KEY) ?? "{}") as AllAnswers;
-    } catch {
-      allAnswers = {};
-    }
-  }
-  return allAnswers;
-}
-
-function subscribeAnswers(listener: () => void) {
-  answerListeners.add(listener);
-  return () => {
-    answerListeners.delete(listener);
-  };
-}
-
-/** 같은 질문을 다시 누르면 답을 지워요 */
-function setAnswer(id: string, questionId: string, value: "YES" | "NO") {
-  const mine = { ...(getAllAnswers()[id] ?? {}) };
-  if (mine[questionId] === value) delete mine[questionId];
-  else mine[questionId] = value;
-  const next = { ...getAllAnswers(), [id]: mine };
-  if (Object.keys(mine).length === 0) delete next[id];
-  allAnswers = next;
-  try {
-    window.sessionStorage.setItem(ANSWERS_KEY, JSON.stringify(next));
-  } catch {
-    // 저장소를 못 쓰면 이번 화면에서만 써요
-  }
-  answerListeners.forEach((l) => l());
-}
-
-function useAllAnswers(): AllAnswers {
-  return useSyncExternalStore(subscribeAnswers, getAllAnswers, () => NO_ALL_ANSWERS);
-}
-
-function useAnswers(id: string): [Answers, (questionId: string, value: "YES" | "NO") => void] {
-  const all = useAllAnswers();
-  return [all[id] ?? NO_ANSWERS, (questionId, value) => setAnswer(id, questionId, value)];
-}
-
-/** 판정 조건 → 내 자격 줄. 근거 문장이 있으면 같이, 질문이면 내 답도 */
+/** 판정 조건 → 내 자격 줄. 근거 문장이 있으면 같이 */
 function rulesOf(j: ApiSpaceEvaluation["judgment"]): SpaceDetail["rules"] {
   const criteria = j ? [...j.common, ...j.groups.flatMap((g) => g.criteria)] : [];
-  const answerOf = new Map((j?.questions ?? []).map((q) => [q.id, q.answer]));
   const toRule = (c: ApiCriterion): SpaceRule => {
     const anyOf = c.kind === "ANY_OF" && c.options?.length;
     return {
-      questionId: c.kind === "ASK" ? c.id : undefined,
-      answer: c.kind === "ASK" ? (answerOf.get(c.id) ?? undefined) : undefined,
       label: anyOf ? "다음 중 하나만 맞으면 돼요" : (criterionLabel[c.kind] ?? "조건"),
       rule: anyOf ? "" : withRegionNames(c.summary ?? c.quote ?? ""),
       mRule: anyOf ? "" : withRegionNames(c.summary ?? c.quote ?? ""),
@@ -663,11 +588,9 @@ function aboutOf(info: ApiPolicyInfo | null): SpaceDetail["about"] {
 /** 공간 상세: 판정을 먼저 받고, 공고면 공고 상세를 더 받아요 (모집 정책은 공고 상세가 없어요) */
 export function useApiSpaceDetail(id: string) {
   const { ready, applicant } = useSpaceApplicant();
-  const [answers, answer] = useAnswers(id);
   const evaluation = useQuery({
-    queryKey: ["spaces", "evaluate", id, applicant, answers] as const,
-    queryFn: () =>
-      api.post<ApiSpaceEvaluation>(endpoints.spaceEvaluate(id), { applicant, answers }),
+    queryKey: ["spaces", "evaluate", id, applicant] as const,
+    queryFn: () => api.post<ApiSpaceEvaluation>(endpoints.spaceEvaluate(id), { applicant }),
     placeholderData: keepPreviousData,
     enabled: ready,
     staleTime: 60 * 1000,
@@ -715,5 +638,5 @@ export function useApiSpaceDetail(id: string) {
   }, [n, evaluation.data]);
   const loading =
     !evaluation.isError && (evaluation.isPending || (!evaluation.data?.policy && notice.loading));
-  return { data, loading, error: evaluation.isError || notice.error, answer };
+  return { data, loading, error: evaluation.isError || notice.error };
 }

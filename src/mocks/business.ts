@@ -227,10 +227,6 @@ export type SpaceRule = {
   met: boolean;
   /** 근거 원문 문장 (실제 API) */
   quote?: string;
-  /** 질문형 조건이면 질문 id (예 · 아니요로 답해요) */
-  questionId?: string;
-  /** 내 답 */
-  answer?: "YES" | "NO";
   /** 불충족으로 정해짐 (실제 API) */
   notMet?: boolean;
   /** 확인 필요일 때 넣으면 정해지는 입력을 받는 화면. 없으면 원문 확인 (실제 API) */

@@ -14,7 +14,7 @@ import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { SpaceDetail } from "@/mocks/business";
-import { AboutSection, AnswerButtons } from "./parts";
+import { AboutSection } from "./parts";
 
 const card = "bg-surface mx-[16px] flex flex-col rounded-card px-[20px] py-[16px]";
 const h3 = "m-0 text-[17px] font-extrabold";
@@ -42,20 +42,16 @@ export function MSupportDetail({ id }: { id: string }) {
   );
 }
 
-type OnAnswer = (questionId: string, value: "YES" | "NO") => void;
-
 function MBizDetail({
   data,
   loading,
   error,
   back,
-  answer,
 }: {
   data: SpaceDetail | undefined;
   loading: boolean;
   error: boolean;
   back: Back;
-  answer?: OnAnswer;
 }) {
   if (!data) {
     return (
@@ -74,18 +70,10 @@ function MBizDetail({
       </MPage>
     );
   }
-  return <MSpaceDetailView data={data} back={back} onAnswer={answer} />;
+  return <MSpaceDetailView data={data} back={back} />;
 }
 
-function MSpaceDetailView({
-  data,
-  back,
-  onAnswer,
-}: {
-  data: SpaceDetail;
-  back: Back;
-  onAnswer?: OnAnswer;
-}) {
+function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const met = data.rules.filter((r) => r.met).length;
   const no = data.rules.filter((r) => r.notMet).length;
@@ -175,28 +163,10 @@ function MSpaceDetailView({
                     {o.rules.map((x, m) => (
                       <div key={m} className="flex flex-col gap-[6px]">
                         <span className="text-[14px] leading-[1.5]">{x.mRule || o.label}</span>
-                        {x.questionId && onAnswer && (
-                          <AnswerButtons
-                            questionId={x.questionId}
-                            answer={x.answer}
-                            onAnswer={onAnswer}
-                          />
-                        )}
                       </div>
                     ))}
                   </div>
                 ))}
-              </div>
-            ) : r.questionId && onAnswer ? (
-              <div
-                key={`${i}-${r.label}`}
-                className={cn(
-                  row(i === data.rules.length - 1),
-                  "flex-col items-stretch gap-[8px] py-[10px]",
-                )}
-              >
-                <span className="text-[14px] leading-[1.5]">{r.mRule}</span>
-                <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />
               </div>
             ) : r.met ? (
               <div
