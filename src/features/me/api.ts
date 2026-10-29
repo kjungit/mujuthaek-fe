@@ -196,7 +196,14 @@ export function useMyReports() {
     enabled: !USE_MOCKS && loggedIn,
     retry: false,
   });
-  return { items: q.data ?? [], loading: !USE_MOCKS && loggedIn && q.isPending, loggedIn };
+  return {
+    items: q.data ?? [],
+    loading: !USE_MOCKS && loggedIn && q.isPending,
+    /** 불러오지 못했어요(서버 오류·아직 배포 안 됨 등). 예전에는 「보낸 제보가 없어요」로 보여 헷갈렸어요 */
+    failed: !USE_MOCKS && loggedIn && q.isError,
+    retry: () => void q.refetch(),
+    loggedIn,
+  };
 }
 
 /* ── 회원 탈퇴 ────────────────────────────────────────────────────── */
