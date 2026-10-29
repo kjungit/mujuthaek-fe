@@ -97,10 +97,12 @@ function Step2({ form }: { form: ProfileForm }) {
         <UnitInput unit="만 원" placeholder="3,200" {...form.sessionField("income")} />
         <span className={help}>작년 원천징수영수증의 총급여를 넣으면 가장 정확해요</span>
       </label>
-      <label className={pLabel}>
-        자산 합계 (예금 · 자동차 · 부동산)
-        <UnitInput unit="만 원" placeholder="4,500" {...form.sessionField("asset")} />
-        <span className="text-text-sub flex items-center gap-[8px] text-[14px] font-medium">
+      <div className="flex flex-col gap-[8px]">
+        <label className={pLabel}>
+          자산 합계 (예금 · 자동차 · 부동산)
+          <UnitInput unit="만 원" placeholder="4,500" {...form.sessionField("asset")} />
+        </label>
+        <label className="text-text-sub flex cursor-pointer items-center gap-[8px] text-[14px] font-medium">
           <input
             type="checkbox"
             checked={form.assetUnknown}
@@ -108,8 +110,31 @@ function Step2({ form }: { form: ProfileForm }) {
             className="m-[3px_3px_3px_4px] size-[18px]"
           />{" "}
           잘 모르겠어요 · 자산 조건은 &apos;확인 필요&apos;로 보여주세요
+        </label>
+      </div>
+      <div className="flex flex-col gap-[8px]">
+        <label className={pLabel}>
+          자동차 가액
+          <UnitInput
+            unit="만 원"
+            placeholder="1,800"
+            disabled={form.noCar}
+            {...form.sessionField("car")}
+          />
+        </label>
+        <label className="text-text-sub flex cursor-pointer items-center gap-[8px] text-[14px] font-medium">
+          <input
+            type="checkbox"
+            checked={form.noCar}
+            onChange={(e) => form.setNoCar(e.target.checked)}
+            className="m-[3px_3px_3px_4px] size-[18px]"
+          />{" "}
+          차가 없어요
+        </label>
+        <span className={help}>
+          보험개발원 차량기준가액을 넣으면 가장 정확해요. 공고의 자동차가액 기준과 비교해요
         </span>
-      </label>
+      </div>
       <RankCriteriaFields form={form} />
     </div>
   );

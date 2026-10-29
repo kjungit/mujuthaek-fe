@@ -3,7 +3,7 @@ import type { DeviceConditions, SessionConditions } from "./types";
 
 /**
  * 판정 입력 (POST 본문의 applicant). 서버로는 정확한 값 대신 구간만 보내요:
- * 생년월일 → 출생 연월, 기간 → 구간, 소득 → 기준 대비 % 구간(10% 단위), 자산 → 기준표 금액 사이.
+ * 생년월일 → 출생 연월, 기간 → 구간, 소득 → 기준 대비 % 구간(10% 단위), 자산·자동차 → 기준표 금액 사이.
  * 쓸 수 있는 돈은 보내지 않아요 (준비할 돈과 비교는 화면에서)
  */
 export type Applicant = {
@@ -21,6 +21,8 @@ export type Applicant = {
   income?: Partial<Record<IncomeStandard, PercentRange>>;
   incomeYear?: number;
   assets?: WonRange;
+  /** 자동차가액 구간 (기준값 carCutsWon 사이). 공고의 자동차가액 조건 판정에 써요 */
+  car?: WonRange;
   rankChecks?: string[];
 };
 
@@ -176,6 +178,11 @@ export function toApplicant(
   const asset = session.assetUnknown ? null : manWon(session.asset);
   if (asset !== null && criteria.assetCutsWon.length) {
     a.assets = wonBand(asset, criteria.assetCutsWon);
+  }
+  // 차가 없으면 0원. 값을 넣지 않았으면 보내지 않아요(자동차가액 조건은 '확인 필요')
+  const car = session.noCar ? 0 : manWon(session.car ?? "");
+  if (car !== null && criteria.carCutsWon.length) {
+    a.car = wonBand(car, criteria.carCutsWon);
   }
   return a;
 }

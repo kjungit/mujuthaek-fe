@@ -111,15 +111,17 @@ export function MProfile() {
                 {...form.sessionField("income")}
               />
             </label>
-            <label className={pLabel}>
-              자산 합계
-              <UnitInput
-                unit="만 원"
-                placeholder="4,500"
-                className="min-h-[54px]"
-                {...form.sessionField("asset")}
-              />
-              <span className="text-text-sub flex min-h-[32px] items-center gap-[8px] text-[14px] font-medium">
+            <div className="flex flex-col gap-[8px]">
+              <label className={pLabel}>
+                자산 합계
+                <UnitInput
+                  unit="만 원"
+                  placeholder="4,500"
+                  className="min-h-[54px]"
+                  {...form.sessionField("asset")}
+                />
+              </label>
+              <label className="text-text-sub flex min-h-[32px] cursor-pointer items-center gap-[8px] text-[14px] font-medium">
                 <input
                   type="checkbox"
                   checked={form.assetUnknown}
@@ -127,8 +129,29 @@ export function MProfile() {
                   className="m-[3px_3px_3px_4px] size-[18px]"
                 />{" "}
                 잘 모르겠어요
-              </span>
-            </label>
+              </label>
+            </div>
+            <div className="flex flex-col gap-[8px]">
+              <label className={pLabel}>
+                자동차 가액
+                <UnitInput
+                  unit="만 원"
+                  placeholder="1,800"
+                  className="min-h-[54px]"
+                  disabled={form.noCar}
+                  {...form.sessionField("car")}
+                />
+              </label>
+              <label className="text-text-sub flex min-h-[32px] cursor-pointer items-center gap-[8px] text-[14px] font-medium">
+                <input
+                  type="checkbox"
+                  checked={form.noCar}
+                  onChange={(e) => form.setNoCar(e.target.checked)}
+                  className="m-[3px_3px_3px_4px] size-[18px]"
+                />{" "}
+                차가 없어요
+              </label>
+            </div>
             <RankCriteriaFields form={form} compact />
           </div>
         )}

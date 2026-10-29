@@ -65,12 +65,14 @@ const emptySession: SessionConditions = {
   income: "",
   asset: "",
   assetUnknown: false,
+  car: "",
+  noCar: false,
   available: "",
   rankChecks: [],
 };
 
 type TextKey = "birth" | "householdSize" | "homelessPeriod" | "bankbookPeriod" | "paymentCount";
-type SessionTextKey = "income" | "asset" | "available";
+type SessionTextKey = "income" | "asset" | "car" | "available";
 
 /** 조건 입력 3단계 상태 (PC/모바일 공통). 처음 값은 이 기기에 저장한 조건에서 가져와요 */
 export function useProfileForm() {
@@ -98,7 +100,7 @@ export function useProfileForm() {
     onChange: (e: { target: { value: string } }) => patch({ [key]: e.target.value }),
   });
   const sessionField = (key: SessionTextKey) => ({
-    value: sess[key],
+    value: sess[key] ?? "",
     onChange: (e: { target: { value: string } }) => patchSess({ [key]: e.target.value }),
   });
 
@@ -141,6 +143,8 @@ export function useProfileForm() {
     toggleStatus: (s: string) => setDevice((d) => ({ ...d, statuses: toggle(d.statuses, s) })),
     assetUnknown: sess.assetUnknown,
     setAssetUnknown: (assetUnknown: boolean) => patchSess({ assetUnknown }),
+    noCar: sess.noCar ?? false,
+    setNoCar: (noCar: boolean) => patchSess({ noCar }),
     rankChecks: sess.rankChecks,
     toggleRankCheck: (key: string) =>
       setSess((v) => ({ ...v, rankChecks: toggle(v.rankChecks, key) })),

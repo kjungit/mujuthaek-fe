@@ -23,6 +23,10 @@ export type SessionConditions = {
   income: string;
   asset: string;
   assetUnknown: boolean;
+  /** 자동차 가액 (만 원). 예전에 저장한 값에는 없을 수 있어요 */
+  car?: string;
+  /** 차가 없어요 (자동차 가액 0원으로 판정) */
+  noCar?: boolean;
   available: string;
   rankChecks: string[];
 };
