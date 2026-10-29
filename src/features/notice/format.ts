@@ -29,11 +29,17 @@ export const dueText = (n: { dday: number; dueLabel?: string }) => n.dueLabel ??
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 
-/** "2026-10-12" → "10월 12일 (월)" · 해가 다르면 연도도 붙여요 */
+/**
+ * "2026-10-12" → "10월 12일 (월)" · 해가 다르면 연도도 붙여요.
+ * 공고에 월이나 해만 적힌 날짜도 와요: "2027-03" → "3월", "2027" → "2027년" (일·요일은 지어내지 않아요)
+ */
 export function formatDay(ymd: string, withYear = false): string {
   const [y, m, d] = ymd.split("-").map(Number);
+  if (!m) return `${y}년`;
+  const year = withYear ? `${y}년 ` : "";
+  if (!d) return `${year}${m}월`;
   const wd = weekdays[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
-  return `${withYear ? `${y}년 ` : ""}${m}월 ${d}일 (${wd})`;
+  return `${year}${m}월 ${d}일 (${wd})`;
 }
 
 /** 시작 ~ 끝. 하루면 하나만, 해가 바뀌면 끝에 연도를 붙여요 */
