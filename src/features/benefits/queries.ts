@@ -101,3 +101,7 @@ function useApiBenefit(id: string | undefined, base?: Benefit): BenefitState {
 export const useBenefit: (id: string | undefined, base?: Benefit) => BenefitState = USE_MOCKS
   ? useMockBenefit
   : useApiBenefit;
+
+/** 「신청하러 가기」 주소: 신청 주소, 없으면 정책 원문. 둘 다 없으면 버튼을 숨겨요(누를 수 없는 버튼이 되지 않게) */
+export const applyHref = (b: { applyUrl?: string | null; policyUrl?: string | null }) =>
+  (b.applyUrl && b.applyUrl !== "#" ? b.applyUrl : b.policyUrl) || undefined;

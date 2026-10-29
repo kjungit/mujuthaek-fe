@@ -7,7 +7,7 @@ import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
 import { CheckAction } from "@/components/ui/CheckAction";
-import { useBenefit, useBenefits } from "@/features/benefits/queries";
+import { useBenefit, useBenefits, applyHref } from "@/features/benefits/queries";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -158,7 +158,7 @@ function BenefitDetail({ b }: { b: Benefit }) {
       </div>
 
       <div className="border-line-soft flex flex-wrap items-center justify-between gap-[12px] border-t border-solid pt-[20px]">
-        <ReportButton target={{ kind: "benefit", id: b.id }} screen="혜택 목록" />
+        <ReportButton target={{ kind: "benefit", id: b.id }} screen="혜택 상세" />
         <div className="flex gap-[8px]">
           {b.policyUrl && (
             <a
@@ -171,15 +171,17 @@ function BenefitDetail({ b }: { b: Benefit }) {
               정책 원문
             </a>
           )}
-          <a
-            href={b.applyUrl || undefined}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-control bg-brand inline-flex min-h-[52px] items-center gap-[6px] px-[20px] text-[16px] font-extrabold text-white no-underline hover:text-white"
-          >
-            신청하러 가기
-            <ArrowRight size={18} strokeWidth={2.2} aria-hidden />
-          </a>
+          {applyHref(b) && (
+            <a
+              href={applyHref(b)}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-control bg-brand inline-flex min-h-[52px] items-center gap-[6px] px-[20px] text-[16px] font-extrabold text-white no-underline hover:text-white"
+            >
+              신청하러 가기
+              <ArrowRight size={18} strokeWidth={2.2} aria-hidden />
+            </a>
+          )}
         </div>
       </div>
     </section>
@@ -267,7 +269,11 @@ export function WebBenefits({ initialId }: { initialId?: string }) {
                   key={b.id}
                   type="button"
                   aria-pressed={on}
-                  onClick={() => setSelId(b.id)}
+                  onClick={() => {
+                    setSelId(b.id);
+                    // 고른 혜택을 주소에도 남겨요 (공유 · 즐겨찾기 · 새로 고침, 모바일 상세 주소와 같아요)
+                    window.history.replaceState(null, "", routes.benefit(b.id));
+                  }}
                   className={cn(
                     "bg-surface text-text flex cursor-pointer flex-col gap-[8px] rounded-[22px] border-2 border-solid px-[20px] py-[18px] text-left",
                     on ? "border-brand" : "border-surface",

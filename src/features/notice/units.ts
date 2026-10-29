@@ -112,3 +112,19 @@ export function bySite<T extends { siteId?: string; siteName?: string; lifeScore
   }
   return groups;
 }
+
+/** 단지 길찾기 (카카오맵). 좌표가 없으면 null */
+export function directionsUrl(
+  site: { name: string; lat: number | null; lng: number | null } | undefined,
+) {
+  if (!site || site.lat === null || site.lng === null) return null;
+  return `https://map.kakao.com/link/to/${encodeURIComponent(site.name)},${site.lat},${site.lng}`;
+}
+
+/** 웹·모바일 화면이 같이 그려져서 같은 id가 둘이에요. 보이는 쪽으로 스크롤해요 */
+export function scrollToVisible(id: string) {
+  const target = Array.from(document.querySelectorAll<HTMLElement>(`#${id}`)).find(
+    (el) => el.offsetParent !== null,
+  );
+  target?.scrollIntoView({ behavior: "smooth" });
+}

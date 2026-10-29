@@ -93,7 +93,10 @@ export function MScore() {
                 </option>
               ))}
             </select>
-            <span className="text-text-sub text-[13px] leading-[1.6]">{help[it.key]}</span>
+            <span className="text-text-sub text-[13px] leading-[1.6]">
+              {help[it.key]}
+              {it.key === "homeless" && ` ${profile.homelessNote}`}
+            </span>
           </section>
         ))}
         <section className="rounded-card bg-brand-soft flex flex-col gap-[10px] px-[20px] py-[18px]">
@@ -104,7 +107,8 @@ export function MScore() {
           <AltLink title="추첨제 물량 · 특별공급" desc="청년·신혼부부 특별공급은 가점과 따로예요" />
         </section>
         <span className="text-text-sub px-[4px] text-[13px] leading-[1.6]">
-          최종 점수는 청약홈의 확인 결과를 기준으로 해요.
+          가점제는 주로 <strong className="text-text">민영주택</strong> 청약에 쓰여요. 최종 점수는
+          청약홈의 확인 결과를 기준으로 해요.
         </span>
       </main>
     </MPage>

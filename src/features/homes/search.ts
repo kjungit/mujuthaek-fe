@@ -49,6 +49,8 @@ export type SearchFilters = {
   /** 찾아볼 지역 (시·도 2자리 · 시·군·구 5자리). 비우면 전체 */
   regionCodes: string[];
   tenure: "RENT" | "BUY";
+  /** 공고 유형 코드 (비우면 전부) */
+  noticeTypes?: string[];
   includeIneligible: boolean;
   sort: SearchSort;
 };
@@ -128,6 +130,7 @@ export function useNoticeSearch(filters: SearchFilters, enabled = true) {
         filters: {
           regionCodes: filters.regionCodes.length ? filters.regionCodes : undefined,
           tenure: filters.tenure,
+          noticeTypes: filters.noticeTypes?.length ? filters.noticeTypes : undefined,
         },
         applicant,
         sort: filters.sort,

@@ -230,7 +230,7 @@ export const faq: FaqData = {
       question: "회원 탈퇴는 어떻게 하나요?",
       answer:
         "내 정보 › 개인정보에서 탈퇴할 수 있어요. 탈퇴하면 계정·관심 공고·알림 설정이 바로 지워지고, 이 기기에 저장한 조건도 함께 지워져요.",
-      link: { label: "내 정보로 가기", href: routes.me },
+      link: { label: "내 정보로 가기", href: `${routes.me}?tab=privacy` },
     },
     {
       id: "f10",
@@ -238,7 +238,7 @@ export const faq: FaqData = {
       question: "알림이 너무 많아요",
       answer:
         "내 정보 › 알림 설정에서 받을 알림 종류를 고르고, 밤 시간에는 방해 금지를 켤 수 있어요.",
-      link: { label: "알림 설정", href: routes.me },
+      link: { label: "알림 설정", href: `${routes.me}?tab=notifications` },
     },
     {
       id: "f11",

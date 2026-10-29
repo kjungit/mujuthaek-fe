@@ -8,14 +8,13 @@ import { Building, Check, ChevronLeft, ChevronRight, ExternalLink, X } from "luc
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
-import { CheckAction } from "@/components/ui/CheckAction";
 import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { track } from "@/lib/analytics";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { SpaceDetail, SpaceRule } from "@/mocks/business";
-import { AboutSection } from "./parts";
+import type { SpaceDetail } from "@/mocks/business";
+import { AboutSection, RuleAction } from "./parts";
 
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
@@ -59,16 +58,6 @@ function RuleMark({ met, notMet, small }: { met: boolean; notMet?: boolean; smal
   );
 }
 
-/** 오른쪽 칸: 결과 (확인 필요면 넣을 입력이 있을 때만 입력 화면으로, 없으면 원문 확인). 공고마다 예 · 아니요로 묻지 않아요 */
-function RuleAction({ r }: { r: SpaceRule }) {
-  if (r.met) return <span className="text-ok-text flex-none text-[14px] font-bold">충족</span>;
-  if (r.notMet)
-    return <span className="text-text-sub flex-none text-[14px] font-bold">해당 안 돼요</span>;
-  if (r.options)
-    return <span className="text-check-text flex-none text-[14px] font-bold">확인 필요</span>;
-  return <CheckAction inputHref={r.inputHref} web />;
-}
-
 function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
   return (
     <div className="flex flex-col">
@@ -93,7 +82,7 @@ function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
                   </span>
                 )}
               </span>
-              <RuleAction r={r} />
+              <RuleAction r={r} web />
             </div>
             {r.options && (
               <ol className="m-0 ml-[40px] flex list-none flex-col gap-[8px] p-0">
@@ -109,7 +98,7 @@ function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
                     {o.rules.map((x, m) => (
                       <div key={m} className="flex items-center gap-[10px]">
                         <span className="flex-1 text-[14px]">{x.rule || o.label}</span>
-                        <RuleAction r={x} />
+                        <RuleAction r={x} web />
                       </div>
                     ))}
                   </li>

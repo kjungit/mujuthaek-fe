@@ -1,6 +1,7 @@
 "use client";
 
 import { NoticeChat } from "@/components/chat/NoticeChat";
+import { ReportButton } from "@/components/report/ReportButton";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
 import { Building, Check, ChevronRight } from "lucide-react";
@@ -14,7 +15,7 @@ import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { SpaceDetail } from "@/mocks/business";
-import { AboutSection } from "./parts";
+import { AboutSection, RuleAction } from "./parts";
 
 const card = "bg-surface mx-[16px] flex flex-col rounded-card px-[20px] py-[16px]";
 const h3 = "m-0 text-[17px] font-extrabold";
@@ -161,8 +162,10 @@ function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
                       {k + 1}번째 길 {o.met ? "· 충족" : o.notMet ? "· 해당 안 됨" : ""}
                     </span>
                     {o.rules.map((x, m) => (
-                      <div key={m} className="flex flex-col gap-[6px]">
+                      // 웹처럼 길 안 조건마다 결과를 보여요 (충족 · 해당 안 돼요 · 입력하고 확인 · 원문 확인)
+                      <div key={m} className="flex items-center justify-between gap-[8px]">
                         <span className="text-[14px] leading-[1.5]">{x.mRule || o.label}</span>
+                        <RuleAction r={x} web={false} />
                       </div>
                     ))}
                   </div>
@@ -186,6 +189,11 @@ function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
                 <span className="flex min-w-0 flex-col gap-[2px]">
                   <span>{r.label}</span>
                   {r.mRule && <span className="text-text-sub text-[13px]">{r.mRule}</span>}
+                  {r.quote && (
+                    <span className="text-text-tertiary text-[12px] leading-[1.5]">
+                      원문 · {r.quote}
+                    </span>
+                  )}
                 </span>
                 {r.notMet ? (
                   <span className="text-text-sub flex-none font-bold">해당 안 돼요</span>
@@ -247,6 +255,42 @@ function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
           </section>
         )}
 
+        {data.schedule.length > 0 && (
+          <section aria-labelledby="sch-h" className={cn(card, "gap-[8px]")}>
+            <h3 id="sch-h" className={cn(h3, "mb-[4px]")}>
+              진행 일정
+            </h3>
+            <ol className="m-0 flex list-none flex-col gap-[6px] p-0">
+              {data.schedule.map((s) => {
+                const now = s.step === data.currentStep;
+                return (
+                  <li
+                    key={s.step}
+                    aria-current={now ? "step" : undefined}
+                    className={cn(
+                      "rounded-tile flex items-center justify-between gap-[10px] px-[14px] py-[12px]",
+                      now ? "bg-brand text-white" : "bg-bg",
+                    )}
+                  >
+                    <span className="flex flex-col gap-[2px]">
+                      <span
+                        className={cn(
+                          "text-[12px] font-semibold",
+                          now ? "text-brand-deep-text-3" : "text-text-sub",
+                        )}
+                      >
+                        {now ? `지금 · ${s.step}단계` : `${s.step}단계`}
+                      </span>
+                      <span className="text-[15px] font-extrabold">{s.title}</span>
+                    </span>
+                    <span className={cn("text-[13px]", !now && "text-text-sub")}>{s.when}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        )}
+
         {data.linkedSupport && (
           <Link
             href={routes.bizSupport}
@@ -265,6 +309,15 @@ function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
         <span className="text-text-sub px-[16px] pt-[4px] text-center text-[13px]">
           자격만 판정해요 · 선정 가능성은 알려드리지 않아요
         </span>
+        <ReportButton
+          target={
+            data.favoriteType === "NOTICE"
+              ? { kind: "notice", id: data.id }
+              : { kind: "program", id: data.id }
+          }
+          screen="사업공간 상세 (모바일)"
+          className="px-[16px]"
+        />
       </main>
       <MBottomActions>
         <a

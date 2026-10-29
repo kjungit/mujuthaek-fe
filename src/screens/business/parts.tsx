@@ -1,9 +1,10 @@
 import { Building, Store, Users, type LucideIcon } from "lucide-react";
 import { Badge, verdictLabel } from "@/components/ui/Badge";
+import { CheckAction } from "@/components/ui/CheckAction";
 import { FilterChip } from "@/components/ui/Chip";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { SpaceItem, SpaceType, SupportStatus } from "@/mocks/business";
+import type { SpaceItem, SpaceRule, SpaceType, SupportStatus } from "@/mocks/business";
 
 /** 공간 카드 링크: 상세 화면이 없는 공간(모집 정책)은 원문을 새 탭으로 */
 export const spaceLink = (it: SpaceItem) =>
@@ -182,4 +183,15 @@ export function AboutSection({
       </span>
     </section>
   );
+}
+
+/** 자격 조건 한 줄의 결과 (웹·모바일 공통): 충족 · 해당 안 돼요 · 확인 필요(넣을 입력이 있을 때만 입력 화면으로, 없으면 원문 확인).
+ * 공고마다 예 · 아니요로 묻지 않아요 */
+export function RuleAction({ r, web }: { r: SpaceRule; web: boolean }) {
+  if (r.met) return <span className="text-ok-text flex-none text-[14px] font-bold">충족</span>;
+  if (r.notMet)
+    return <span className="text-text-sub flex-none text-[14px] font-bold">해당 안 돼요</span>;
+  if (r.options)
+    return <span className="text-check-text flex-none text-[14px] font-bold">확인 필요</span>;
+  return <CheckAction inputHref={r.inputHref} web={web} />;
 }

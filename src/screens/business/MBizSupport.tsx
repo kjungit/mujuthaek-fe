@@ -7,6 +7,7 @@ import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
 import { useRegionScope, useSupportList } from "@/features/business/queries";
 import { useTypeFilter } from "@/features/business/state";
+import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import { RegionScopeChips, SupportBadge, TypeFilters, supportFilters } from "./parts";
 
@@ -63,24 +64,34 @@ export function MBizSupport() {
           </p>
         )}
 
-        {visible.map((it) => (
-          <Link
-            key={it.id}
-            href={it.href ?? routes.bizSupport}
-            className="bg-surface text-text hover:text-text flex flex-col gap-[8px] rounded-[22px] p-[18px] no-underline"
-          >
-            <span className="flex items-center justify-between gap-[8px]">
-              <SupportBadge status={it.status} size="xs" className="px-[8px] py-[3px]" />
-              <span className="text-[13px] font-extrabold">{it.due}</span>
-            </span>
-            <h2 className="tracking-title m-0 text-[18px] font-extrabold">{it.title}</h2>
-            <span className="text-text-tertiary text-[12px]">{it.mOrg}</span>
-            <span className="text-[15px] font-semibold">{it.mBody}</span>
-            <span className="border-line-soft text-text-sub border-t border-solid pt-[8px] text-[13px]">
-              {it.mReason}
-            </span>
-          </Link>
-        ))}
+        {visible.map((it) => {
+          const body = (
+            <>
+              <span className="flex items-center justify-between gap-[8px]">
+                <SupportBadge status={it.status} size="xs" className="px-[8px] py-[3px]" />
+                <span className="text-[13px] font-extrabold">{it.due}</span>
+              </span>
+              <h2 className="tracking-title m-0 text-[18px] font-extrabold">{it.title}</h2>
+              <span className="text-text-tertiary text-[12px]">{it.mOrg}</span>
+              <span className="text-[15px] font-semibold">{it.mBody}</span>
+              {it.note && <span className="text-text-sub text-[13px]">{it.note}</span>}
+              <span className="border-line-soft text-text-sub border-t border-solid pt-[8px] text-[13px]">
+                {it.mReason}
+              </span>
+            </>
+          );
+          const box = "bg-surface text-text flex flex-col gap-[8px] rounded-[22px] p-[18px]";
+          // 상세 주소가 없는 지원은 눌러도 갈 곳이 없어서 글로만 보여요 (웹과 같아요)
+          return it.href ? (
+            <Link key={it.id} href={it.href} className={cn(box, "hover:text-text no-underline")}>
+              {body}
+            </Link>
+          ) : (
+            <div key={it.id} className={box}>
+              {body}
+            </div>
+          );
+        })}
 
         <span className="text-text-sub px-[4px] text-[13px] leading-[1.6]">
           세금 정보는 참고용이에요. 최종 판단은 세무서나 세무사에게 확인해주세요.
