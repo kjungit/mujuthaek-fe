@@ -46,16 +46,33 @@ export const authToken = {
   },
 };
 
-/** 쿠키의 refresh token으로 access token을 다시 받아요. 동시에 여러 번 불려도 한 번만 요청해요 */
-export function refreshAccessToken(): Promise<string | null> {
-  refreshing ??= fetch(`${API_BASE_URL}${endpoints.authRefresh}`, {
+/** 로그인 연장 한 번. 409(다른 요청이 먼저 연장함)면 그쪽이 받은 새 쿠키로 한 번 더 해요 */
+async function postRefresh(retried = false): Promise<string | null> {
+  const res = await fetch(`${API_BASE_URL}${endpoints.authRefresh}`, {
     method: "POST",
     headers: { Accept: "application/json" },
     credentials: "include",
-  })
-    .then(async (res) => {
-      const data = res.ok ? ((await res.json()) as { accessToken: string }) : null;
-      accessToken = data?.accessToken ?? null;
+  });
+  if (res.status === 409 && !retried) {
+    await new Promise((r) => setTimeout(r, 300));
+    return postRefresh(true);
+  }
+  const data = res.ok ? ((await res.json()) as { accessToken: string }) : null;
+  return data?.accessToken ?? null;
+}
+
+/**
+ * 쿠키의 refresh token으로 access token을 다시 받아요. 이 탭에서 동시에 여러 번 불려도 한 번만 요청하고, 탭이 여러 개면 브라우저
+ * 잠금으로 한 탭씩 차례로 해요(같은 쿠키로 동시에 연장하면 늦은 쪽이 로그아웃되던 문제, 2026-10-29). 잠금이 없는 브라우저는 그냥 보내요
+ */
+export function refreshAccessToken(): Promise<string | null> {
+  const run = () => postRefresh();
+  // 잠금 콜백이 돌려준 Promise를 풀어 받아요
+  const locked = async (): Promise<string | null> =>
+    await navigator.locks.request("mujuthaek-auth-refresh", run);
+  refreshing ??= (typeof navigator !== "undefined" && navigator.locks ? locked() : run())
+    .then((token) => {
+      accessToken = token;
       return accessToken;
     })
     .catch(() => {
