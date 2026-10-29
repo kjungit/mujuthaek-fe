@@ -166,10 +166,9 @@ const settingRows: { key: keyof NotificationSettings; label: string; desc: strin
   { key: "followUp", label: "후속 안내", desc: "관심 공고에 발표·추가 안내가 나오면" },
 ];
 
-export function NotificationSettingsPanel({ onEmail }: { onEmail?: () => void }) {
+export function NotificationSettingsPanel() {
   const settings = useNotificationSettings();
   const push = usePush();
-  const { data: session } = useSession();
   if (!settings.loggedIn) return <LoginPrompt what="알림 설정" />;
   return (
     <div className="flex flex-col gap-[22px]">
@@ -204,7 +203,7 @@ export function NotificationSettingsPanel({ onEmail }: { onEmail?: () => void })
           />
         </div>
         <span className="text-text-sub text-[13px]">
-          꺼도 알림함에는 남아요. 푸시·이메일로만 보내지 않아요
+          꺼도 알림함에는 남아요. 푸시는 발송하지 않아요
         </span>
         {settings.failed && (
           <span role="alert" className="text-danger-text mt-[6px] text-[14px]">
@@ -224,27 +223,6 @@ export function NotificationSettingsPanel({ onEmail }: { onEmail?: () => void })
           >
             이 브라우저 · 앱 알림 {push.enabled ? "켜짐" : "꺼짐"}
           </button>
-          <span className="text-text-sub text-[14px]">
-            {session?.email ? (
-              <>이메일({session.email})로도 받아요</>
-            ) : (
-              <>
-                연락용 이메일을 등록하면 이메일로도 받아요
-                {onEmail && (
-                  <>
-                    {" · "}
-                    <button
-                      type="button"
-                      onClick={onEmail}
-                      className="text-brand cursor-pointer border-0 bg-transparent p-0 text-[14px] font-bold"
-                    >
-                      등록하기
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-          </span>
         </div>
         {push.error && (
           <span role="alert" className="text-danger-text text-[14px]">
