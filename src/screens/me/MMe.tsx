@@ -48,9 +48,11 @@ export function MMe() {
   const favorites = useFavorites();
   const reports = useMyReports();
   const replies = reports.items.filter((r) => r.reply).length;
-  // 웹 주소(/me?tab=reports …)로 들어오면 모바일 세부 화면으로
+  // 웹 주소(/me?tab=reports …)로 들어오면 모바일 세부 화면으로. PC 폭(lg, 1024px 이상)에서는 이 화면이 숨어 있어도
+  // 그려져 있어서(Responsive), 여기서 옮기면 웹 탭을 누를 때마다 /me/{tab}으로 다시 이동해 버벅이고 탭이 되돌아가요
   const tab = params.get("tab");
   useEffect(() => {
+    if (window.matchMedia("(min-width: 1024px)").matches) return;
     if (tab && ["favorites", "interests", "notifications", "reports"].includes(tab)) {
       const rest = new URLSearchParams(params.toString());
       rest.delete("tab");
