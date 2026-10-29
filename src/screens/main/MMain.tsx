@@ -81,7 +81,7 @@ export function MMain() {
 
   return (
     <div className="bg-surface text-text flex min-h-screen w-full flex-col">
-      <header className="border-line-soft flex h-[56px] items-center justify-between border-b border-solid pr-[8px] pl-[16px]">
+      <header className="border-line-soft bg-surface sticky top-0 z-[2] flex h-[56px] items-center justify-between border-b border-solid pr-[8px] pl-[16px]">
         <Link
           href={routes.main}
           aria-label="무주택자들 홈"

@@ -23,7 +23,7 @@ const iconTone = (on: boolean) =>
 
 export function WebHeader({ mode = "home", current, active }: WebHeaderProps) {
   return (
-    <header className="border-line bg-surface border-b border-solid">
+    <header className="border-line bg-surface sticky top-0 z-20 border-b border-solid">
       <div className="mx-auto box-border flex min-h-[68px] w-full max-w-[1200px] flex-wrap items-center justify-between gap-x-[28px] gap-y-[12px] px-[32px]">
         <div className="flex flex-wrap items-center gap-x-[28px] gap-y-[12px]">
           <Link

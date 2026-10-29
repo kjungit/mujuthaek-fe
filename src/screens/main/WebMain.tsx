@@ -170,7 +170,7 @@ export function WebMain() {
 
   return (
     <div className="bg-surface text-text flex min-h-screen w-full flex-col">
-      <header className="border-line-soft border-b border-solid">
+      <header className="border-line-soft bg-surface sticky top-0 z-20 border-b border-solid">
         <div
           className={cn(
             wrap,

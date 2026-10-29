@@ -405,10 +405,8 @@ export function WebDetail({ id }: { id: string }) {
   return (
     <WebPage>
       <div className={cn("flex flex-1 flex-col", pdf.open && pdfUrl && "pl-[min(46vw,680px)]")}>
-        {/* 상단 바는 본문을 내려도 위에 붙어 있어요(높이 69px: 오른쪽 칸이 그 아래에 붙어요) */}
-        <div className="sticky top-0 z-20">
-          <WebHeader mode="home" current={routes.homes} />
-        </div>
+        {/* 상단 바는 화면마다 위에 붙어 있어요(높이 69px: 오른쪽 칸이 그 아래에 붙어요) */}
+        <WebHeader mode="home" current={routes.homes} />
         <WebMain className="gap-[20px] pt-[24px] pb-[80px]">
           <nav
             aria-label="위치"
