@@ -59,16 +59,20 @@ type LegacyDevice = Partial<{
   workplace: string;
 }>;
 
-/** 예전 조건 정리: 이름으로 저장한 지역 → 코드, 지금은 받지 않는 칸(직장 위치)은 버려요 */
+/** 예전 조건 정리: 이름으로 저장한 지역 → 코드, 지금은 받지 않는 칸(직장 위치)은 버려요. 찾아볼 지역은 한 곳만 (예전엔 3곳까지) */
 function migrateDevice(raw: DeviceConditions & LegacyDevice): DeviceConditions {
   const { sido, sigungu, searchRegions, ...rest } = raw;
   delete rest.workplace;
-  if (typeof rest.regionCode === "string" && Array.isArray(rest.searchRegionCodes)) return rest;
+  if (typeof rest.regionCode === "string" && Array.isArray(rest.searchRegionCodes))
+    return { ...rest, searchRegionCodes: rest.searchRegionCodes.slice(0, 1) };
   const toCode = (p: LegacyPlace) => snapshotRegions.codeByNames(p.sido, p.sigungu);
   return {
     ...rest,
     regionCode: (sido && toCode({ sido, sigungu: sigungu ?? "" })) || "",
-    searchRegionCodes: (searchRegions ?? []).map(toCode).filter((c): c is string => Boolean(c)),
+    searchRegionCodes: (searchRegions ?? [])
+      .map(toCode)
+      .filter((c): c is string => Boolean(c))
+      .slice(0, 1),
   };
 }
 

@@ -40,8 +40,6 @@ export function estimateRank(criteria: RankCriteria[], checked: string[]) {
   return hit?.rank ?? null;
 }
 
-export const MAX_SEARCH_REGIONS = 3;
-
 const toggle = (xs: string[], x: string) =>
   xs.includes(x) ? xs.filter((v) => v !== x) : [...xs, x];
 
@@ -144,18 +142,9 @@ export function useProfileForm() {
     /** 사는 곳 코드. 시·도만 고르면 2자리, 시·군·구까지 고르면 5자리 */
     regionCode: device.regionCode,
     setRegionCode: (regionCode: string) => patch({ regionCode }),
-    searchRegionCodes: device.searchRegionCodes,
-    addSearchRegion: (code: string) =>
-      setDevice((d) =>
-        d.searchRegionCodes.length >= MAX_SEARCH_REGIONS || d.searchRegionCodes.includes(code)
-          ? d
-          : { ...d, searchRegionCodes: [...d.searchRegionCodes, code] },
-      ),
-    removeSearchRegion: (code: string) =>
-      setDevice((d) => ({
-        ...d,
-        searchRegionCodes: d.searchRegionCodes.filter((c) => c !== code),
-      })),
+    /** 찾아볼 지역 코드 (한 곳). 고르면 바로 값이 돼요. 안 고르면 "" (전체 지역) */
+    searchRegionCode: device.searchRegionCodes[0] ?? "",
+    setSearchRegionCode: (code: string) => patch({ searchRegionCodes: code ? [code] : [] }),
     head: device.head,
     setHead: (head: Head) => patch({ head }),
     marry: device.marry,

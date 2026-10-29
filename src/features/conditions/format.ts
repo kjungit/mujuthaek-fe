@@ -34,8 +34,8 @@ const place = (c: DeviceConditions, regions: Regions) =>
 
 /** "부산 해운대구 외 1곳" */
 const searchChip = (c: DeviceConditions, regions: Regions) => {
-  const [first, ...rest] = c.searchRegionCodes;
-  return first && `찾아볼 지역 ${regions.label(first)}${rest.length ? ` 외 ${rest.length}곳` : ""}`;
+  const [first] = c.searchRegionCodes;
+  return first && `찾아볼 지역 ${regions.label(first)}`;
 };
 
 /** 홈·가입 완료의 조건 칩. 소득·순위는 이번 탭에서 입력했을 때만 */
