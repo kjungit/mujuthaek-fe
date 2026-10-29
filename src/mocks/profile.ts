@@ -3,7 +3,6 @@
 export type ProfilePreview = { homes: number; benefits: number; needCheck: number };
 
 export type ProfileOptions = {
-  householdSize: string[];
   homelessPeriod: string[];
   bankbookPeriod: string[];
   priorities: string[];
@@ -30,7 +29,6 @@ export type ProfileFormData = {
 
 export const profileFormData: ProfileFormData = {
   options: {
-    householdSize: ["1명", "2명", "3명", "4명 이상"],
     homelessPeriod: [
       "3년 이상 5년 미만",
       "1년 미만",

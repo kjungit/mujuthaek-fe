@@ -5,6 +5,7 @@ import { ArrowRight, Check, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import {
   ChipGroup,
+  HouseholdStepper,
   KidsStepper,
   PriorityChips,
   RankCriteriaFields,
@@ -87,15 +88,10 @@ function Step2({ form }: { form: ProfileForm }) {
           <span className="text-[15px] font-bold">자녀 수</span>
           <KidsStepper form={form} />
         </div>
-        <label className={pLabel}>
-          함께 사는 가족 (나 포함)
-          <select className={cn(pSelect, "font-medium")} {...form.field("householdSize")}>
-            <SelectOptions
-              items={form.data.options.householdSize}
-              value={form.field("householdSize").value}
-            />
-          </select>
-        </label>
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[15px] font-bold">함께 사는 가족 (나 포함)</span>
+          <HouseholdStepper form={form} />
+        </div>
       </div>
       <label className={pLabel}>
         연소득 (세전)

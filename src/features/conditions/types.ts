@@ -11,6 +11,7 @@ export type DeviceConditions = {
   statuses: string[];
   marry: Marry;
   kids: number;
+  /** 함께 사는 가족 수 (나 포함) "1명" ~ "10명". 모르면 "" */
   householdSize: string;
   homelessPeriod: string;
   bankbookPeriod: string;

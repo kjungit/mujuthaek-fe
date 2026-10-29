@@ -24,6 +24,7 @@ const won = (v: string) => {
 const marryLabel = (c: DeviceConditions) =>
   marryOptions.find((o) => o.key === c.marry)?.label ?? "";
 
+/** "3명" → "3인". 모르면 "" */
 const householdLabel = (size: string) => size.replace("명", "인");
 
 const homelessChip = (period: string) => (period === "집이 있어요" ? "유주택" : `무주택 ${period}`);
@@ -66,7 +67,7 @@ export function shortConditionChips(c: DeviceConditions, regions: Regions) {
     age !== null && `만 ${age}세`,
     searchChip(c, regions),
     place(c, regions),
-    `${marryLabel(c)} · ${householdLabel(c.householdSize)}`,
+    [marryLabel(c), householdLabel(c.householdSize)].filter(Boolean).join(" · "),
     ...c.statuses,
     homelessChip(c.homelessPeriod),
   ].filter((x): x is string => Boolean(x));
@@ -92,7 +93,7 @@ export function conditionRows(c: DeviceConditions, regions: Regions): ConditionR
     { k: "사는 곳", v: place(c, regions) || MISSING, muted: !c.regionCode },
     {
       k: "세대",
-      v: `${c.head === "head" ? "세대주" : "세대원"} · ${householdLabel(c.householdSize)} 가구`,
+      v: `${c.head === "head" ? "세대주" : "세대원"} · ${c.householdSize ? `${householdLabel(c.householdSize)} 가구` : `가구원 수 ${MISSING}`}`,
     },
     { k: "결혼 · 자녀", v: `${marryLabel(c)} · ${c.kids ? `자녀 ${c.kids}명` : "자녀 없음"}` },
     {
