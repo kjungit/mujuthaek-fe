@@ -14,6 +14,7 @@ import {
   type BusinessApplicant,
 } from "@/features/business/profile";
 import { birthMonthOf, judgeRegionCode } from "@/features/conditions/applicant";
+import { inputHrefOf } from "@/features/conditions/needs";
 import { useConditions } from "@/features/conditions/store";
 import type { DeviceConditions } from "@/features/conditions/types";
 import { formatPeriod } from "@/features/notice/format";
@@ -88,6 +89,8 @@ type ApiCriterion = {
   summary: string | null;
   /** 근거 원문 문장 */
   quote: string | null;
+  /** 확인 필요일 때 넣으면 정해지는 입력 칸 (주거·혜택 판정의 needs와 같은 뜻) */
+  needs?: string[];
   /** "다음 중 하나"(ANY_OF)일 때 길마다의 결과 */
   options?: { label: string; result: Verdict3; criteria: ApiCriterion[] }[];
 };
@@ -578,6 +581,7 @@ function rulesOf(j: ApiSpaceEvaluation["judgment"]): SpaceDetail["rules"] {
       quote: c.summary && c.quote ? c.quote : undefined,
       met: c.result === "MET",
       notMet: c.result === "NOT_MET",
+      inputHref: c.result === "UNKNOWN" ? inputHrefOf(c.needs) : undefined,
       // 길 안의 질문도 같은 질문 id로 답해요 (판정 엔진이 묶음 안 질문도 questions에 넣어줘요)
       options: anyOf
         ? c.options!.map((o, i) => ({

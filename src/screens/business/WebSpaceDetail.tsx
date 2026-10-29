@@ -8,6 +8,7 @@ import { Building, Check, ChevronLeft, ChevronRight, ExternalLink, X } from "luc
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
+import { CheckAction } from "@/components/ui/CheckAction";
 import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { track } from "@/lib/analytics";
 import { useDocChecks } from "@/features/business/state";
@@ -60,7 +61,7 @@ function RuleMark({ met, notMet, small }: { met: boolean; notMet?: boolean; smal
   );
 }
 
-/** 오른쪽 칸: 질문이면 예 · 아니요, 아니면 결과 (확인 필요면 사업 정보 입력으로) */
+/** 오른쪽 칸: 질문이면 예 · 아니요, 아니면 결과 (확인 필요면 넣을 입력이 있을 때만 입력 화면으로, 없으면 원문 확인) */
 function RuleAction({ r, onAnswer }: { r: SpaceRule; onAnswer?: OnAnswer }) {
   if (r.questionId && onAnswer)
     return <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />;
@@ -69,14 +70,7 @@ function RuleAction({ r, onAnswer }: { r: SpaceRule; onAnswer?: OnAnswer }) {
     return <span className="text-text-sub flex-none text-[14px] font-bold">해당 안 돼요</span>;
   if (r.options)
     return <span className="text-check-text flex-none text-[14px] font-bold">확인 필요</span>;
-  return (
-    <Link
-      href={routes.bizOnboarding}
-      className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-    >
-      확인 필요 · 입력
-    </Link>
-  );
+  return <CheckAction inputHref={r.inputHref} web />;
 }
 
 function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?: OnAnswer }) {

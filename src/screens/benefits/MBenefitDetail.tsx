@@ -4,6 +4,7 @@ import { ReportButton } from "@/components/report/ReportButton";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
+import { CheckAction } from "@/components/ui/CheckAction";
 import { useBenefit } from "@/features/benefits/queries";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
@@ -101,9 +102,13 @@ export function MBenefitDetail({ id }: { id: string }) {
                 <span>{e.label}</span>
                 {e.reason && <span className="text-text-sub text-[13px]">{e.reason}</span>}
               </span>
-              <Badge tone={eligTone[e.result]} size="md" className="flex-none py-[3px]">
-                {eligLabel[e.result]}
-              </Badge>
+              {e.result === "check" ? (
+                <CheckAction inputHref={e.inputHref} web={false} />
+              ) : (
+                <Badge tone={eligTone[e.result]} size="md" className="flex-none py-[3px]">
+                  {eligLabel[e.result]}
+                </Badge>
+              )}
             </div>
           ))}
         </section>

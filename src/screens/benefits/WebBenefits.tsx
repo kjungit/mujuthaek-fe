@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
+import { CheckAction } from "@/components/ui/CheckAction";
 import { useBenefit, useBenefits } from "@/features/benefits/queries";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
@@ -124,12 +125,16 @@ function BenefitDetail({ b }: { b: Benefit }) {
               <span className="text-[15px]">{e.label}</span>
               {e.reason && <span className="text-text-sub text-[13px]">{e.reason}</span>}
             </span>
-            <Badge
-              tone={eligTone[e.result]}
-              className="inline-flex flex-none items-center gap-[5px] px-[10px] py-[4px] text-[14px]"
-            >
-              {eligLabel[e.result]}
-            </Badge>
+            {e.result === "check" ? (
+              <CheckAction inputHref={e.inputHref} web />
+            ) : (
+              <Badge
+                tone={eligTone[e.result]}
+                className="inline-flex flex-none items-center gap-[5px] px-[10px] py-[4px] text-[14px]"
+              >
+                {eligLabel[e.result]}
+              </Badge>
+            )}
           </div>
         ))}
       </div>

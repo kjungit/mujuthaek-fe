@@ -7,6 +7,7 @@ import { Building, Check, ChevronRight } from "lucide-react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
+import { CheckAction } from "@/components/ui/CheckAction";
 import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { track } from "@/lib/analytics";
 import { useDocChecks } from "@/features/business/state";
@@ -219,12 +220,7 @@ function MSpaceDetailView({
                 {r.notMet ? (
                   <span className="text-text-sub flex-none font-bold">해당 안 돼요</span>
                 ) : (
-                  <Link
-                    href={routes.bizOnboarding}
-                    className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-                  >
-                    확인 필요 · 입력
-                  </Link>
+                  <CheckAction inputHref={r.inputHref} web={false} />
                 )}
               </div>
             ),

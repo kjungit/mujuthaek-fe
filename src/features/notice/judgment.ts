@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { ListingVerdict } from "@/components/ui/Badge";
 import { availableCashWon, toApplicant } from "@/features/conditions/applicant";
+import { inputHrefOf } from "@/features/conditions/needs";
 import { useConditions } from "@/features/conditions/store";
 import { useCriteria } from "@/features/eligibility/criteria";
 import { formatWon } from "@/features/notice/format";
@@ -11,6 +12,7 @@ import { prepareNoteLabel } from "@/features/notice/labels";
 import { api } from "@/lib/api/client";
 import { USE_MOCKS } from "@/lib/api/config";
 import { endpoints } from "@/lib/api/endpoints";
+import { routes } from "@/lib/routes";
 import type { NoticeMoney, StandardNotice } from "@/mocks/notice";
 import type { NoticeDoc } from "@/mocks/notice-doc";
 
@@ -65,8 +67,8 @@ export type JudgedItem = {
   status: CheckStatus;
   /** 충족이 아닐 때 이유 (기준만, 내 값은 없어요) */
   reason?: string;
-  /** 조건 입력에서 값을 넣으면 판정돼요 */
-  needsInput: boolean;
+  /** 넣으면 판정되는 입력을 받는 화면. 없으면 원문 확인이에요 */
+  inputHref?: string;
   /** 근거 원문 쪽 */
   page?: number;
 };
@@ -115,7 +117,7 @@ function itemOf(i: ApiItem): JudgedItem {
     label: i.label,
     status: statusOf[i.status],
     reason,
-    needsInput: i.needs.length > 0,
+    inputHref: inputHrefOf(i.needs),
     page: i.evidence?.page ?? undefined,
   };
 }
@@ -197,7 +199,7 @@ export function mockJudgment(n: StandardNotice): NoticeJudgment {
     label: e.label,
     shortLabel: e.shortLabel,
     status: e.status === "met" ? "met" : "unknown",
-    needsInput: e.status === "input",
+    inputHref: e.status === "input" ? routes.profile : undefined,
   }));
   const count = (s: CheckStatus) => items.filter((i) => i.status === s).length;
   return {
