@@ -9,7 +9,7 @@ import { endpoints } from "@/lib/api/endpoints";
 
 /* ── 알림 설정 (GET·PUT /api/users/me/notification-settings) ───────────── */
 
-/** 백엔드 NotificationSettings. 꺼도 알림함에는 남고 푸시·이메일만 안 가요 */
+/** 백엔드 NotificationSettings. 꺼도 알림함에는 남고 푸시만 안 가요 */
 export type NotificationSettings = {
   newNotice: boolean;
   newSupport: boolean;
@@ -62,6 +62,8 @@ export function useNotificationSettings() {
     loggedIn: USE_MOCKS || loggedIn,
     failed: save.isError,
     set: (patch: Partial<NotificationSettings>) => save.mutate({ ...value, ...patch }),
+    /** 저장이 끝날 때까지 기다려요 (실패하면 throw, 화면 값은 되돌아가요) */
+    setAsync: (patch: Partial<NotificationSettings>) => save.mutateAsync({ ...value, ...patch }),
   };
 }
 
