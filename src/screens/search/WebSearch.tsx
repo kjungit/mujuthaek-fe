@@ -109,6 +109,14 @@ export function WebSearch() {
             검색하지 못했어요. 잠시 뒤 다시 해 주세요
           </p>
         )}
+        {!error && loading && results.length === 0 && (
+          <p
+            role="status"
+            className="rounded-card bg-surface text-text-sub m-0 px-[24px] py-[40px] text-center text-[15px]"
+          >
+            검색하는 중이에요
+          </p>
+        )}
         {!error && !loading && results.length === 0 && (
           <p className="rounded-card bg-surface text-text-sub m-0 px-[24px] py-[40px] text-center text-[15px]">
             {keyword ? `「${keyword}」에 맞는 공고·혜택이 없어요` : "지금 열린 공고·혜택이 없어요"}
