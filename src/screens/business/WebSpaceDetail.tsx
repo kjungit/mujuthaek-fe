@@ -13,8 +13,8 @@ import { track } from "@/lib/analytics";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { SpaceDetail, SpaceRule } from "@/mocks/business";
-import { AboutSection, AnswerButtons } from "./parts";
+import type { SpaceDetail } from "@/mocks/business";
+import { AboutSection, RuleAction } from "./parts";
 
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
@@ -57,25 +57,6 @@ function RuleMark({ met, notMet, small }: { met: boolean; notMet?: boolean; smal
     >
       ?
     </span>
-  );
-}
-
-/** 오른쪽 칸: 질문이면 예 · 아니요, 아니면 결과 (확인 필요면 사업 정보 입력으로) */
-function RuleAction({ r, onAnswer }: { r: SpaceRule; onAnswer?: OnAnswer }) {
-  if (r.questionId && onAnswer)
-    return <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />;
-  if (r.met) return <span className="text-ok-text flex-none text-[14px] font-bold">충족</span>;
-  if (r.notMet)
-    return <span className="text-text-sub flex-none text-[14px] font-bold">해당 안 돼요</span>;
-  if (r.options)
-    return <span className="text-check-text flex-none text-[14px] font-bold">확인 필요</span>;
-  return (
-    <Link
-      href={routes.bizOnboarding}
-      className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-    >
-      확인 필요 · 입력
-    </Link>
   );
 }
 
