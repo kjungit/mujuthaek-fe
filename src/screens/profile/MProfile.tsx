@@ -138,15 +138,6 @@ export function MProfile() {
               <HouseholdStepper form={form} className="min-h-[54px]" />
             </div>
             <label className={pLabel}>
-              함께 사는 가족 (나 포함)
-              <select className={cn(mSelect, "font-medium")} {...form.field("householdSize")}>
-                <SelectOptions
-                  items={options.householdSize}
-                  value={form.field("householdSize").value}
-                />
-              </select>
-            </label>
-            <label className={pLabel}>
               연소득 (세전)
               <UnitInput
                 unit="만 원"

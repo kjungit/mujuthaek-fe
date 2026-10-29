@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, ChevronRight } from "lucide-react";
-import { HomePushCard } from "@/components/alerts/HomePushCard";
+import { DeadlineAlertPrompt } from "@/components/alerts/DeadlineAlertPrompt";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
@@ -188,7 +188,7 @@ export function MHome() {
               ))}
             </section>
 
-            <HomePushCard variant="mobile" />
+            <DeadlineAlertPrompt variant="mobile" />
 
             {data.suggestedBenefit && (
               <Link
