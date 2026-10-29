@@ -11,6 +11,7 @@ import {
 import type { DeviceConditions, SessionConditions } from "@/features/conditions/types";
 import { routes } from "@/lib/routes";
 import type { ProfileFormData, RankCriteria } from "@/mocks/profile";
+import { useConditionsPreview } from "./preview";
 import { useProfileFormData } from "./queries";
 
 export type Head = "head" | "member";
@@ -91,6 +92,9 @@ export function useProfileForm() {
     if (stored.session) setSess({ ...emptySession, ...stored.session });
   }
 
+  // 「지금 조건으로」: 입력 중인 조건으로 바로 세요 (목업은 단계별 예시)
+  const preview = useConditionsPreview(device, sess, loaded, data.previewByStep[step - 1]);
+
   const patch = (p: Partial<DeviceConditions>) => setDevice((d) => ({ ...d, ...p }));
   const patchSess = (p: Partial<SessionConditions>) => setSess((v) => ({ ...v, ...p }));
 
@@ -111,7 +115,7 @@ export function useProfileForm() {
     prev: () => setStep((s) => Math.max(1, s - 1)),
     next: () => setStep((s) => Math.min(3, s + 1)),
     isLast: step === 3,
-    preview: data.previewByStep[step - 1],
+    preview,
     field,
     sessionField,
     /** 사는 곳 시·도를 바꾸면 시·군·구는 다시 골라요 */

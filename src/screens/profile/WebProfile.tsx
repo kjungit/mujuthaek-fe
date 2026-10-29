@@ -33,6 +33,9 @@ const steps = [
 ];
 
 const help = "text-text-sub text-[13px] font-medium";
+
+/** 받기 전·실패면 「–」 */
+const count = (n: number | null) => (n === null ? "–" : n);
 const headerLink =
   "text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[4px] px-[12px] text-[15px] font-semibold no-underline";
 
@@ -312,29 +315,47 @@ export function WebProfile() {
           <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 280px" }}>
             <section
               aria-label="지금 조건으로"
+              aria-busy={form.preview.updating}
               className="rounded-card bg-surface flex flex-col gap-[14px] p-[24px]"
             >
               <span className="text-text-sub text-[15px] font-bold">지금 조건으로</span>
               <div className="flex items-baseline justify-between">
                 <span className="text-[15px]">지원 가능한 공고</span>
-                <span className="tracking-title text-[26px] font-extrabold">
-                  {form.preview.homes}곳
+                <span
+                  className={cn(
+                    "tracking-title text-[26px] font-extrabold",
+                    form.preview.updating && "opacity-50",
+                  )}
+                >
+                  {count(form.preview.homes)}곳
                 </span>
               </div>
               <div className="flex items-baseline justify-between">
                 <span className="text-[15px]">받을 수 있는 혜택</span>
-                <span className="tracking-title text-[26px] font-extrabold">
-                  {form.preview.benefits}개
+                <span
+                  className={cn(
+                    "tracking-title text-[26px] font-extrabold",
+                    form.preview.updating && "opacity-50",
+                  )}
+                >
+                  {count(form.preview.benefits)}개
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[15px]">확인 필요한 조건</span>
+                <span className="text-[15px]">확인이 필요한 공고</span>
                 <span className="rounded-badge bg-check-bg text-check-text px-[10px] py-[4px] text-[14px] font-extrabold">
-                  {form.preview.needCheck}개
+                  {count(form.preview.needCheck)}곳
                 </span>
               </div>
-              <span className="border-line-soft text-text-sub border-t border-solid pt-[12px] text-[13px]">
-                입력할수록 정확해져요
+              <span
+                role="status"
+                className="border-line-soft text-text-sub border-t border-solid pt-[12px] text-[13px]"
+              >
+                {form.preview.error
+                  ? "지금은 셀 수 없어요. 확인하기를 누르면 홈에서 볼 수 있어요"
+                  : form.preview.updating
+                    ? "바뀐 조건으로 세는 중이에요"
+                    : "입력할수록 정확해져요"}
               </span>
             </section>
 
