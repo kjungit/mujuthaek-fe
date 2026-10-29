@@ -3,7 +3,7 @@
 import { NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Building, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
@@ -360,7 +360,31 @@ function ApiBlockUnits({
   );
 }
 
+/**
+ * 오른쪽 칸을 붙여 둘 위치: 처음 놓인 자리(문서 맨 위에서 칸까지의 거리). 그 자리에 그대로 붙어 있어서 본문을 내려도 칸이 움직이지 않고,
+ * 칸 위에서 휠을 굴릴 때만 칸 안이 내려가요. 위쪽 내용 높이가 바뀌면(창 크기·불러오기) 다시 재요
+ */
+function usePinnedTop() {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const [top, setTop] = useState<number | null>(null);
+  useEffect(() => {
+    const row = el?.parentElement;
+    if (!row) return;
+    // 칸은 줄(row)의 맨 위에 있어요. 붙어 있는 동안 칸 자체의 위치는 바뀌니 줄의 위치로 재요
+    const update = () => setTop(Math.round(row.getBoundingClientRect().top + window.scrollY));
+    const seen = new ResizeObserver(update);
+    seen.observe(document.body);
+    window.addEventListener("resize", update);
+    return () => {
+      seen.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [el]);
+  return [setEl, top] as const;
+}
+
 export function WebDetail({ id }: { id: string }) {
+  const [pinTo, pinTop] = usePinnedTop();
   const { data, loading, error } = useNotice(id);
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
@@ -528,10 +552,12 @@ export function WebDetail({ id }: { id: string }) {
               )}
             </div>
 
-            {/* 내 자격·관심 등록·원문 보기는 본문을 내려도 계속 보이게 붙여 둬요(두 칸이 나란할 때만). 화면보다 길면 이 칸만 따로 휠로 내려요(스크롤바는 숨겨요). 상단 바 아래에 붙어요 */}
+            {/* 내 자격·관심 등록·원문 보기는 처음 자리에 붙어 있어서 본문을 내려도 움직이지 않아요(두 칸이 나란할 때만).
+                화면보다 길면 이 칸 위에서 휠을 굴릴 때만 칸 안이 내려가요(스크롤바는 숨겨요) */}
             <aside
-              className="flex min-w-0 flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:top-[93px] min-[1100px]:max-h-[calc(100dvh-117px)] min-[1100px]:[scrollbar-width:none] min-[1100px]:overflow-x-hidden min-[1100px]:overflow-y-auto min-[1100px]:overscroll-contain min-[1100px]:[&::-webkit-scrollbar]:hidden"
-              style={{ flex: "1 1 360px" }}
+              ref={pinTo}
+              className="flex min-w-0 flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:top-[var(--pin-top)] min-[1100px]:max-h-[calc(100dvh-var(--pin-top)-24px)] min-[1100px]:[scrollbar-width:none] min-[1100px]:overflow-x-hidden min-[1100px]:overflow-y-auto min-[1100px]:overscroll-contain min-[1100px]:[&::-webkit-scrollbar]:hidden"
+              style={{ flex: "1 1 360px", "--pin-top": `${pinTop ?? 93}px` } as React.CSSProperties}
             >
               <EligibilityCard
                 judgment={j.judgment}
