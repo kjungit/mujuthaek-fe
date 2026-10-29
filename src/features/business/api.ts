@@ -510,7 +510,7 @@ function rulesOf(j: ApiSpaceEvaluation["judgment"]): SpaceDetail["rules"] {
       met: c.result === "MET",
       notMet: c.result === "NOT_MET",
       inputHref: c.result === "UNKNOWN" ? inputHrefOf(c.needs) : undefined,
-      // 길 안의 질문도 같은 질문 id로 답해요 (판정 엔진이 묶음 안 질문도 questions에 넣어줘요)
+      // 길 안 조건도 같은 표시예요 (확인 필요면 넣을 입력이 있을 때만 입력 화면으로, 없으면 원문 확인)
       options: anyOf
         ? c.options!.map((o, i) => ({
             label: o.label.replace(/^\d+번째 길:\s*/, "") || `${i + 1}번째`,
