@@ -34,6 +34,10 @@ const nextConfig: NextConfig = {
       fallback: [],
     };
   },
+  // 백엔드가 탈퇴 재인증에 실패하면 /mypage?withdraw=<이유>로 보내요. 내 정보 개인정보(탈퇴 버튼 자리)로 넘기고 쿼리는 그대로 붙어요
+  async redirects() {
+    return [{ source: "/mypage", destination: "/me?tab=privacy", permanent: false }];
+  },
   async headers() {
     return [
       {

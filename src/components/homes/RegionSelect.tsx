@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { House, MapPin, Plus } from "lucide-react";
+import { House, MapPin } from "lucide-react";
 import type { RegionFilter } from "@/features/homes/region";
 import { useRegions } from "@/features/regions/queries";
 import { cn } from "@/lib/cn";
-import { routes } from "@/lib/routes";
 
 const select =
   "border-line bg-surface text-text min-h-[44px] min-w-0 rounded-sm border border-solid px-[12px] text-[15px] font-semibold disabled:text-text-sub disabled:bg-fill";
@@ -13,7 +11,7 @@ const select =
 const chip =
   "rounded-pill inline-flex min-h-[36px] min-w-0 cursor-pointer items-center gap-[4px] border-0 px-[12px] text-[13px] font-bold";
 
-/** 지역 필터: 찾아볼 지역 / 전체, 또는 시·도 → 시·군·구. 사는 곳은 배지로만 보여줘요 */
+/** 지역 필터: 찾아볼 지역 / 전체, 또는 시·도 → 시·군·구. 사는 곳은 배지로만 보여줘요. 찾아볼 지역을 바꾸는 건 화면 위 「조건 수정」 */
 export function RegionSelect({ filter, compact }: { filter: RegionFilter; compact?: boolean }) {
   const regions = useRegions();
   const { code, mine, residence } = filter;
@@ -47,18 +45,7 @@ export function RegionSelect({ filter, compact }: { filter: RegionFilter; compac
               전체
             </button>
           </>
-        ) : (
-          <Link
-            href={routes.profile}
-            className={cn(
-              chip,
-              "bg-brand-soft text-brand-strong hover:text-brand-strong no-underline",
-            )}
-          >
-            <Plus size={14} aria-hidden className="flex-none" />
-            찾아볼 지역 정하기
-          </Link>
-        )}
+        ) : null}
         {residence && (
           <span
             className="rounded-pill bg-fill text-text-sub inline-flex min-h-[36px] min-w-0 items-center gap-[4px] px-[12px] text-[13px] font-semibold"

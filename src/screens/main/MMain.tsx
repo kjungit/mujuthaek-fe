@@ -7,6 +7,7 @@ import { VerdictBadge } from "@/components/ui/Badge";
 import { useMainLanding } from "@/features/main/queries";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/features/auth/session";
+import { useStartLinks } from "@/features/main/start";
 import { routes } from "@/lib/routes";
 
 const eyebrow = "text-brand-strong text-[14px] font-bold";
@@ -76,6 +77,7 @@ function StatCard({
 export function MMain() {
   // 로그인했으면 로그인 대신 이름 · 내 홈 (불러오는 동안은 숨겨요)
   const { data: session } = useSession();
+  const links = useStartLinks();
   const { data } = useMainLanding();
   const { example, judgeExample } = data;
 
@@ -118,10 +120,10 @@ export function MMain() {
             판정해드려요
           </p>
           <Link
-            href={routes.profile}
+            href={links.start.href}
             className="bg-brand mt-[6px] flex min-h-[58px] items-center justify-center gap-[8px] rounded-[16px] text-[18px] font-extrabold text-white no-underline hover:text-white"
           >
-            로그인 없이 시작하기
+            {links.start.label}
             <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
           </Link>
           <a
@@ -168,7 +170,7 @@ export function MMain() {
           className="flex flex-col gap-[10px] px-[20px] pt-[28px] pb-[8px]"
         >
           <Link
-            href={routes.profile}
+            href={links.homes}
             className="rounded-card bg-brand-soft text-text hover:text-text flex items-center gap-[14px] p-[20px] no-underline"
           >
             <span className="flex flex-1 flex-col gap-[3px]">
@@ -330,10 +332,10 @@ export function MMain() {
             가입 없이 바로, 받을 수 있는 집과 혜택부터
           </span>
           <Link
-            href={routes.profile}
+            href={links.start.href}
             className="rounded-control bg-surface text-brand-strong hover:text-brand-strong flex min-h-[56px] items-center justify-center text-[17px] font-extrabold no-underline"
           >
-            로그인 없이 시작하기
+            {links.start.label}
           </Link>
         </section>
       </main>

@@ -23,6 +23,7 @@ import {
   useProfileForm,
   type ProfileForm,
 } from "@/features/profile/useProfileForm";
+import { useSession } from "@/features/auth/session";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
@@ -189,6 +190,7 @@ function Step3({ form }: { form: ProfileForm }) {
 
 export function WebProfile() {
   const form = useProfileForm();
+  const session = useSession();
   const current = steps[form.step - 1];
   const primary =
     "rounded-control bg-brand inline-flex min-h-[56px] items-center gap-[8px] px-[26px] text-[17px] font-extrabold text-white";
@@ -206,9 +208,11 @@ export function WebProfile() {
             <span className="tracking-logo text-[19px] font-extrabold">무주택자들</span>
           </Link>
           <div className="flex items-center gap-[8px]">
-            <Link href={routes.login} className={headerLink}>
-              로그인
-            </Link>
+            {session.data === null && (
+              <Link href={routes.login} className={headerLink}>
+                로그인
+              </Link>
+            )}
             <Link href={routes.main} className={headerLink}>
               <X size={18} aria-hidden />
               나가기
