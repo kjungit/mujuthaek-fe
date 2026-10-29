@@ -46,6 +46,7 @@ function Step1({ form }: { form: ProfileForm }) {
       <BirthField
         value={form.field("birth").value}
         onChange={(birth) => form.field("birth").onChange({ target: { value: birth } })}
+        showProblem={form.birthBlocked}
         selectClassName={pSelect}
       />
       <SearchRegionsField form={form} selectClassName={pSelect} />

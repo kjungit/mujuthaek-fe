@@ -21,6 +21,22 @@ export function splitBirth(birth: string) {
 
 const joinBirth = (y: string, m: string, d: string) => (y || m || d ? `${y}.${m}.${d}` : "");
 
+/**
+ * 생년월일이 다음 단계로 넘어갈 수 있는지. 문제가 있으면 안내 문구, 괜찮으면 null.
+ * 해는 OLDEST_YEAR ~ 올해, 달·날까지 다 있어야 해요 (범위 밖 해는 나이를 못 세서 미입력처럼 저장돼요)
+ */
+export function birthProblem(birth: string, thisYear = new Date().getFullYear()) {
+  const { y, m, d } = splitBirth(birth);
+  if (!y && !m && !d) return "생년월일을 입력해 주세요";
+  if (y.length !== 4) return "해는 네 자리로 써 주세요 (예: 1997)";
+  if (Number(y) < OLDEST_YEAR || Number(y) > thisYear)
+    return `${OLDEST_YEAR}년부터 ${thisYear}년 사이로 써 주세요`;
+  if (!/^(0[1-9]|1[0-2])$/.test(m)) return "태어난 달을 써 주세요";
+  if (!/^\d{2}$/.test(d) || Number(d) < 1 || Number(d) > lastDayOf(y, m))
+    return "태어난 날을 써 주세요";
+  return null;
+}
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** 그 달의 마지막 날 (해를 모르면 윤년으로 봐서 2월 29일까지) */
@@ -75,7 +91,8 @@ function Segment({
   onType: (raw: string) => void;
   onPick: (value: string) => void;
   onBackspaceEmpty?: () => void;
-  onLeave?: () => void;
+  /** 칸을 떠날 때. 지금 칸에 보이는 값을 받아요 */
+  onLeave?: (current: string) => void;
 }) {
   return (
     <div
@@ -99,7 +116,7 @@ function Segment({
         onKeyDown={(e) => {
           if (e.key === "Backspace" && !value) onBackspaceEmpty?.();
         }}
-        onBlur={onLeave}
+        onBlur={(e) => onLeave?.(e.currentTarget.value)}
         className="text-text placeholder:text-text-tertiary w-full min-w-0 border-0 bg-transparent p-0 text-inherit outline-none"
       />
       <span aria-hidden className="text-text-sub flex-none">
@@ -134,9 +151,12 @@ export function BirthField({
   value,
   onChange,
   selectClassName,
+  showProblem = false,
 }: {
   value: string;
   onChange: (birth: string) => void;
+  /** 다음 단계로 가려다 막혔으면 true: 빈 칸·덜 쓴 칸까지 이유를 보여 줘요 */
+  showProblem?: boolean;
   /** 다른 칸과 높이·글자를 맞추려고 받아요 */
   selectClassName: string;
 }) {
@@ -159,8 +179,9 @@ export function BirthField({
     if (nd.length === 2 && Number(nd) > lastDayOf(ny, nm)) nd = "";
     onChange(joinBirth(ny, nm, nd));
   };
-  // "3"처럼 한 자리로 두고 나가면 "03"으로
-  const padOnLeave = (part: "m" | "d", current: string) => () => {
+  // "3"처럼 한 자리로 두고 나가면 "03"으로. 값은 칸에 보이는 것을 써요: 두 자리를 다 쓰면 바로 다음 칸으로
+  // 옮기는데, 그때 나가는 칸은 아직 앞 글자("1")만 아는 화면이라 그 값으로 0을 붙이면 11·12월이 01월이 돼요
+  const padOnLeave = (part: "m" | "d") => (current: string) => {
     if (current.length === 1 && current !== "0") set({ [part]: pad(Number(current)) });
   };
 
@@ -170,12 +191,10 @@ export function BirthField({
 
   const yearInvalid =
     (y.length === 4 && (Number(y) < OLDEST_YEAR || Number(y) > thisYear)) ||
-    (y.length > 0 && y.length < 4 && Boolean(m));
-  const error = !yearInvalid
-    ? null
-    : y.length === 4
-      ? `${OLDEST_YEAR}년부터 ${thisYear}년 사이로 써 주세요`
-      : "해는 네 자리로 써 주세요 (예: 1997)";
+    (y.length > 0 && y.length < 4 && (Boolean(m) || showProblem));
+  const problem = birthProblem(value, thisYear);
+  // 쓰는 중에는 해가 틀렸을 때만, 막힌 뒤에는 남은 문제를 모두 보여 줘요
+  const error = showProblem ? problem : yearInvalid ? problem : null;
 
   return (
     <fieldset className="m-0 flex flex-col gap-[8px] border-0 p-0">
@@ -222,7 +241,7 @@ export function BirthField({
             dayRef.current?.focus();
           }}
           onBackspaceEmpty={() => yearRef.current?.focus()}
-          onLeave={padOnLeave("m", m)}
+          onLeave={padOnLeave("m")}
         />
         <Segment
           inputRef={dayRef}
@@ -237,7 +256,7 @@ export function BirthField({
           onType={(raw) => set({ d: typeTwoDigits(raw, lastDay).value })}
           onPick={(v) => set({ d: v })}
           onBackspaceEmpty={() => monthRef.current?.focus()}
-          onLeave={padOnLeave("d", d)}
+          onLeave={padOnLeave("d")}
         />
       </div>
       {error && (
