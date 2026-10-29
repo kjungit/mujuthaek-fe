@@ -21,6 +21,7 @@ export function UnitInput({
   describedBy,
   value,
   onChange,
+  disabled,
 }: {
   unit: string;
   placeholder: string;
@@ -28,6 +29,7 @@ export function UnitInput({
   describedBy?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }) {
   return (
     <span className="relative flex">
@@ -38,7 +40,14 @@ export function UnitInput({
         aria-describedby={describedBy}
         value={value}
         onChange={onChange}
-        className={cn(pInput, "flex-1", unit.length > 1 ? "pr-[60px]" : "pr-[44px]", className)}
+        disabled={disabled}
+        className={cn(
+          pInput,
+          "flex-1",
+          "disabled:opacity-50",
+          unit.length > 1 ? "pr-[60px]" : "pr-[44px]",
+          className,
+        )}
       />
       <span className="text-text-sub pointer-events-none absolute top-1/2 right-[16px] -translate-y-1/2 text-[16px] font-semibold">
         {unit}
