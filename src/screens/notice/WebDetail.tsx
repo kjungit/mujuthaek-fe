@@ -526,7 +526,11 @@ export function WebDetail({ id }: { id: string }) {
               )}
             </div>
 
-            <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 360px" }}>
+            {/* 내 자격·관심 등록·원문 보기는 본문을 내려도 계속 보이게 붙여 둬요(두 칸이 나란할 때만). 화면보다 길면 이 칸만 따로 휠로 내려요 */}
+            <aside
+              className="flex min-w-0 flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:top-[24px] min-[1100px]:max-h-[calc(100dvh-48px)] min-[1100px]:overflow-x-hidden min-[1100px]:overflow-y-auto min-[1100px]:overscroll-contain"
+              style={{ flex: "1 1 360px" }}
+            >
               <EligibilityCard
                 judgment={j.judgment}
                 loading={j.loading}
@@ -565,30 +569,33 @@ export function WebDetail({ id }: { id: string }) {
                 </section>
               )}
 
-              <WebFavoriteButton
-                type="NOTICE"
-                id={n.id}
-                onAdd={() => track("notice_bookmark", noticeParams(n))}
-              />
-              <button
-                type="button"
-                aria-pressed={pdfUrl ? pdf.open : undefined}
-                onClick={() => (pdf.open ? pdf.close() : openOriginal())}
-                className="rounded-tile bg-surface text-text flex min-h-[56px] cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold"
-              >
-                <FileText size={18} aria-hidden />
-                {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
-              </button>
-              <div className="flex flex-col items-center gap-[2px] pt-[4px]">
-                <span className="text-text-sub text-[13px]">
-                  판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
-                </span>
-                <ReportButton
-                  target={{ kind: "notice", id: n.id }}
-                  screen="공고 상세"
-                  className="self-stretch"
-                  buttonClassName="text-[13px]"
+              {/* 관심 등록·원문 보기는 칸이 화면보다 길어도 아래에 늘 보이게 붙여 둬요 */}
+              <div className="bg-bg flex flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:bottom-0 min-[1100px]:pt-[4px]">
+                <WebFavoriteButton
+                  type="NOTICE"
+                  id={n.id}
+                  onAdd={() => track("notice_bookmark", noticeParams(n))}
                 />
+                <button
+                  type="button"
+                  aria-pressed={pdfUrl ? pdf.open : undefined}
+                  onClick={() => (pdf.open ? pdf.close() : openOriginal())}
+                  className="rounded-tile bg-surface text-text flex min-h-[56px] cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold"
+                >
+                  <FileText size={18} aria-hidden />
+                  {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
+                </button>
+                <div className="flex flex-col items-center gap-[2px] pt-[4px]">
+                  <span className="text-text-sub text-[13px]">
+                    판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
+                  </span>
+                  <ReportButton
+                    target={{ kind: "notice", id: n.id }}
+                    screen="공고 상세"
+                    className="self-stretch"
+                    buttonClassName="text-[13px]"
+                  />
+                </div>
               </div>
             </aside>
           </div>
