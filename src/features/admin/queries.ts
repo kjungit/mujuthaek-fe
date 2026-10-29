@@ -1,4 +1,10 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type InfiniteData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useAdminMe } from "@/components/admin/AdminGuard";
 import { useCallback } from "react";
 import { mockQuery } from "@/features/mock-query";
 import {
@@ -9,6 +15,7 @@ import {
   adminSources,
   reviewQueue,
   type AdminCounts,
+  type ReviewReason,
 } from "@/mocks/admin";
 import {
   EMPTY_REVIEW,
@@ -17,7 +24,7 @@ import {
   liveOverview,
   liveReports,
   liveReviewDetail,
-  liveReviewQueue,
+  liveReviewQueuePage,
   liveSources,
   liveBotTraffic,
   liveActivity,
@@ -120,21 +127,45 @@ export function useAdminOverview() {
   return useQuery(mockQuery(adminKeys.overview, adminOverview));
 }
 
-export function useReviewQueue() {
-  if (LIVE) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const q = useQuery({
-      queryKey: live(adminKeys.review),
-      queryFn: liveReviewQueue,
-      staleTime: 30 * 1000,
-    });
-    return {
-      ...q,
-      data: q.data ?? { total: 0, items: [{ ...EMPTY_REVIEW, title: "불러오는 중…" }] },
-    };
+type QueuePage = Awaited<ReturnType<typeof liveReviewQueuePage>>;
+
+/**
+ * 검수 대기열 (무한 스크롤): 사유(reason)로 거른 대기열을 50건씩 이어 받아요. 내 권한으로 볼 수 있는 종류(공고 검수·혜택 검수)만 물어요.
+ * 화면을 떠나면 받아 둔 페이지를 버려요(돌아왔을 때 수천 건을 페이지마다 다시 받지 않게 첫 페이지부터).
+ */
+export function useReviewQueue(reason: ReviewReason | null) {
+  const permissions = useAdminMe().data?.permissions;
+  const kinds = [
+    ...(permissions?.includes("NOTICE_REVIEW") ? ["NOTICE"] : []),
+    ...(permissions?.includes("BENEFIT_REVIEW") ? ["BENEFIT"] : []),
+  ];
+  const q = useInfiniteQuery({
+    queryKey: [...live(adminKeys.review), kinds.join(","), reason ?? "all"],
+    queryFn: ({ pageParam }) => liveReviewQueuePage(kinds, reason, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: QueuePage) => last.nextCursor,
+    enabled: LIVE && kinds.length > 0,
+    staleTime: 60 * 1000,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+  });
+  if (!LIVE) {
+    const items = reviewQueue.items.filter((i) => !reason || i.reason === reason);
+    return { total: reviewQueue.total, items, more: false, loadingMore: false, loadMore: () => {} };
   }
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useQuery(mockQuery(adminKeys.review, reviewQueue));
+  const items = q.data?.pages.flatMap((p) => p.items) ?? [];
+  return {
+    total: q.data?.pages[0]?.total ?? 0,
+    items: items.length
+      ? items
+      : [{ ...EMPTY_REVIEW, title: q.isPending ? "불러오는 중…" : EMPTY_REVIEW.title }],
+    more: q.hasNextPage,
+    loadingMore: q.isFetchingNextPage,
+    /** 대기열 아래 끝이 보이면 다음 50건 */
+    loadMore: () => {
+      if (q.hasNextPage && !q.isFetchingNextPage) void q.fetchNextPage();
+    },
+  };
 }
 
 /** 고른 검수 건의 원문·추출 결과. 목업이면 대기열 항목에 이미 들어 있어 받지 않아요 */
@@ -149,8 +180,8 @@ export function useReviewDetail(id: string) {
 }
 
 /**
- * 승인·반려 뒤: 대기열 목록과 사이드바 숫자만 다시 받아요. 관리자 화면 전체({@link useSetAdminCounts})를 다시 받으면
- * 다른 화면의 데이터까지 모두 다시 불러요
+ * 승인·반려 뒤: 대기열은 다시 받지 않고(받아 둔 페이지가 많으면 페이지마다 다시 불러요) 건수만 하나 줄이고, 사이드바 숫자만 다시 받아요.
+ * 처리한 건은 「승인함·반려함」으로 남았다가 화면을 다시 열면 빠져요. 관리자 화면 전체({@link useSetAdminCounts})는 다시 받지 않아요
  */
 export function useReviewDecided() {
   const queryClient = useQueryClient();
@@ -161,7 +192,16 @@ export function useReviewDecided() {
         setCounts({ reviewPending: pending });
         return;
       }
-      void queryClient.invalidateQueries({ queryKey: live(adminKeys.review), exact: true });
+      queryClient.setQueriesData<InfiniteData<QueuePage>>(
+        { queryKey: live(adminKeys.review) },
+        (data) =>
+          data && {
+            ...data,
+            pages: data.pages.map((p, i) =>
+              i === 0 ? { ...p, total: Math.max(0, p.total - 1) } : p,
+            ),
+          },
+      );
       void queryClient.invalidateQueries({ queryKey: live(adminKeys.counts), exact: true });
     },
     [queryClient, setCounts],
