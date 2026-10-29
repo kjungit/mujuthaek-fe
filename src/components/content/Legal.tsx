@@ -47,7 +47,7 @@ export function WebLegalToc({ sections }: { sections: LegalSection[] }) {
   );
 }
 
-function Block({ block }: { block: LegalBlock }) {
+function Block({ block, mobile }: { block: LegalBlock; mobile?: boolean }) {
   switch (block.kind) {
     case "p":
       return <p className={cn("m-0", block.small && "text-[15px]")}>{block.text}</p>;
@@ -60,6 +60,32 @@ function Block({ block }: { block: LegalBlock }) {
         </ol>
       );
     case "table":
+      // 모바일은 좁아서 표 대신 줄마다 카드로 (내용은 웹 표와 같아요)
+      if (mobile) {
+        return (
+          <div className="flex flex-col gap-[8px]">
+            {block.rows.map((r) => (
+              <div
+                key={r.label}
+                className="bg-bg rounded-sm px-[14px] py-[12px] text-[14px] leading-[1.6]"
+              >
+                <strong className="text-text">{r.label}</strong>
+                <br />
+                {r.text}
+                {r.strong && <strong className="text-brand-strong">{r.strong}</strong>}
+                {r.when && (
+                  <>
+                    <br />
+                    <span className="text-text-sub">
+                      {block.head[2]} · {r.when}
+                    </span>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      }
       return (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px] border-collapse text-[15px] leading-[1.6]">
@@ -187,7 +213,35 @@ export function MLegalTabs({ current }: { current: "terms" | "privacy" }) {
   );
 }
 
-/** 모바일: 접고 펼치는 조항 */
+/** 모바일: 웹과 같은 조항(전체 본문)을 접고 펼쳐요. 처음 조항과 강조 조항은 펼쳐 둬요 */
+export function MLegalSection({ section, open }: { section: LegalSection; open?: boolean }) {
+  return (
+    <details
+      open={open || section.emphasis}
+      className={cn(
+        section.emphasis
+          ? "bg-brand-soft rounded-tile px-[16px] pt-[6px] pb-[14px]"
+          : "border-line-soft border-b border-solid pt-[6px] pb-[14px]",
+      )}
+    >
+      <summary
+        className={cn(
+          "flex min-h-[44px] cursor-pointer items-center text-[16px] font-extrabold",
+          section.emphasis ? "text-brand-strong" : "text-text",
+        )}
+      >
+        {section.title ?? section.toc}
+      </summary>
+      <div className={cn("mt-[4px] flex flex-col gap-[8px]", section.emphasis && "text-text")}>
+        {section.blocks.map((b, i) => (
+          <Block key={i} block={b} mobile />
+        ))}
+      </div>
+    </details>
+  );
+}
+
+/** 모바일: 접고 펼치는 조항 (예전 짧은 본문) */
 export function MLegalDetails({ section }: { section: MobileLegalSection }) {
   return (
     <details

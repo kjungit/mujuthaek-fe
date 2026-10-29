@@ -1,6 +1,6 @@
 "use client";
 
-import { MLegalDetails, MLegalMain, MLegalTabs } from "@/components/content/Legal";
+import { MLegalMain, MLegalSection, MLegalTabs } from "@/components/content/Legal";
 import { MBackHeader } from "@/components/layout/MBackHeader";
 import { useTerms } from "@/features/content/queries";
 import { routes } from "@/lib/routes";
@@ -16,7 +16,7 @@ export function MTerms() {
         <label className="text-text-sub flex items-center justify-between gap-[8px] text-[14px]">
           {data.effective}
           <select className="bg-fill text-text min-h-[40px] rounded-[10px] border-0 px-[10px] text-[14px] font-semibold">
-            {data.mobileVersions.map((v) => (
+            {data.versions.map((v) => (
               <option key={v}>{v}</option>
             ))}
           </select>
@@ -25,10 +25,10 @@ export function MTerms() {
           <span className="text-text text-[15px] font-extrabold">한눈에 보기</span>
           <span className="text-[14px] leading-[1.7]">{data.summary.mobile}</span>
         </div>
-        {data.mobileSections.map((s) => (
-          <MLegalDetails key={s.title} section={s} />
+        {data.sections.map((s, i) => (
+          <MLegalSection key={s.id} section={s} open={i === 0} />
         ))}
-        <span className="text-text-sub text-[13px]">{data.closing.mobile}</span>
+        <span className="text-text-sub text-[13px]">{data.closing.web}</span>
       </MLegalMain>
     </div>
   );
