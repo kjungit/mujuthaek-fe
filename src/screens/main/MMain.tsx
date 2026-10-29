@@ -8,6 +8,8 @@ import { useMainLanding } from "@/features/main/queries";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/features/auth/session";
 import { useStartLinks } from "@/features/main/start";
+import { faqs, howSteps, trust } from "@/features/main/landing";
+import { reportHref } from "@/features/me/tabs";
 import { routes } from "@/lib/routes";
 
 const eyebrow = "text-brand-strong text-[14px] font-bold";
@@ -33,21 +35,6 @@ const judgeSteps = [
   "조건마다 충족 · 확인 필요로 나눠요",
   "근거가 된 원문을 바로 보여줘요",
   "준비할 돈까지 계산해요",
-];
-
-const faqs = [
-  {
-    q: "회원가입을 해야 하나요?",
-    a: "아니요. 로그인 없이 조건을 입력하면 바로 결과를 볼 수 있어요.",
-  },
-  {
-    q: "판정 결과는 믿어도 되나요?",
-    a: "원문을 바탕으로 판정하고 근거를 함께 보여드려요. 최종 자격은 기관 심사로 정해져요.",
-  },
-  {
-    q: "어느 지역 공고까지 나오나요?",
-    a: "LH와 청약홈은 전국, 지방 공사는 서울·경기·인천·부산·대구·대전·울산·경북·경남 공고를 모아요.",
-  },
 ];
 
 const MOBILE_CONDITIONS = 2;
@@ -92,13 +79,29 @@ export function MMain() {
           <Logo size={28} />
           <span className="tracking-logo text-[18px] font-extrabold">무주택자들</span>
         </Link>
-        {session !== undefined && (
+        {session === null && (
           <Link
-            href={session ? routes.home : routes.login}
+            href={routes.login}
             className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center px-[12px] text-[15px] font-semibold no-underline"
           >
-            {session ? `${session.nickname}님 · 내 홈` : "로그인"}
+            로그인
           </Link>
+        )}
+        {session && (
+          <span className="flex items-center">
+            <Link
+              href={routes.me}
+              className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center px-[8px] text-[15px] font-semibold no-underline"
+            >
+              {session.nickname}님
+            </Link>
+            <Link
+              href={routes.home}
+              className="text-brand-strong hover:text-brand-strong inline-flex min-h-[44px] items-center px-[8px] text-[15px] font-bold no-underline"
+            >
+              내 홈
+            </Link>
+          </span>
         )}
       </header>
 
@@ -235,31 +238,35 @@ export function MMain() {
               </span>
             </span>
             <span className="tracking-title text-[20px] font-extrabold">{judgeExample.title}</span>
-            {judgeExample.rows
-              .filter((r) => r.mobile)
-              .map((r) =>
-                r.verdict === "ok" ? (
-                  <span
-                    key={r.label}
-                    className="border-line-soft flex justify-between border-b border-solid py-[9px] text-[15px]"
-                  >
-                    <span>{r.mobileLabel ?? r.label}</span>
-                    <span className="text-brand-strong font-bold">충족</span>
-                  </span>
-                ) : (
-                  <span
-                    key={r.label}
-                    className="flex items-center justify-between py-[6px] text-[15px]"
-                  >
-                    <span>{r.mobileLabel ?? r.label}</span>
-                    <VerdictBadge verdict="check" size="md" className="py-[3px]" />
-                  </span>
-                ),
-              )}
+            {judgeExample.rows.map((r) =>
+              r.verdict === "ok" ? (
+                <span
+                  key={r.label}
+                  className="border-line-soft flex justify-between border-b border-solid py-[9px] text-[15px]"
+                >
+                  <span>{r.mobileLabel ?? r.label}</span>
+                  <span className="text-brand-strong font-bold">충족</span>
+                </span>
+              ) : (
+                <span
+                  key={r.label}
+                  className="flex items-center justify-between py-[6px] text-[15px]"
+                >
+                  <span>{r.mobileLabel ?? r.label}</span>
+                  <VerdictBadge verdict="check" size="md" className="py-[3px]" />
+                </span>
+              ),
+            )}
             <span className="border-line flex items-baseline justify-between border-t border-solid pt-[12px]">
               <span className="text-[15px] font-bold">내가 준비할 돈</span>
               <span className="text-[22px] font-extrabold">{judgeExample.prepareAmount}</span>
             </span>
+            <div className="bg-bg flex flex-col gap-[4px] rounded-[14px] px-[14px] py-[12px]">
+              <span className="text-text-sub text-[12px] font-bold">
+                {judgeExample.quoteSource}
+              </span>
+              <span className="text-[14px] leading-[1.6]">{judgeExample.quote}</span>
+            </div>
           </div>
           <ol className="m-0 flex list-none flex-col gap-[16px] p-0">
             {judgeSteps.map((s, i) => (
@@ -294,7 +301,56 @@ export function MMain() {
               className="bg-surface flex flex-col gap-[10px] rounded-[22px] p-[18px]"
             >
               <span className="text-[16px] font-extrabold">{g.title}</span>
-              <span className="text-text-sub text-[14px] leading-[1.7]">{g.summary}</span>
+              <span className="flex flex-wrap gap-[6px]">
+                {g.items.map((it) => (
+                  <span
+                    key={it}
+                    className="rounded-pill bg-fill text-text px-[10px] py-[5px] text-[13px] font-semibold"
+                  >
+                    {it}
+                  </span>
+                ))}
+              </span>
+            </div>
+          ))}
+        </section>
+
+        <section
+          id="how"
+          aria-label="이렇게 찾아요"
+          className="flex flex-col gap-[14px] px-[20px] py-[48px]"
+        >
+          <div className="flex flex-col gap-[8px]">
+            <span className={eyebrow}>이렇게 찾아요</span>
+            <h2 className={h2}>세 단계면 끝나요</h2>
+          </div>
+          {howSteps.map(({ icon: Icon, title, desc }, i) => (
+            <div key={title} className="bg-bg flex gap-[12px] rounded-[20px] p-[16px]">
+              <span className="bg-brand flex size-[40px] flex-none items-center justify-center rounded-[12px] text-white">
+                <Icon size={20} aria-hidden />
+              </span>
+              <span className="flex flex-col gap-[4px]">
+                <span className="text-[16px] font-extrabold">
+                  {i + 1}. {title}
+                </span>
+                <span className="text-text-sub text-[14px] leading-[1.6]">{desc}</span>
+              </span>
+            </div>
+          ))}
+        </section>
+
+        <section
+          aria-label="안심하고 쓰세요"
+          className="bg-bg flex flex-col gap-[12px] px-[20px] py-[48px]"
+        >
+          <h2 className={h2}>안심하고 쓰세요</h2>
+          {trust.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="bg-surface flex gap-[12px] rounded-[20px] p-[16px]">
+              <Icon size={22} className="text-brand flex-none" aria-hidden />
+              <span className="flex flex-col gap-[4px]">
+                <span className="text-[16px] font-extrabold">{title}</span>
+                <span className="text-text-sub text-[14px] leading-[1.6]">{desc}</span>
+              </span>
             </div>
           ))}
         </section>
@@ -356,6 +412,12 @@ export function MMain() {
             className={cn(footLink, "text-text hover:text-text font-bold")}
           >
             개인정보처리방침
+          </Link>
+          <a href="#sources" className={footLink}>
+            데이터 출처
+          </a>
+          <Link href={reportHref({ from: "소개 화면" })} className={footLink}>
+            제보하기
           </Link>
         </nav>
         <span className="text-text-sub text-[13px]">
