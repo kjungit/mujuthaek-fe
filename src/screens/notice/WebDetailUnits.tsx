@@ -1,7 +1,8 @@
 "use client";
 
+import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
-import { ArrowRight, ChevronRight, FileText, Heart, MapPin } from "lucide-react";
+import { ArrowRight, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
@@ -46,7 +47,7 @@ export function WebDetailUnits({ id }: { id: string }) {
   return (
     <WebPage>
       <div className={cn("flex flex-1 flex-col", pdf.open && pdfUrl && "pl-[min(46vw,680px)]")}>
-        <WebHeader mode="home" current={routes.homes} unread={3} />
+        <WebHeader mode="home" current={routes.homes} />
         <WebMain className="gap-[16px] pt-[24px] pb-[80px]">
           <nav
             aria-label="위치"
@@ -367,14 +368,12 @@ export function WebDetailUnits({ id }: { id: string }) {
                 ))}
               </section>
               {n.ranking && <WebRankCard ranking={n.ranking} className="py-[22px]" />}
-              <button
-                type="button"
-                onClick={() => track("notice_bookmark", noticeParams(n))}
-                className="bg-brand rounded-tile flex min-h-[58px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[17px] font-extrabold text-white"
-              >
-                <Heart size={20} strokeWidth={2.2} aria-hidden />
-                관심 등록하고 마감 알림 받기
-              </button>
+              <WebFavoriteButton
+                type="NOTICE"
+                id={n.id}
+                onAdd={() => track("notice_bookmark", noticeParams(n))}
+                className="min-h-[58px] text-[17px]"
+              />
               <button
                 type="button"
                 onClick={() => (pdf.open ? pdf.close() : openOriginal())}

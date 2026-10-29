@@ -1,8 +1,9 @@
 "use client";
 
+import { ReportButton } from "@/components/report/ReportButton";
+import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Heart } from "lucide-react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
@@ -136,7 +137,6 @@ export function MDetail({ id }: { id: string }) {
   const { data, loading, error } = useNotice(id);
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
-  const [fav, setFav] = useState(false);
   const pdf = usePdfViewer();
   useJudgmentViewed(id, n);
   if (!n) {
@@ -275,29 +275,18 @@ export function MDetail({ id }: { id: string }) {
         <span className="text-text-sub px-[16px] pt-[4px] text-center text-[13px]">
           판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
         </span>
-        <button
-          type="button"
-          className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center self-center border-0 bg-transparent p-0 text-[14px] font-semibold"
-        >
-          정보가 틀렸어요 · 제보하기
-        </button>
+        <ReportButton
+          target={{ kind: "notice", id: n.id }}
+          screen="공고 상세 (모바일)"
+          className="px-[16px]"
+        />
       </main>
       <MBottomActions>
-        <button
-          type="button"
-          aria-pressed={fav}
-          aria-label={fav ? "관심 해제" : "관심 등록하고 마감 알림 받기"}
-          onClick={() => {
-            if (!fav) track("notice_bookmark", noticeParams(n));
-            setFav(!fav);
-          }}
-          className={cn(
-            "rounded-control bg-fill flex min-h-[56px] w-[56px] flex-none cursor-pointer items-center justify-center border-0",
-            fav ? "text-brand" : "text-text-sub",
-          )}
-        >
-          <Heart size={24} fill={fav ? "currentColor" : "none"} aria-hidden />
-        </button>
+        <MFavoriteHeart
+          type="NOTICE"
+          id={n.id}
+          onAdd={() => track("notice_bookmark", noticeParams(n))}
+        />
         <button
           type="button"
           onClick={() => openOriginal()}

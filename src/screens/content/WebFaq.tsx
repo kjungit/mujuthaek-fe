@@ -1,5 +1,6 @@
 "use client";
 
+import { reportHref } from "@/features/me/tabs";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { WebContentMain, WebContentShell } from "@/components/content/WebContentShell";
@@ -130,7 +131,7 @@ export function WebFaq() {
               이메일로 문의
             </a>
             <Link
-              href={routes.me}
+              href={reportHref({ kind: "WRONG_INFO", from: "자주 묻는 질문" })}
               className="rounded-control inline-flex min-h-[52px] items-center bg-white/12 px-[18px] text-[15px] font-bold text-white no-underline hover:text-white"
             >
               정보가 틀렸다면 제보하기

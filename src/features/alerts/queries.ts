@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { liveAlerts, markAlertRead, markAllAlertsRead } from "@/features/alerts/api";
+import { useSession } from "@/features/auth/session";
+import { api } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 import { mockQuery } from "@/features/mock-query";
 import { USE_MOCKS } from "@/lib/api/config";
 import {
@@ -15,8 +18,33 @@ import {
 } from "@/mocks/alerts";
 
 export const alertsKeys = {
+  all: ["alerts"] as const,
   list: ["alerts", "list"] as const,
+  unread: ["alerts", "unread"] as const,
 };
+
+/** 목업 모드: 예시 알림 중 안 읽은 것 */
+const MOCK_UNREAD = alertsData.items.filter((a) => !a.read).length;
+
+/**
+ * 헤더 알림 점: 읽지 않은 알림 수. 로그인했을 때만 물어요(로그아웃·실패면 0).
+ * 다른 화면에서 알림이 와도 보이게 1분마다, 창으로 돌아올 때 다시 물어요
+ */
+export function useUnreadCount(): number {
+  const session = useSession();
+  const loggedIn = !!session.data;
+  const q = useQuery({
+    queryKey: alertsKeys.unread,
+    queryFn: () => api.get<{ count: number }>(endpoints.notificationsUnreadCount),
+    enabled: !USE_MOCKS && loggedIn,
+    retry: false,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+  if (USE_MOCKS) return MOCK_UNREAD;
+  return loggedIn ? (q.data?.count ?? 0) : 0;
+}
 
 /** 받기 전·로그인 전에 보여 줄 빈 값 */
 const EMPTY: AlertsData = { items: [], settings: [], quietHours: "밤 10시 ~ 아침 8시" };
@@ -67,7 +95,8 @@ export function useAlerts() {
       .filter((g) => g.items.length > 0);
   }, [data.items, tab, readNow]);
 
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: alertsKeys.list });
+  // 목록과 헤더 알림 점을 같이 새로 받아요
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: alertsKeys.all });
 
   const markRead = (id: string) => {
     setReadNow((r) => ({ ...r, [id]: true }));

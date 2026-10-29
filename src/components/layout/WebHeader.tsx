@@ -1,17 +1,16 @@
 import Link from "next/link";
-import { Bell, Search, User } from "lucide-react";
+import { Search, User } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Segment } from "@/components/ui/Segment";
 import { cn } from "@/lib/cn";
 import { routes, type Mode } from "@/lib/routes";
+import { AlertsBell } from "./AlertsBell";
 import { modeSegment, webMenu } from "./nav";
 
 type WebHeaderProps = {
   mode?: Mode;
   /** 현재 메뉴 href. 없으면 강조 없음 */
   current?: string;
-  /** 새 알림 수. 0이면 초록 점 없음 */
-  unread?: number;
   /** 검색 · 알림 · 내 정보 화면이면 오른쪽 아이콘을 현재 화면으로 강조 */
   active?: HeaderIcon;
 };
@@ -22,8 +21,7 @@ const iconLink = "inline-flex size-[44px] items-center justify-center rounded-sm
 const iconTone = (on: boolean) =>
   on ? "bg-brand-soft text-brand hover:text-brand" : "text-text-sub hover:text-text-sub";
 
-export function WebHeader({ mode = "home", current, unread = 0, active }: WebHeaderProps) {
-  const showDot = unread > 0 && active !== "alerts";
+export function WebHeader({ mode = "home", current, active }: WebHeaderProps) {
   return (
     <header className="border-line bg-surface border-b border-solid">
       <div className="mx-auto box-border flex min-h-[68px] w-full max-w-[1200px] flex-wrap items-center justify-between gap-x-[28px] gap-y-[12px] px-[32px]">
@@ -67,20 +65,10 @@ export function WebHeader({ mode = "home", current, unread = 0, active }: WebHea
           >
             <Search size={22} aria-hidden />
           </Link>
-          <Link
-            href={routes.alerts}
-            aria-label={showDot ? `알림, 새 알림 ${unread}개` : "알림"}
-            aria-current={active === "alerts" ? "page" : undefined}
-            className={cn(iconLink, iconTone(active === "alerts"), "relative")}
-          >
-            <Bell size={22} aria-hidden />
-            {showDot && (
-              <span
-                aria-hidden
-                className="rounded-pill bg-brand absolute top-[10px] right-[11px] size-[12px] border-2 border-solid border-white"
-              />
-            )}
-          </Link>
+          <AlertsBell
+            className={cn(iconLink, iconTone(active === "alerts"))}
+            current={active === "alerts"}
+          />
           <Link
             href={routes.me}
             aria-label="내 정보"

@@ -1,9 +1,9 @@
 "use client";
 
+import { reportHref } from "@/features/me/tabs";
 import Link from "next/link";
 import { CircleAlert, RefreshCw, TriangleAlert } from "lucide-react";
 import { SERVICE_HOURS } from "@/lib/api/availability";
-import { routes } from "@/lib/routes";
 
 type LoadErrorProps = {
   title?: string;
@@ -57,7 +57,7 @@ export function WebLoadErrorState({
           다시 시도
         </button>
         <Link
-          href={routes.me}
+          href={reportHref({ kind: "APP_ERROR", from: "오류 화면", code })}
           className="rounded-control bg-surface text-text hover:text-text inline-flex min-h-[52px] items-center px-[20px] text-[16px] font-bold no-underline"
         >
           문제 알리기

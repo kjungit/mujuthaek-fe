@@ -1,5 +1,6 @@
 "use client";
 
+import { reportHref } from "@/features/me/tabs";
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
@@ -116,7 +117,7 @@ export function MSearch() {
         <div className="bg-bg mx-[16px] mt-[16px] flex flex-col gap-[6px] rounded-[20px] p-[16px]">
           <span className="text-[15px] font-extrabold">찾는 게 없나요?</span>
           <Link
-            href={routes.me}
+            href={reportHref({ kind: "MISSING_NOTICE", from: "검색 (모바일)" })}
             className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
           >
             빠진 공고·정책 알려주기

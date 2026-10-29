@@ -38,7 +38,7 @@ export function WebBusiness() {
 
   return (
     <WebPage>
-      <WebHeader mode="business" current={routes.business} unread={3} />
+      <WebHeader mode="business" current={routes.business} />
       <WebMain>
         <div className="flex flex-col gap-[6px]">
           <h1 className="tracking-h1 m-0 text-[32px] font-extrabold">사업공간</h1>

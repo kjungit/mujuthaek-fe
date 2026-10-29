@@ -239,6 +239,8 @@ export type SpaceRule = {
 
 export type SpaceDetail = {
   id: string;
+  /** 관심 등록·제보 대상 종류: 사업공간 공고(NOTICE) · 사업공간 모집 정책(SPACE_RECRUITMENT). 목업은 없음 */
+  favoriteType?: "NOTICE" | "SPACE_RECRUITMENT";
   verdict: ListingVerdict;
   due: string;
   tag: string;

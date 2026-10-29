@@ -140,12 +140,14 @@ export function AdminWebReports() {
                   <span className="text-text-sub text-[13px] font-bold">{cur.where}</span>
                   <h2 className="tracking-title m-0 text-[22px] font-extrabold">{cur.target}</h2>
                 </div>
-                <Link
-                  href={cur.link}
-                  className="bg-fill text-text hover:text-text inline-flex min-h-[44px] items-center gap-[6px] rounded-sm px-[14px] text-[14px] font-bold no-underline"
-                >
-                  사용자 화면에서 보기
-                </Link>
+                {cur.link && (
+                  <Link
+                    href={cur.link}
+                    className="bg-fill text-text hover:text-text inline-flex min-h-[44px] items-center gap-[6px] rounded-sm px-[14px] text-[14px] font-bold no-underline"
+                  >
+                    사용자 화면에서 보기
+                  </Link>
+                )}
               </div>
               <div
                 className="grid gap-[12px]"
@@ -232,8 +234,8 @@ export function AdminWebReports() {
                 >
                   원문과 같아요 · 답변만
                 </button>
-                {/* 생활권 제보는 AI 추출 값이 아니라 검수로 보내지 않아요 */}
-                {!isAreaReport(cur.id) && (
+                {/* 생활권 제보는 AI 추출 값이 아니라, 일반 제보는 대상이 없어 검수로 보내지 않아요 */}
+                {!isAreaReport(cur.id) && !cur.general && (
                   <Link
                     href={routes.adminReview}
                     onClick={async (e) => {

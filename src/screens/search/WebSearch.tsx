@@ -1,5 +1,6 @@
 "use client";
 
+import { reportHref } from "@/features/me/tabs";
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Search } from "lucide-react";
@@ -14,7 +15,6 @@ import {
   type SearchTab,
 } from "@/features/search/queries";
 import { cn } from "@/lib/cn";
-import { routes } from "@/lib/routes";
 import { ResultBadge } from "./ResultBadge";
 
 export function WebSearch() {
@@ -25,7 +25,7 @@ export function WebSearch() {
 
   return (
     <WebPage>
-      <WebHeader mode="home" active="search" unread={3} />
+      <WebHeader mode="home" active="search" />
       <WebMain className="max-w-[920px] gap-[20px]">
         <div role="search" className="flex flex-col gap-[14px]">
           <label className="relative flex">
@@ -120,7 +120,7 @@ export function WebSearch() {
 
         <span className="text-text-sub text-center text-[14px]">
           찾는 게 없나요?{" "}
-          <Link href={routes.me} className="font-bold">
+          <Link href={reportHref({ kind: "MISSING_NOTICE", from: "검색" })} className="font-bold">
             빠진 공고·정책 알려주기
           </Link>
         </span>

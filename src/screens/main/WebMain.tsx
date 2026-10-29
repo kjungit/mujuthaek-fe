@@ -1,5 +1,6 @@
 "use client";
 
+import { reportHref } from "@/features/me/tabs";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -634,13 +635,9 @@ export function WebMain() {
             <a href="#sources" className={footLink}>
               데이터 출처
             </a>
-            {/* 제보 화면은 아직 디자인이 없어요 */}
-            <button
-              type="button"
-              className={cn(footLink, "cursor-pointer border-0 bg-transparent p-0")}
-            >
+            <Link href={reportHref({ from: "소개 화면" })} className={footLink}>
               제보하기
-            </button>
+            </Link>
           </nav>
         </div>
       </footer>
