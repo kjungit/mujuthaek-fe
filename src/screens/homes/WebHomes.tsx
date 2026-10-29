@@ -8,17 +8,9 @@ import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { RankChip, VerdictBadge } from "@/components/ui/Badge";
 import { InfoTag } from "@/components/ui/Chip";
-import {
-  defaultChecked,
-  defaultMode,
-  defaultSort,
-  filterGroups,
-  moveInModes,
-  sortOptions,
-  tenureParam,
-  type FilterKey,
-  type SortOption,
-} from "@/features/homes/filters";
+import { sortOptions, tenureParam, type SortOption } from "@/features/homes/filters";
+import { HomesFilterPanel } from "@/components/homes/HomesFilterPanel";
+import { useHomesFilters } from "@/features/homes/useHomesFilters";
 import { HomesMap } from "@/components/homes/HomesMap";
 import { EditConditionsLink } from "@/components/homes/EditConditionsLink";
 import { RegionSelect } from "@/components/homes/RegionSelect";
@@ -99,18 +91,9 @@ function ListingCard({
 }
 
 export function WebHomes() {
-  const [mode, setMode] = useState(defaultMode);
-  const [sort, setSort] = useState<SortOption>(defaultSort);
-  const [checked, setChecked] = useState(defaultChecked);
+  const filters = useHomesFilters();
   const region = useRegionFilter();
-  const list = useHomeList({
-    region,
-    mode,
-    sort,
-    includeIneligible: checked.ineligible,
-    showOk: checked.ok,
-    showCheck: checked.check,
-  });
+  const list = useHomeList({ region, ...filters.listState });
   const visible = list.listings;
   const [view, setView] = useState<"list" | "map">("list");
   const verdicts = useMemo(() => new Map(visible.map((l) => [l.id, l.verdict])), [visible]);
@@ -123,8 +106,7 @@ export function WebHomes() {
   };
 
   const resetFilters = () => {
-    setMode(defaultMode);
-    setChecked(defaultChecked);
+    filters.reset();
     region.reset();
   };
 
@@ -142,6 +124,12 @@ export function WebHomes() {
                 {list.needsInputCount ? ` · 확인 필요 ${list.needsInputCount}곳` : ""}
               </span>
               <EditConditionsLink />
+              <Link
+                href={routes.score}
+                className="text-brand-strong hover:text-brand-strong inline-flex min-h-[36px] items-center text-[14px] font-bold no-underline"
+              >
+                청약 가점 계산
+              </Link>
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-[10px]">
@@ -166,8 +154,8 @@ export function WebHomes() {
             <label className="text-text-sub inline-flex items-center gap-[8px] text-[14px]">
               정렬
               <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortOption)}
+                value={filters.sort}
+                onChange={(e) => filters.setSort(e.target.value as SortOption)}
                 className="bg-surface text-text min-h-[44px] rounded-sm border-0 px-[14px] text-[15px] font-semibold"
               >
                 {sortOptions.map((o) => (
@@ -188,59 +176,7 @@ export function WebHomes() {
               <legend className="mb-[8px] p-0 text-[15px] font-extrabold">지역</legend>
               <RegionSelect filter={region} />
             </fieldset>
-            <div
-              role="group"
-              aria-label="입주 방식"
-              className="bg-fill grid grid-cols-2 rounded-sm p-[4px]"
-            >
-              {moveInModes.map((m) => {
-                const on = m === mode;
-                return (
-                  <button
-                    key={m}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => setMode(m)}
-                    className={cn(
-                      "min-h-[40px] cursor-pointer rounded-[9px] border-0 text-[14px]",
-                      on
-                        ? "bg-surface text-text shadow-seg font-bold"
-                        : "text-text-sub bg-transparent font-semibold",
-                    )}
-                  >
-                    {m}
-                  </button>
-                );
-              })}
-            </div>
-            {filterGroups.map((g) => (
-              <fieldset key={g.key} className="m-0 flex flex-col gap-[4px] border-0 p-0">
-                <legend className="mb-[8px] p-0 text-[15px] font-extrabold">{g.legend}</legend>
-                {g.options.map((o) => (
-                  <label
-                    key={o.key}
-                    className="flex min-h-[40px] items-center gap-[10px] text-[15px]"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked[o.key as FilterKey]}
-                      onChange={(e) =>
-                        setChecked((prev) => ({ ...prev, [o.key]: e.target.checked }))
-                      }
-                      className="m-0 size-[18px]"
-                    />
-                    {o.label}
-                  </label>
-                ))}
-              </fieldset>
-            ))}
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="bg-fill text-text-sub min-h-[44px] cursor-pointer rounded-sm border-0 text-[14px] font-bold"
-            >
-              필터 초기화
-            </button>
+            <HomesFilterPanel filters={filters} onReset={resetFilters} />
           </aside>
 
           <section
@@ -251,7 +187,7 @@ export function WebHomes() {
             {view === "map" && (
               <HomesMap
                 regionCodes={region.codes}
-                tenure={tenureParam[mode]}
+                tenure={tenureParam[filters.mode]}
                 verdictOf={verdictOf}
                 className="h-[520px]"
               />
@@ -309,10 +245,10 @@ export function WebHomes() {
                       : "더 보기"}
                 </button>
               )}
-              {!checked.ineligible && (
+              {!filters.checked.ineligible && (
                 <button
                   type="button"
-                  onClick={() => setChecked((prev) => ({ ...prev, ineligible: true }))}
+                  onClick={filters.showIneligible}
                   className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-semibold"
                 >
                   지원 불가 공고까지 모두 보기
