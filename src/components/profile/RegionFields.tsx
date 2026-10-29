@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, X } from "lucide-react";
-import { MAX_SEARCH_REGIONS, type ProfileForm } from "@/features/profile/useProfileForm";
+import type { ProfileForm } from "@/features/profile/useProfileForm";
 import { useRegions } from "@/features/regions/queries";
 import { cn } from "@/lib/cn";
 
@@ -80,7 +78,7 @@ export function ResidenceField({
   );
 }
 
-/** 찾아볼 지역: 내 집에서 볼 공고를 골라요 (최대 3곳) */
+/** 찾아볼 지역: 내 집에서 볼 공고를 골라요 (한 곳) */
 export function SearchRegionsField({
   form,
   selectClassName,
@@ -88,61 +86,15 @@ export function SearchRegionsField({
   form: ProfileForm;
   selectClassName: string;
 }) {
-  const regions = useRegions();
-  const [draft, setDraft] = useState("");
-  const full = form.searchRegionCodes.length >= MAX_SEARCH_REGIONS;
-  const add = () => {
-    form.addSearchRegion(draft);
-    setDraft("");
-  };
-
   return (
     <div className="flex flex-col gap-[8px]">
-      <span className="text-[15px] font-bold">
-        어떤 지역 공고를 찾아볼까요?{" "}
-        <span className="text-text-sub font-medium">· 최대 {MAX_SEARCH_REGIONS}곳</span>
-      </span>
-      {form.searchRegionCodes.length > 0 && (
-        <ul aria-label="찾아볼 지역" className="m-0 flex list-none flex-wrap gap-[6px] p-0">
-          {form.searchRegionCodes.map((code) => {
-            const label = regions.label(code);
-            return (
-              <li key={code}>
-                <span className="rounded-pill bg-brand-soft text-brand-strong inline-flex min-h-[36px] items-center gap-[2px] pl-[12px] text-[14px] font-bold">
-                  {code.length === 2 ? `${label} 전체` : label}
-                  <button
-                    type="button"
-                    aria-label={`${label} 빼기`}
-                    onClick={() => form.removeSearchRegion(code)}
-                    className="text-brand-strong inline-flex size-[36px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent"
-                  >
-                    <X size={16} aria-hidden />
-                  </button>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {!full && (
-        <div className="flex flex-col gap-[8px]">
-          <PlaceSelects
-            code={draft}
-            onChange={setDraft}
-            selectClassName={selectClassName}
-            sigunguEmpty="전체"
-          />
-          <button
-            type="button"
-            onClick={add}
-            disabled={!draft}
-            className="bg-fill text-text disabled:text-text-tertiary inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-[4px] self-start rounded-sm border-0 px-[16px] text-[14px] font-bold disabled:cursor-default"
-          >
-            <Plus size={16} aria-hidden />
-            지역 추가
-          </button>
-        </div>
-      )}
+      <span className="text-[15px] font-bold">어떤 지역 공고를 찾아볼까요?</span>
+      <PlaceSelects
+        code={form.searchRegionCode}
+        onChange={form.setSearchRegionCode}
+        selectClassName={selectClassName}
+        sigunguEmpty="전체"
+      />
       <span className="text-text-sub text-[13px]">
         내 집에서 이 지역 공고를 먼저 보여드려요. 비워 두면 전체 지역 공고를 보여드려요
       </span>

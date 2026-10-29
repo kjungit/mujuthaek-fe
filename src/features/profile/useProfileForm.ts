@@ -40,7 +40,12 @@ export function estimateRank(criteria: RankCriteria[], checked: string[]) {
   return hit?.rank ?? null;
 }
 
-export const MAX_SEARCH_REGIONS = 3;
+/** 가구원 수 − / + 범위 (나 포함) */
+export const MIN_HOUSEHOLD = 1;
+export const MAX_HOUSEHOLD = 10;
+
+/** "3명" → 3. 모르면(빈 값) null */
+const householdCount = (v: string) => (/^\d+명$/.test(v) ? Number.parseInt(v, 10) : null);
 
 const toggle = (xs: string[], x: string) =>
   xs.includes(x) ? xs.filter((v) => v !== x) : [...xs, x];
@@ -55,7 +60,7 @@ function defaultDevice(data: ProfileFormData): DeviceConditions {
     statuses: [],
     marry: "single",
     kids: 0,
-    householdSize: options.householdSize[0],
+    householdSize: `${MIN_HOUSEHOLD}명`,
     homelessPeriod: options.homelessPeriod[0],
     bankbookPeriod: options.bankbookPeriod[0],
     paymentCount: "",
@@ -73,7 +78,7 @@ const emptySession: SessionConditions = {
   rankChecks: [],
 };
 
-type TextKey = "birth" | "householdSize" | "homelessPeriod" | "bankbookPeriod" | "paymentCount";
+type TextKey = "birth" | "homelessPeriod" | "bankbookPeriod" | "paymentCount";
 type SessionTextKey = "income" | "asset" | "car" | "available";
 
 /** 조건 입력 3단계 상태 (PC/모바일 공통). 처음 값은 이 기기에 저장한 조건에서 가져와요 */
@@ -144,23 +149,32 @@ export function useProfileForm() {
     /** 사는 곳 코드. 시·도만 고르면 2자리, 시·군·구까지 고르면 5자리 */
     regionCode: device.regionCode,
     setRegionCode: (regionCode: string) => patch({ regionCode }),
-    searchRegionCodes: device.searchRegionCodes,
-    addSearchRegion: (code: string) =>
-      setDevice((d) =>
-        d.searchRegionCodes.length >= MAX_SEARCH_REGIONS || d.searchRegionCodes.includes(code)
-          ? d
-          : { ...d, searchRegionCodes: [...d.searchRegionCodes, code] },
-      ),
-    removeSearchRegion: (code: string) =>
-      setDevice((d) => ({
-        ...d,
-        searchRegionCodes: d.searchRegionCodes.filter((c) => c !== code),
-      })),
+    /** 찾아볼 지역 코드 (한 곳). 고르면 바로 값이 돼요. 안 고르면 "" (전체 지역) */
+    searchRegionCode: device.searchRegionCodes[0] ?? "",
+    setSearchRegionCode: (code: string) => patch({ searchRegionCodes: code ? [code] : [] }),
     head: device.head,
     setHead: (head: Head) => patch({ head }),
     marry: device.marry,
     setMarry: (marry: Marry) => patch({ marry }),
     kids: device.kids,
+    /** 함께 사는 가족 수. 모르면 null (예전 「4명 이상」은 다시 골라야 해요) */
+    household: householdCount(device.householdSize),
+    householdDown: () =>
+      setDevice((d) => {
+        const n = householdCount(d.householdSize);
+        return {
+          ...d,
+          householdSize: `${Math.max(MIN_HOUSEHOLD, (n ?? MIN_HOUSEHOLD + 1) - 1)}명`,
+        };
+      }),
+    householdUp: () =>
+      setDevice((d) => {
+        const n = householdCount(d.householdSize);
+        return {
+          ...d,
+          householdSize: `${n === null ? MIN_HOUSEHOLD : Math.min(MAX_HOUSEHOLD, n + 1)}명`,
+        };
+      }),
     kidsDown: () => setDevice((d) => ({ ...d, kids: Math.max(0, d.kids - 1) })),
     kidsUp: () => setDevice((d) => ({ ...d, kids: Math.min(9, d.kids + 1) })),
     prios: device.priorities,
