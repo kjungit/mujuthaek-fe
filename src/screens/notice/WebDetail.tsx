@@ -474,6 +474,9 @@ export function WebDetail({ id }: { id: string }) {
                 </div>
               </section>
 
+              {/* 이 공고 이야기는 공고 요약 바로 아래 (공급 주택 목록 위) */}
+              <NoticeChat noticeId={n.id} variant="web" />
+
               {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
               {n.hasUnits && (
                 <ApiBlockUnits notice={n} judgment={j.judgment} onShowLife={showLife} />
@@ -494,8 +497,6 @@ export function WebDetail({ id }: { id: string }) {
                 variant="web"
                 onOpenPage={pdfUrl ? openOriginal : undefined}
               />
-
-              <NoticeChat noticeId={n.id} variant="web" />
 
               {benefits.length > 0 && (
                 <section
