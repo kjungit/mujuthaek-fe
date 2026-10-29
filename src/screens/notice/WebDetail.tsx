@@ -18,7 +18,7 @@ import { WebRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { dueText, formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
 import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/notice/judgment";
-import { bySite, toUnit, useNoticeUnits } from "@/features/notice/units";
+import { bySite, directionsUrl, toUnit, useNoticeUnits } from "@/features/notice/units";
 import { UnitPrices } from "@/components/notice/UnitPrices";
 import { SitesMap } from "@/components/notice/SitesMap";
 import { noticeParams, useJudgmentViewed } from "@/features/notice/analytics";
@@ -28,7 +28,7 @@ import { usePdfViewer } from "@/features/notice/usePdfViewer";
 import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { NoticeUnit, StandardNotice } from "@/mocks/notice";
+import type { NoticeSite, NoticeUnit, StandardNotice } from "@/mocks/notice";
 
 const sectionTitle = "tracking-title m-0 text-[21px] font-extrabold";
 
@@ -49,10 +49,13 @@ type BlockUnitsProps = {
   excel?: boolean;
   /** 고른 집 단지의 생활권 카드로 (실제 API) */
   onShowLife?: (siteId: string) => void;
+  /** 단지 좌표 (길찾기). 없으면 길찾기를 숨겨요 */
+  sites?: NoticeSite[];
 };
 
-function BlockUnits({ units, map, more, excel = true, onShowLife }: BlockUnitsProps) {
+function BlockUnits({ units, map, more, excel = true, onShowLife, sites }: BlockUnitsProps) {
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
+  const directions = directionsUrl(sites?.find((s) => s.id === selected?.siteId));
 
   return (
     <section
@@ -304,13 +307,17 @@ function BlockUnits({ units, map, more, excel = true, onShowLife }: BlockUnitsPr
                 <MapPin size={17} aria-hidden />이 집 생활권 {selected.lifeScore}점
               </button>
             )}
-            <button
-              type="button"
-              className="bg-brand inline-flex min-h-[46px] cursor-pointer items-center gap-[6px] rounded-sm border-0 px-[14px] text-[14px] font-bold text-white"
-            >
-              <ArrowRight size={17} strokeWidth={2.2} aria-hidden />
-              길찾기
-            </button>
+            {directions && (
+              <a
+                href={directions}
+                target="_blank"
+                rel="noreferrer"
+                className="bg-brand inline-flex min-h-[46px] items-center gap-[6px] rounded-sm px-[14px] text-[14px] font-bold text-white no-underline hover:text-white"
+              >
+                <ArrowRight size={17} strokeWidth={2.2} aria-hidden />
+                길찾기
+              </a>
+            )}
           </div>
         </div>
       )}
@@ -340,6 +347,7 @@ function ApiBlockUnits({
       units={units}
       excel={false}
       onShowLife={onShowLife}
+      sites={sites}
       more={
         q.hasNextPage
           ? { onClick: () => void q.fetchNextPage(), loading: q.isFetchingNextPage }

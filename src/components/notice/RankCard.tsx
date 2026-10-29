@@ -147,7 +147,7 @@ export function MRankCard({ ranking }: { ranking: NoticeRanking }) {
         })}
       </ol>
       <span className="text-text-sub text-[12px]">
-        같은 순위 안에서는 {ranking.tieBreak}으로 정해요
+        같은 순위 안에서는 {ranking.tieBreak}으로 정해요 · 근거 원문 {ranking.sourcePage}쪽
       </span>
     </section>
   );

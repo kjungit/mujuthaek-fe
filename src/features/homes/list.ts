@@ -13,6 +13,8 @@ export type HomeListState = {
   sort: SortOption;
   /** 지원 불가 공고까지 보기 */
   includeIneligible: boolean;
+  /** 공고 유형 코드로 거르기 (없으면 전부, filters.noticeTypesOf) */
+  noticeTypes?: string[];
   /** 판정으로 거르기 (지원 가능 · 확인 필요 체크) */
   showOk: boolean;
   showCheck: boolean;
@@ -62,6 +64,8 @@ function useApiList(s: HomeListState): HomeList {
   const q = useNoticeSearch({
     regionCodes: s.region.codes,
     tenure: tenureParam[s.mode],
+    // 유형은 빌려서 들어가기의 임대 유형이라 사서 들어가기에는 보내지 않아요
+    noticeTypes: s.mode === "빌려서 들어가기" ? s.noticeTypes : undefined,
     includeIneligible: s.includeIneligible,
     sort: sortParam[s.sort],
   });
