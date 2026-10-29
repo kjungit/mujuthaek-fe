@@ -679,11 +679,9 @@ export async function liveReports(): Promise<{
   newBefore: number;
   items: ReportItem[];
 }> {
+  // 상세(제보 설명·같은 묶음 설명·답장)는 고른 제보만 받아요(liveReportDetail). 목록마다 상세를 다 받으면 요청이 100번 넘게 나가요
   const list = await api.get<ReportList>("/api/admin/reports");
-  const details = await Promise.all(
-    list.items.map((i) => api.get<ReportDetail>(`/api/admin/reports/${i.id}`)),
-  );
-  const items: (ReportItem & { at: string })[] = list.items.map((r, i) => ({
+  const items: (ReportItem & { at: string })[] = list.items.map((r) => ({
     at: r.createdAt,
     id: r.id,
     st: STATUS[r.status] ?? "new",
@@ -696,7 +694,7 @@ export async function liveReports(): Promise<{
     general: r.targetType === "GENERAL",
     current: r.currentValue ?? "-",
     reported: r.reportedValue ?? "-",
-    source: details[i].note ?? r.summary ?? "-", // 화면에서는 「제보 설명」으로 보여요(기관 원문이 아님)
+    source: r.summary ?? "-", // 화면에서는 「제보 설명」으로 보여요(기관 원문이 아님). 상세를 받으면 그 설명으로
     summary: r.summary ?? r.field,
     age: ago(r.createdAt),
     groupCount: r.groupCount,
@@ -710,11 +708,8 @@ export async function liveReports(): Promise<{
         : r.programId
           ? `${routes.bizSupport}/${r.programId}`
           : "",
-    notes: (details[i].notes ?? []).map((n) => ({
-      text: n.text,
-      meta: `사용자 · ${when(n.createdAt)}`,
-    })),
-    reply: details[i].reply ?? "",
+    notes: [],
+    reply: "",
   }));
   items.push(...(await liveAreaReports()));
   items.sort((a, b) => b.at.localeCompare(a.at)); // 공고·생활권 제보를 들어온 차례(최근 먼저)로
@@ -748,10 +743,7 @@ export const isAreaReport = (id: string) => id.startsWith(AREA_REPORT);
 
 async function liveAreaReports(): Promise<(ReportItem & { at: string })[]> {
   const list = await api.get<AreaReportList>("/api/admin/area-reports");
-  const [details, notices] = await Promise.all([
-    Promise.all(
-      list.items.map((i) => api.get<AreaReportDetail>(`/api/admin/area-reports/${i.id}`)),
-    ),
+  const [notices] = await Promise.all([
     // 생활권 제보는 공고 제목을 주지 않아 공고 상세에서 제목·단지 이름을 찾아요
     Promise.all(
       [...new Set(list.items.map((i) => i.noticeId))].map((id) =>
@@ -765,7 +757,7 @@ async function liveAreaReports(): Promise<(ReportItem & { at: string })[]> {
       ),
     ).then((rows) => new Map(rows)),
   ]);
-  return list.items.map((r, i) => {
+  return list.items.map((r) => {
     const notice = notices.get(r.noticeId);
     const site = notice?.sites.find((s) => s.id === r.noticeLocationId)?.name;
     return {
@@ -777,18 +769,33 @@ async function liveAreaReports(): Promise<(ReportItem & { at: string })[]> {
       field: r.field,
       current: r.currentValue ?? "-",
       reported: r.reportedValue ?? "-",
-      source: details[i].note ?? r.summary ?? "-",
+      source: r.summary ?? "-",
       summary: r.summary ?? r.field,
       age: ago(r.createdAt),
       groupCount: r.groupCount,
       link: routes.notice(r.noticeId),
-      notes: (details[i].notes ?? []).map((n) => ({
-        text: n.text,
-        meta: `사용자 · ${when(n.createdAt)}`,
-      })),
-      reply: details[i].reply ?? "",
+      notes: [],
+      reply: "",
     };
   });
+}
+
+/**
+ * 고른 제보 하나의 상세: 제보 설명(없으면 요약), 같은 묶음의 다른 제보 설명, 저장된 답장. 공고 제보·생활권 제보(id 앞 「area:」) 모두.
+ * 목록은 이 값 없이 받고(요청 한 번), 화면이 고른 제보만 이걸로 채워요.
+ */
+export async function liveReportDetail(
+  id: string,
+  summary: string,
+): Promise<Pick<ReportItem, "source" | "notes" | "reply">> {
+  const d = isAreaReport(id)
+    ? await api.get<AreaReportDetail>(`/api/admin/area-reports/${id.slice(AREA_REPORT.length)}`)
+    : await api.get<ReportDetail>(`/api/admin/reports/${id}`);
+  return {
+    source: d.note ?? summary,
+    notes: (d.notes ?? []).map((n) => ({ text: n.text, meta: `사용자 · ${when(n.createdAt)}` })),
+    reply: d.reply ?? "",
+  };
 }
 
 /** 처리 끝: 고침(FIXED)·그대로(KEPT)와 답장. 처리 시작 전이면 먼저 시작해요. */

@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AdminTitleRow } from "@/components/admin/AdminShell";
 import { isAreaReport, reopenFromReport, resolveReport } from "@/features/admin/api";
-import { useAdminReports, useSetAdminCounts } from "@/features/admin/queries";
+import {
+  reportDetailQuery,
+  useAdminReportDetail,
+  useAdminReports,
+  useSetAdminCounts,
+} from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { ReportItem, ReportStatus } from "@/mocks/admin";
@@ -25,6 +31,7 @@ const secondary =
 export function AdminWebReports({ head }: { head: React.ReactNode }) {
   const { data } = useAdminReports();
   const setCounts = useSetAdminCounts();
+  const queryClient = useQueryClient();
   const items = data.items;
 
   const [tab, setTab] = useState<ReportStatus>("new");
@@ -36,7 +43,10 @@ export function AdminWebReports({ head }: { head: React.ReactNode }) {
   const statusOf = (d: ReportItem, doneMap = done): ReportStatus => (doneMap[d.id] ? "done" : d.st);
   const list = items.filter((d) => statusOf(d) === tab);
   const selId = list.some((d) => d.id === sel) ? sel : (list[0]?.id ?? null);
-  const cur = items.find((d) => d.id === selId);
+  const picked = items.find((d) => d.id === selId);
+  // 설명·같은 묶음 설명·답장은 고른 제보만 받아요. 받기 전에는 목록 값(요약)
+  const detail = useAdminReportDetail(picked);
+  const cur = picked && detail.data ? { ...picked, ...detail.data } : picked;
 
   const finish = async (kind: Finish) => {
     if (!cur) return;
@@ -44,7 +54,11 @@ export function AdminWebReports({ head }: { head: React.ReactNode }) {
     if (!USE_MOCKS) {
       try {
         setError(null);
-        await resolveReport(cur.id, kind === "fix", replies[cur.id] ?? cur.reply);
+        // 상세를 아직 못 받았으면 저장된 답장을 먼저 받아요(빈 답장으로 덮어쓰지 않게)
+        const saved =
+          replies[cur.id] ??
+          (await queryClient.ensureQueryData(reportDetailQuery(cur.id, cur.summary))).reply;
+        await resolveReport(cur.id, kind === "fix", saved);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
         return;

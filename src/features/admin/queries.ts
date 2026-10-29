@@ -15,6 +15,7 @@ import {
   adminSources,
   reviewQueue,
   type AdminCounts,
+  type ReportItem,
   type ReviewReason,
 } from "@/mocks/admin";
 import {
@@ -22,6 +23,7 @@ import {
   liveCounts,
   liveCriteria,
   liveOverview,
+  liveReportDetail,
   liveReports,
   liveReviewDetail,
   liveReviewQueuePage,
@@ -267,6 +269,24 @@ export function useAdminReports() {
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery(mockQuery(adminKeys.reports, adminReports));
+}
+
+/** 제보 상세 받기 설정 (화면이 고른 제보, 처리 직전 답장 확인에 같이 써요) */
+export const reportDetailQuery = (id: string, summary: string) => ({
+  queryKey: [...live(adminKeys.reports), "detail", id] as const,
+  queryFn: () => liveReportDetail(id, summary),
+  staleTime: 0,
+});
+
+/**
+ * 고른 제보 하나의 설명·같은 묶음 설명·답장. 목록은 이 값 없이 받아요(제보마다 상세를 받지 않게). 목업이면 목록에 이미 있어 받지 않아요.
+ * 받기 전에는 목록 값(요약)을 그대로 보여 줘요.
+ */
+export function useAdminReportDetail(item: ReportItem | undefined) {
+  return useQuery({
+    ...reportDetailQuery(item?.id ?? "", item?.summary ?? ""),
+    enabled: LIVE && !!item,
+  });
 }
 
 /** 트래픽(GA·서버 숫자). 기간이 바뀌면 다시 받아요. GA 숫자는 백엔드가 한 시간쯤 다시 써요 */
