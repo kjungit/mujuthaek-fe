@@ -165,6 +165,10 @@ function StatCard({
 export function WebMain() {
   // 로그인했으면 로그인 대신 이름 · 내 홈 (불러오는 동안은 둘 다 숨겨요)
   const { data: session } = useSession();
+  // 로그인했으면 「로그인 없이 시작하기」 대신 내 홈으로 (불러오는 동안은 로그인 전 문구)
+  const start = session
+    ? { label: "내 홈에서 확인하기", href: routes.home }
+    : { label: "로그인 없이 시작하기", href: routes.profile };
   const { data } = useMainLanding();
   const { example, judgeExample } = data;
 
@@ -245,10 +249,10 @@ export function WebMain() {
             </p>
             <div className="mt-[8px] flex flex-wrap gap-[10px]">
               <Link
-                href={routes.profile}
+                href={start.href}
                 className="rounded-control bg-brand inline-flex min-h-[60px] items-center gap-[8px] px-[26px] text-[18px] font-bold text-white no-underline hover:text-white"
               >
-                로그인 없이 시작하기
+                {start.label}
                 <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
               </Link>
               <a
@@ -259,10 +263,12 @@ export function WebMain() {
               </a>
             </div>
             <div className="text-text-sub flex flex-wrap gap-x-[20px] gap-y-[8px] text-[15px]">
-              <span className="inline-flex items-center gap-[6px]">
-                <CircleCheck size={18} className="text-brand" aria-hidden />
-                가입 없이 바로
-              </span>
+              {!session && (
+                <span className="inline-flex items-center gap-[6px]">
+                  <CircleCheck size={18} className="text-brand" aria-hidden />
+                  가입 없이 바로
+                </span>
+              )}
               <span className="inline-flex items-center gap-[6px]">
                 <Lock size={18} className="text-brand" aria-hidden />
                 소득·자산은 저장하지 않아요
@@ -591,14 +597,16 @@ export function WebMain() {
                 내 조건으로 지금 확인해보세요
               </span>
               <span className="text-brand-deep-text-2 text-[18px]">
-                가입 없이 바로, 받을 수 있는 집과 혜택부터
+                {session
+                  ? "받을 수 있는 집과 혜택부터 바로"
+                  : "가입 없이 바로, 받을 수 있는 집과 혜택부터"}
               </span>
             </div>
             <Link
-              href={routes.profile}
+              href={start.href}
               className="rounded-control bg-surface text-brand-strong hover:text-brand-strong inline-flex min-h-[60px] items-center gap-[8px] px-[28px] text-[18px] font-extrabold no-underline"
             >
-              로그인 없이 시작하기
+              {start.label}
               <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
             </Link>
           </div>

@@ -76,6 +76,10 @@ function StatCard({
 export function MMain() {
   // 로그인했으면 로그인 대신 이름 · 내 홈 (불러오는 동안은 숨겨요)
   const { data: session } = useSession();
+  // 로그인했으면 「로그인 없이 시작하기」 대신 내 홈으로 (불러오는 동안은 로그인 전 문구)
+  const start = session
+    ? { label: "내 홈에서 확인하기", href: routes.home }
+    : { label: "로그인 없이 시작하기", href: routes.profile };
   const { data } = useMainLanding();
   const { example, judgeExample } = data;
 
@@ -118,10 +122,10 @@ export function MMain() {
             판정해드려요
           </p>
           <Link
-            href={routes.profile}
+            href={start.href}
             className="bg-brand mt-[6px] flex min-h-[58px] items-center justify-center gap-[8px] rounded-[16px] text-[18px] font-extrabold text-white no-underline hover:text-white"
           >
-            로그인 없이 시작하기
+            {start.label}
             <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
           </Link>
           <a
@@ -131,10 +135,12 @@ export function MMain() {
             어떻게 판정하나요?
           </a>
           <div className="text-text-sub flex flex-wrap justify-center gap-x-[16px] gap-y-[6px] text-[14px]">
-            <span className="inline-flex items-center gap-[5px]">
-              <CircleCheck size={16} className="text-brand" aria-hidden />
-              가입 없이 바로
-            </span>
+            {!session && (
+              <span className="inline-flex items-center gap-[5px]">
+                <CircleCheck size={16} className="text-brand" aria-hidden />
+                가입 없이 바로
+              </span>
+            )}
             <span className="inline-flex items-center gap-[5px]">
               <Lock size={16} className="text-brand" aria-hidden />
               소득·자산은 저장 안 해요
@@ -327,13 +333,15 @@ export function MMain() {
             지금 확인해보세요
           </span>
           <span className="text-brand-deep-text-2 text-[15px]">
-            가입 없이 바로, 받을 수 있는 집과 혜택부터
+            {session
+              ? "받을 수 있는 집과 혜택부터 바로"
+              : "가입 없이 바로, 받을 수 있는 집과 혜택부터"}
           </span>
           <Link
-            href={routes.profile}
+            href={start.href}
             className="rounded-control bg-surface text-brand-strong hover:text-brand-strong flex min-h-[56px] items-center justify-center text-[17px] font-extrabold no-underline"
           >
-            로그인 없이 시작하기
+            {start.label}
           </Link>
         </section>
       </main>
