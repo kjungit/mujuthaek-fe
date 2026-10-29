@@ -18,6 +18,7 @@ import {
 import { BirthField } from "@/components/profile/BirthField";
 import { SearchRegionsField, ResidenceField } from "@/components/profile/RegionFields";
 import { headOptions, marryOptions, useProfileForm } from "@/features/profile/useProfileForm";
+import { useSession } from "@/features/auth/session";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
@@ -26,12 +27,11 @@ const count = (n: number | null) => (n === null ? "–" : n);
 const titles = ["기본 정보를 알려주세요", "가족 · 소득 · 자산", "주택 · 생활권"];
 
 const mSelect = cn(pSelect, "min-h-[54px] px-[12px] text-[16px]");
-
-// 모바일은 선택지 일부만 보여줘요
-const pickIdx = (xs: string[], idx: number[]) => idx.map((i) => xs[i]).filter(Boolean);
+const help = "text-text-sub text-[13px] font-medium";
 
 export function MProfile() {
   const form = useProfileForm();
+  const session = useSession();
   const { options } = form.data;
 
   return (
@@ -45,7 +45,34 @@ export function MProfile() {
           >
             <X size={24} aria-hidden />
           </Link>
-          <span className="text-brand-strong pr-[12px] text-[15px] font-bold">{form.step} / 3</span>
+          <div className="flex items-center gap-[4px] pr-[4px]">
+            {session.data === null && (
+              <Link
+                href={routes.login}
+                className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center px-[8px] text-[14px] font-semibold no-underline"
+              >
+                로그인
+              </Link>
+            )}
+            {/* 단계 이동: 웹처럼 아무 단계로나 바로 가요 */}
+            <nav aria-label="단계" className="flex items-center">
+              {[1, 2, 3].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  aria-label={`${n}단계 · ${titles[n - 1]}`}
+                  aria-current={form.step === n ? "step" : undefined}
+                  onClick={() => form.goTo(n)}
+                  className={cn(
+                    "inline-flex size-[36px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-[15px] font-bold",
+                    form.step === n ? "text-brand-strong" : "text-text-tertiary",
+                  )}
+                >
+                  {n}
+                </button>
+              ))}
+            </nav>
+          </div>
         </div>
         <span className="bg-line mx-[12px] block h-[4px] overflow-hidden rounded-[2px]">
           <span
@@ -105,6 +132,15 @@ export function MProfile() {
               <KidsStepper form={form} className="min-h-[54px]" />
             </div>
             <label className={pLabel}>
+              함께 사는 가족 (나 포함)
+              <select className={cn(mSelect, "font-medium")} {...form.field("householdSize")}>
+                <SelectOptions
+                  items={options.householdSize}
+                  value={form.field("householdSize").value}
+                />
+              </select>
+            </label>
+            <label className={pLabel}>
               연소득 (세전)
               <UnitInput
                 unit="만 원"
@@ -112,10 +148,11 @@ export function MProfile() {
                 className="min-h-[54px]"
                 {...form.sessionField("income")}
               />
+              <span className={help}>작년 원천징수영수증의 총급여를 넣으면 가장 정확해요</span>
             </label>
             <div className="flex flex-col gap-[8px]">
               <label className={pLabel}>
-                자산 합계
+                자산 합계 (예금 · 자동차 · 부동산)
                 <UnitInput
                   unit="만 원"
                   placeholder="4,500"
@@ -130,7 +167,7 @@ export function MProfile() {
                   onChange={(e) => form.setAssetUnknown(e.target.checked)}
                   className="m-[3px_3px_3px_4px] size-[18px]"
                 />{" "}
-                잘 모르겠어요
+                잘 모르겠어요 · 자산 조건은 &apos;확인 필요&apos;로 보여주세요
               </label>
             </div>
             <div className="flex flex-col gap-[8px]">
@@ -153,6 +190,9 @@ export function MProfile() {
                 />{" "}
                 차가 없어요
               </label>
+              <span className={help}>
+                보험개발원 차량기준가액을 넣으면 가장 정확해요. 공고의 자동차가액 기준과 비교해요
+              </span>
             </div>
             <RankCriteriaFields form={form} compact />
           </div>
@@ -164,7 +204,7 @@ export function MProfile() {
               무주택 기간
               <select className={cn(mSelect, "font-medium")} {...form.field("homelessPeriod")}>
                 <SelectOptions
-                  items={pickIdx(options.homelessPeriod, [0, 1, 3])}
+                  items={options.homelessPeriod}
                   value={form.field("homelessPeriod").value}
                 />
               </select>
@@ -195,12 +235,15 @@ export function MProfile() {
                 className="min-h-[54px]"
                 {...form.sessionField("available")}
               />
+              <span className={help}>공고마다 &apos;내가 준비할 돈&apos;과 비교해 드려요</span>
             </label>
             <div className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-bold">살 곳을 고를 때 중요한 것</span>
+              <span className="text-[15px] font-bold">
+                살 곳을 고를 때 중요한 것{" "}
+                <span className="text-text-sub font-medium">· 여러 개 고를 수 있어요</span>
+              </span>
               <PriorityChips form={form} chipClassName="px-[16px]" />
             </div>
-            <DeviceSaveCard form={form} compact />
           </div>
         )}
 
@@ -210,12 +253,26 @@ export function MProfile() {
           className="bg-bg flex items-center justify-between gap-[10px] rounded-[18px] px-[16px] py-[14px]"
         >
           <span className="text-text-sub text-[14px]">지금 조건으로</span>
-          <span className={cn("text-[15px] font-extrabold", form.preview.updating && "opacity-50")}>
-            {form.preview.error
-              ? "지금은 셀 수 없어요"
-              : `공고 ${count(form.preview.homes)}곳 · 혜택 ${count(form.preview.benefits)}개`}
+          <span className="flex flex-col items-end gap-[2px] text-right">
+            <span
+              className={cn("text-[15px] font-extrabold", form.preview.updating && "opacity-50")}
+            >
+              {form.preview.error
+                ? "지금은 셀 수 없어요"
+                : `공고 ${count(form.preview.homes)}곳 · 혜택 ${count(form.preview.benefits)}개`}
+            </span>
+            <span className="text-text-sub text-[12px]">
+              {form.preview.error
+                ? "확인하기를 누르면 홈에서 볼 수 있어요"
+                : form.preview.updating
+                  ? "바뀐 조건으로 세는 중이에요"
+                  : `확인이 필요한 공고 ${count(form.preview.needCheck)}곳`}
+            </span>
           </span>
         </div>
+
+        {/* 이 기기에 저장: 웹처럼 모든 단계에서 켜고 끄고 지울 수 있어요 */}
+        <DeviceSaveCard form={form} compact />
       </main>
 
       <MBottomActions>
