@@ -1,25 +1,25 @@
 "use client";
 
 import { ChevronRight, ExternalLink, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/Badge";
 import { decideReview, reviewMeta } from "@/features/admin/api";
-import { useReviewQueue, useSetAdminCounts } from "@/features/admin/queries";
+import { useReviewDecided, useReviewDetail, useReviewQueue } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import type { ReviewReason, SourcePartKind } from "@/mocks/admin";
 import { USE_MOCKS } from "@/lib/api/config";
 
 const REASON: Record<ReviewReason, { label: string; tone: "ok" | "check" | "danger" }> = {
   must: { label: "필수 검수", tone: "ok" },
-  low: { label: "확인 필요", tone: "check" },
+  low: { label: "검수 필요", tone: "check" },
   format: { label: "형식 오류", tone: "danger" },
 };
 
 const FILTERS: { key: "all" | ReviewReason; label: string }[] = [
   { key: "all", label: "전체" },
   { key: "must", label: "필수 검수" },
-  { key: "low", label: "확인 필요" },
+  { key: "low", label: "검수 필요" },
   { key: "format", label: "형식 오류" },
 ];
 
@@ -34,11 +34,12 @@ const REJECT_REASONS = ["중복 공고", "원문과 다름", "서비스 대상 �
 type Done = "ok" | "no";
 
 export function AdminWebReview() {
-  const { data } = useReviewQueue();
-  const setCounts = useSetAdminCounts();
-  const items = data.items;
-
   const [filter, setFilter] = useState<"all" | ReviewReason>("all");
+  // 사유로 거르기는 서버가 해요(대기열을 50건씩 이어 받아서, 받은 것만 거르면 뒤 페이지의 건이 빠져요)
+  const queue = useReviewQueue(filter === "all" ? null : filter);
+  const decided = useReviewDecided();
+  const items = queue.items;
+
   const [sel, setSel] = useState(items[0].id);
   const [done, setDone] = useState<Record<string, Done>>({});
   const [edits, setEdits] = useState<Record<string, Record<string, string>>>({});
@@ -46,14 +47,33 @@ export function AdminWebReview() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const shown = items.filter((i) => filter === "all" || i.reason === filter);
-  const selId = shown.some((i) => i.id === sel) ? sel : (shown[0]?.id ?? items[0].id);
-  const cur = items.find((i) => i.id === selId) ?? items[0];
+  const shown = items;
+  const selId = shown.some((i) => i.id === sel) ? sel : items[0].id;
+  const row = items.find((i) => i.id === selId) ?? items[0];
+  // 대기열 아래 끝이 보이면 다음 50건을 받아요
+  const listRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const { more, loadMore } = queue;
+  useEffect(() => {
+    const end = endRef.current;
+    if (!end || !more) return;
+    const seen = new IntersectionObserver((e) => e[0]?.isIntersecting && loadMore(), {
+      root: listRef.current,
+      rootMargin: "200px",
+    });
+    seen.observe(end);
+    return () => seen.disconnect();
+  }, [more, loadMore, items.length]);
+  // 대기열 줄에는 원문·추출 결과가 없어요. 고른 건만 상세를 받아 채워요(목업은 줄에 다 있어요)
+  const detail = useReviewDetail(row.id);
+  const cur = detail.data ?? row;
+  /** 상세(승인·반려에 쓰는 칸 정보)를 받기 전에는 처리하지 않아요 */
+  const ready = USE_MOCKS || !!detail.data;
   const curEdits = edits[cur.id] ?? {};
   const edited = Object.keys(curEdits).length > 0;
   const curDone = done[cur.id];
-  // 처리하면 대기열을 다시 받아 total이 이미 줄어요. 처리한 수를 또 빼지 않아요
-  const pending = !USE_MOCKS ? data.total : data.total - Object.keys(done).length;
+  // 실제 연결은 처리할 때마다 받아 둔 건수를 하나씩 줄여요(useReviewDecided). 처리한 수를 또 빼지 않아요
+  const pending = !USE_MOCKS ? queue.total : queue.total - Object.keys(done).length;
   const meta = reviewMeta.get(cur.id);
   /** 건을 바꾸면 반려 사유·오류도 그 건 것이 아니므로 비워요 */
   const select = (id: string) => {
@@ -90,13 +110,17 @@ export function AdminWebReview() {
     }
     const next = { ...done, [cur.id]: kind };
     setDone(next);
-    setCounts({ reviewPending: data.total - Object.keys(next).length });
+    decided(queue.total - Object.keys(next).length);
   };
 
+  /** 다음 건. 받은 마지막 건이면 다음 50건을 받고(받으면 그때 다시 눌러요), 다 받았으면 처음으로 */
   const goNext = () => {
     const idx = items.findIndex((i) => i.id === cur.id);
+    if (idx === items.length - 1 && more) {
+      loadMore();
+      return;
+    }
     select(items[(idx + 1) % items.length].id);
-    setFilter("all");
   };
 
   const reason = REASON[cur.reason];
@@ -106,7 +130,7 @@ export function AdminWebReview() {
       <AdminTitleRow>
         <AdminTitle
           title="검수"
-          desc="AI가 원문에서 뽑은 조건을 확인하고 서비스에 내보내요 · 필수 검수·형식 오류는 승인 전까지 안 보이고, 확인 필요는 이미 공개 중이며 보류 칸만 승인 전까지 안 보여요"
+          desc="AI가 원문에서 뽑은 조건을 확인하고 서비스에 내보내요 · 필수 검수·형식 오류는 승인 전까지 안 보이고, 검수 필요는 이미 공개 중이며 보류 칸만 승인 전까지 안 보여요"
         />
       </AdminTitleRow>
 
@@ -143,7 +167,10 @@ export function AdminWebReview() {
               })}
             </div>
           </div>
-          <div className="flex min-h-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain [overflow-wrap:anywhere]">
+          <div
+            ref={listRef}
+            className="flex min-h-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain [overflow-wrap:anywhere]"
+          >
             {shown.map((q) => {
               const on = q.id === selId;
               const r = REASON[q.reason];
@@ -171,6 +198,14 @@ export function AdminWebReview() {
                 </button>
               );
             })}
+            {more && (
+              <div
+                ref={endRef}
+                className="border-t-line-soft text-text-sub border-0 border-t border-solid px-[18px] py-[14px] text-[13px]"
+              >
+                {queue.loadingMore ? "더 불러오는 중이에요" : "아래로 내리면 더 불러와요"}
+              </div>
+            )}
           </div>
         </section>
 
@@ -226,11 +261,18 @@ export function AdminWebReview() {
                     </span>
                     <span className="inline-flex items-center gap-[4px]">
                       <span className="bg-check-bg size-[10px] rounded-[3px]" aria-hidden />
-                      확인 필요
+                      검수 필요
                     </span>
                   </span>
                 </div>
                 <div className="-mr-[12px] flex min-h-0 flex-col gap-[12px] overflow-x-hidden overflow-y-auto overscroll-contain pr-[12px] [overflow-wrap:anywhere]">
+                  {!ready && cur.id !== "empty" && (
+                    <p className="text-text-sub m-0 text-[15px]">
+                      {detail.isError
+                        ? "원문을 불러오지 못했어요 · 이미 처리된 건일 수 있어요. 새로고침해 주세요"
+                        : "원문을 불러오는 중이에요"}
+                    </p>
+                  )}
                   {cur.paras.map((p) => (
                     <p key={p.head} className="text-text-body-long m-0 text-[15px] leading-[1.85]">
                       <strong className="text-text">{p.head}</strong>{" "}
@@ -362,7 +404,7 @@ export function AdminWebReview() {
               <button
                 type="button"
                 onClick={() => finish("ok")}
-                disabled={busy || cur.id === "empty"}
+                disabled={busy || !ready || cur.id === "empty"}
                 className="rounded-control bg-brand min-h-[52px] cursor-pointer border-0 px-[22px] text-[16px] font-extrabold text-white"
               >
                 {edited ? "수정 후 승인" : "승인"}
@@ -370,7 +412,7 @@ export function AdminWebReview() {
               <button
                 type="button"
                 onClick={() => finish("no")}
-                disabled={busy || cur.id === "empty"}
+                disabled={busy || !ready || cur.id === "empty"}
                 className="rounded-control bg-fill text-text min-h-[52px] cursor-pointer border-0 px-[20px] text-[15px] font-bold"
               >
                 반려
