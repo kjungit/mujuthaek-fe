@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, CircleCheck, House, Lock, Wallet, type LucideIcon } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
@@ -80,6 +81,17 @@ export function MMain() {
   const links = useStartLinks();
   const { data } = useMainLanding();
   const { example, judgeExample } = data;
+  // 「어떻게 판정하나요?」(#judge): PC 화면도 숨긴 채 같이 그려져(Responsive) 문서에서 먼저 나오는 id="judge"가 PC 쪽이라,
+  // 브라우저 기본 이동은 모바일에서 숨은 칸을 찾아 움직이지 않아요. 모바일은 이 화면의 칸으로 직접 옮겨요
+  const judgeRef = useRef<HTMLElement>(null);
+  const showJudge = (behavior: ScrollBehavior) =>
+    judgeRef.current?.scrollIntoView({ behavior, block: "start" });
+  // 주소가 /#judge로 열렸을 때도 (PC 폭이면 PC 화면의 칸으로 브라우저가 이미 옮겨요)
+  useEffect(() => {
+    if (window.location.hash === "#judge" && !window.matchMedia("(min-width: 1024px)").matches) {
+      judgeRef.current?.scrollIntoView({ block: "start" });
+    }
+  }, []);
 
   return (
     <div className="bg-surface text-text flex min-h-screen w-full flex-col">
@@ -128,6 +140,11 @@ export function MMain() {
           </Link>
           <a
             href="#judge"
+            onClick={(e) => {
+              e.preventDefault();
+              if (window.location.hash !== "#judge") window.history.pushState(null, "", "#judge");
+              showJudge("smooth");
+            }}
             className="bg-fill text-text hover:text-text flex min-h-[52px] items-center justify-center rounded-[16px] text-[16px] font-bold no-underline"
           >
             어떻게 판정하나요?
@@ -218,9 +235,9 @@ export function MMain() {
         </section>
 
         <section
-          id="judge"
+          ref={judgeRef}
           aria-label="자격 판정"
-          className="flex flex-col gap-[20px] px-[20px] py-[48px]"
+          className="flex scroll-mt-[56px] flex-col gap-[20px] px-[20px] py-[48px]"
         >
           <div className="flex flex-col gap-[8px]">
             <span className={eyebrow}>자격 판정</span>
