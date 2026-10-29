@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   clearConditions,
@@ -9,8 +9,9 @@ import {
   useConditions,
 } from "@/features/conditions/store";
 import type { DeviceConditions, SessionConditions } from "@/features/conditions/types";
-import { routes } from "@/lib/routes";
+import { routes, safeNext } from "@/lib/routes";
 import type { ProfileFormData, RankCriteria } from "@/mocks/profile";
+import { useConditionsPreview } from "./preview";
 import { useProfileFormData } from "./queries";
 
 export type Head = "head" | "member";
@@ -65,17 +66,21 @@ const emptySession: SessionConditions = {
   income: "",
   asset: "",
   assetUnknown: false,
+  car: "",
+  noCar: false,
   available: "",
   rankChecks: [],
 };
 
 type TextKey = "birth" | "householdSize" | "homelessPeriod" | "bankbookPeriod" | "paymentCount";
-type SessionTextKey = "income" | "asset" | "available";
+type SessionTextKey = "income" | "asset" | "car" | "available";
 
 /** 조건 입력 3단계 상태 (PC/모바일 공통). 처음 값은 이 기기에 저장한 조건에서 가져와요 */
 export function useProfileForm() {
   const { data } = useProfileFormData();
   const router = useRouter();
+  /** 확인하기 뒤 갈 곳 (?next=/homes). 없으면 홈 */
+  const next = safeNext(useSearchParams().get("next")) ?? routes.home;
   const stored = useConditions();
   const [step, setStep] = useState(1);
   const [device, setDevice] = useState<DeviceConditions>(() => defaultDevice(data));
@@ -89,6 +94,9 @@ export function useProfileForm() {
     if (stored.session) setSess({ ...emptySession, ...stored.session });
   }
 
+  // 「지금 조건으로」: 입력 중인 조건으로 바로 세요 (목업은 단계별 예시)
+  const preview = useConditionsPreview(device, sess, loaded, data.previewByStep[step - 1]);
+
   const patch = (p: Partial<DeviceConditions>) => setDevice((d) => ({ ...d, ...p }));
   const patchSess = (p: Partial<SessionConditions>) => setSess((v) => ({ ...v, ...p }));
 
@@ -98,7 +106,7 @@ export function useProfileForm() {
     onChange: (e: { target: { value: string } }) => patch({ [key]: e.target.value }),
   });
   const sessionField = (key: SessionTextKey) => ({
-    value: sess[key],
+    value: sess[key] ?? "",
     onChange: (e: { target: { value: string } }) => patchSess({ [key]: e.target.value }),
   });
 
@@ -109,7 +117,7 @@ export function useProfileForm() {
     prev: () => setStep((s) => Math.max(1, s - 1)),
     next: () => setStep((s) => Math.min(3, s + 1)),
     isLast: step === 3,
-    preview: data.previewByStep[step - 1],
+    preview,
     field,
     sessionField,
     /** 사는 곳 시·도를 바꾸면 시·군·구는 다시 골라요 */
@@ -141,6 +149,8 @@ export function useProfileForm() {
     toggleStatus: (s: string) => setDevice((d) => ({ ...d, statuses: toggle(d.statuses, s) })),
     assetUnknown: sess.assetUnknown,
     setAssetUnknown: (assetUnknown: boolean) => patchSess({ assetUnknown }),
+    noCar: sess.noCar ?? false,
+    setNoCar: (noCar: boolean) => patchSess({ noCar }),
     rankChecks: sess.rankChecks,
     toggleRankCheck: (key: string) =>
       setSess((v) => ({ ...v, rankChecks: toggle(v.rankChecks, key) })),
@@ -153,10 +163,10 @@ export function useProfileForm() {
       setDevice(defaultDevice(data));
       setSess(emptySession);
     },
-    /** 확인하기: 저장하고 결과(홈)로 */
+    /** 확인하기: 저장하고 결과(홈, 또는 ?next로 받은 곳)로 */
     submit: () => {
       saveConditions(device, sess);
-      router.push(routes.home);
+      router.push(next);
     },
   };
 }

@@ -21,6 +21,8 @@ import { headOptions, marryOptions, useProfileForm } from "@/features/profile/us
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
+/** 받기 전·실패면 「–」 */
+const count = (n: number | null) => (n === null ? "–" : n);
 const titles = ["기본 정보를 알려주세요", "가족 · 소득 · 자산", "주택 · 생활권"];
 
 const mSelect = cn(pSelect, "min-h-[54px] px-[12px] text-[16px]");
@@ -111,15 +113,17 @@ export function MProfile() {
                 {...form.sessionField("income")}
               />
             </label>
-            <label className={pLabel}>
-              자산 합계
-              <UnitInput
-                unit="만 원"
-                placeholder="4,500"
-                className="min-h-[54px]"
-                {...form.sessionField("asset")}
-              />
-              <span className="text-text-sub flex min-h-[32px] items-center gap-[8px] text-[14px] font-medium">
+            <div className="flex flex-col gap-[8px]">
+              <label className={pLabel}>
+                자산 합계
+                <UnitInput
+                  unit="만 원"
+                  placeholder="4,500"
+                  className="min-h-[54px]"
+                  {...form.sessionField("asset")}
+                />
+              </label>
+              <label className="text-text-sub flex min-h-[32px] cursor-pointer items-center gap-[8px] text-[14px] font-medium">
                 <input
                   type="checkbox"
                   checked={form.assetUnknown}
@@ -127,8 +131,29 @@ export function MProfile() {
                   className="m-[3px_3px_3px_4px] size-[18px]"
                 />{" "}
                 잘 모르겠어요
-              </span>
-            </label>
+              </label>
+            </div>
+            <div className="flex flex-col gap-[8px]">
+              <label className={pLabel}>
+                자동차 가액
+                <UnitInput
+                  unit="만 원"
+                  placeholder="1,800"
+                  className="min-h-[54px]"
+                  disabled={form.noCar}
+                  {...form.sessionField("car")}
+                />
+              </label>
+              <label className="text-text-sub flex min-h-[32px] cursor-pointer items-center gap-[8px] text-[14px] font-medium">
+                <input
+                  type="checkbox"
+                  checked={form.noCar}
+                  onChange={(e) => form.setNoCar(e.target.checked)}
+                  className="m-[3px_3px_3px_4px] size-[18px]"
+                />{" "}
+                차가 없어요
+              </label>
+            </div>
             <RankCriteriaFields form={form} compact />
           </div>
         )}
@@ -179,10 +204,16 @@ export function MProfile() {
           </div>
         )}
 
-        <div className="bg-bg flex items-center justify-between gap-[10px] rounded-[18px] px-[16px] py-[14px]">
+        <div
+          role="status"
+          aria-busy={form.preview.updating}
+          className="bg-bg flex items-center justify-between gap-[10px] rounded-[18px] px-[16px] py-[14px]"
+        >
           <span className="text-text-sub text-[14px]">지금 조건으로</span>
-          <span className="text-[15px] font-extrabold">
-            공고 {form.preview.homes}곳 · 혜택 {form.preview.benefits}개
+          <span className={cn("text-[15px] font-extrabold", form.preview.updating && "opacity-50")}>
+            {form.preview.error
+              ? "지금은 셀 수 없어요"
+              : `공고 ${count(form.preview.homes)}곳 · 혜택 ${count(form.preview.benefits)}개`}
           </span>
         </div>
       </main>

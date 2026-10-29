@@ -20,6 +20,7 @@ import {
   type SortOption,
 } from "@/features/homes/filters";
 import { HomesMap } from "@/components/homes/HomesMap";
+import { EditConditionsLink } from "@/components/homes/EditConditionsLink";
 import { RegionSelect } from "@/components/homes/RegionSelect";
 import { useHomeList } from "@/features/homes/list";
 import { useRegionFilter } from "@/features/homes/region";
@@ -134,10 +135,13 @@ export function WebHomes() {
         <div className="flex flex-wrap items-end justify-between gap-[16px]">
           <div className="flex flex-col gap-[6px]">
             <h1 className="tracking-h1 m-0 text-[32px] font-extrabold">내 집</h1>
-            <span className="text-text-sub text-[16px]">
-              내 조건으로 지원할 수 있는 곳{" "}
-              <strong className="text-brand-strong">{list.eligibleCount}곳</strong>
-              {list.needsInputCount ? ` · 확인 필요 ${list.needsInputCount}곳` : ""}
+            <span className="text-text-sub flex flex-wrap items-center gap-x-[12px] text-[16px]">
+              <span>
+                내 조건으로 지원할 수 있는 곳{" "}
+                <strong className="text-brand-strong">{list.eligibleCount}곳</strong>
+                {list.needsInputCount ? ` · 확인 필요 ${list.needsInputCount}곳` : ""}
+              </span>
+              <EditConditionsLink />
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-[10px]">

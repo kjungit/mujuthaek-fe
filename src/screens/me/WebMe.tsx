@@ -220,9 +220,7 @@ export function WebMe({ initialTab }: { initialTab?: MeTab }) {
 
           {tab === "favorites" && <FavoriteList />}
           {tab === "interests" && <InterestsPanel />}
-          {tab === "notifications" && (
-            <NotificationSettingsPanel onEmail={() => setTab("privacy")} />
-          )}
+          {tab === "notifications" && <NotificationSettingsPanel />}
 
           {tab === "privacy" && (
             <div className="flex flex-col gap-[16px]">

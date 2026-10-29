@@ -28,6 +28,7 @@ import { VerdictBadge } from "@/components/ui/Badge";
 import { useMainLanding } from "@/features/main/queries";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/features/auth/session";
+import { useStartLinks } from "@/features/main/start";
 import { routes } from "@/lib/routes";
 import type { MainSourceGroup } from "@/mocks/main";
 
@@ -165,10 +166,7 @@ function StatCard({
 export function WebMain() {
   // 로그인했으면 로그인 대신 이름 · 내 홈 (불러오는 동안은 둘 다 숨겨요)
   const { data: session } = useSession();
-  // 로그인했으면 「로그인 없이 시작하기」 대신 내 홈으로 (불러오는 동안은 로그인 전 문구)
-  const start = session
-    ? { label: "내 홈에서 확인하기", href: routes.home }
-    : { label: "로그인 없이 시작하기", href: routes.profile };
+  const links = useStartLinks();
   const { data } = useMainLanding();
   const { example, judgeExample } = data;
 
@@ -249,10 +247,10 @@ export function WebMain() {
             </p>
             <div className="mt-[8px] flex flex-wrap gap-[10px]">
               <Link
-                href={start.href}
+                href={links.start.href}
                 className="rounded-control bg-brand inline-flex min-h-[60px] items-center gap-[8px] px-[26px] text-[18px] font-bold text-white no-underline hover:text-white"
               >
-                {start.label}
+                {links.start.label}
                 <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
               </Link>
               <a
@@ -314,7 +312,7 @@ export function WebMain() {
         <section aria-label="찾는 공간 고르기" className={cn(wrap, "pb-[96px]")}>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-[16px]">
             <Link
-              href={routes.profile}
+              href={links.homes}
               className="rounded-card-lg bg-brand-soft text-text hover:text-text flex items-center gap-[20px] px-[32px] py-[30px] no-underline"
             >
               <span className="bg-surface text-brand flex size-[64px] flex-none items-center justify-center rounded-[20px]">
@@ -603,10 +601,10 @@ export function WebMain() {
               </span>
             </div>
             <Link
-              href={start.href}
+              href={links.start.href}
               className="rounded-control bg-surface text-brand-strong hover:text-brand-strong inline-flex min-h-[60px] items-center gap-[8px] px-[28px] text-[18px] font-extrabold no-underline"
             >
-              {start.label}
+              {links.start.label}
               <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
             </Link>
           </div>

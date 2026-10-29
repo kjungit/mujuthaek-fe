@@ -5,9 +5,11 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { LegalNote, LoginError, SocialButtons } from "@/components/auth/parts";
+import { useLeaveIfLoggedIn } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
 
 export function MLogin() {
+  useLeaveIfLoggedIn();
   return (
     <div className="bg-surface text-text flex min-h-screen w-full flex-col">
       <header className="flex h-[56px] items-center px-[8px]">

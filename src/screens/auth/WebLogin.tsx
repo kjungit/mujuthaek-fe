@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BellRing, ChevronRight, Heart, ListChecks } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { LegalNote, LoginError, SocialButtons } from "@/components/auth/parts";
+import { useLeaveIfLoggedIn } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
 
 const perks = [
@@ -22,6 +23,7 @@ const perks = [
 ];
 
 export function WebLogin() {
+  useLeaveIfLoggedIn();
   return (
     <div className="bg-surface text-text flex min-h-screen w-full flex-wrap">
       <section
