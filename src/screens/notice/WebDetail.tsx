@@ -405,7 +405,10 @@ export function WebDetail({ id }: { id: string }) {
   return (
     <WebPage>
       <div className={cn("flex flex-1 flex-col", pdf.open && pdfUrl && "pl-[min(46vw,680px)]")}>
-        <WebHeader mode="home" current={routes.homes} />
+        {/* 상단 바는 본문을 내려도 위에 붙어 있어요(높이 69px: 오른쪽 칸이 그 아래에 붙어요) */}
+        <div className="sticky top-0 z-20">
+          <WebHeader mode="home" current={routes.homes} />
+        </div>
         <WebMain className="gap-[20px] pt-[24px] pb-[80px]">
           <nav
             aria-label="위치"
@@ -526,9 +529,9 @@ export function WebDetail({ id }: { id: string }) {
               )}
             </div>
 
-            {/* 내 자격·관심 등록·원문 보기는 본문을 내려도 계속 보이게 붙여 둬요(두 칸이 나란할 때만). 화면보다 길면 이 칸만 따로 휠로 내려요 */}
+            {/* 내 자격·관심 등록·원문 보기는 본문을 내려도 계속 보이게 붙여 둬요(두 칸이 나란할 때만). 화면보다 길면 이 칸만 따로 휠로 내려요(스크롤바는 숨겨요). 상단 바 아래에 붙어요 */}
             <aside
-              className="flex min-w-0 flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:top-[24px] min-[1100px]:max-h-[calc(100dvh-48px)] min-[1100px]:overflow-x-hidden min-[1100px]:overflow-y-auto min-[1100px]:overscroll-contain"
+              className="flex min-w-0 flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:top-[93px] min-[1100px]:max-h-[calc(100dvh-117px)] min-[1100px]:[scrollbar-width:none] min-[1100px]:overflow-x-hidden min-[1100px]:overflow-y-auto min-[1100px]:overscroll-contain min-[1100px]:[&::-webkit-scrollbar]:hidden"
               style={{ flex: "1 1 360px" }}
             >
               <EligibilityCard
