@@ -5,6 +5,7 @@ import { ArrowRight, Check, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import {
   ChipGroup,
+  HouseholdStepper,
   KidsStepper,
   PriorityChips,
   RankCriteriaFields,
@@ -46,6 +47,7 @@ function Step1({ form }: { form: ProfileForm }) {
       <BirthField
         value={form.field("birth").value}
         onChange={(birth) => form.field("birth").onChange({ target: { value: birth } })}
+        showProblem={form.birthBlocked}
         selectClassName={pSelect}
       />
       <SearchRegionsField form={form} selectClassName={pSelect} />
@@ -86,15 +88,10 @@ function Step2({ form }: { form: ProfileForm }) {
           <span className="text-[15px] font-bold">자녀 수</span>
           <KidsStepper form={form} />
         </div>
-        <label className={pLabel}>
-          함께 사는 가족 (나 포함)
-          <select className={cn(pSelect, "font-medium")} {...form.field("householdSize")}>
-            <SelectOptions
-              items={form.data.options.householdSize}
-              value={form.field("householdSize").value}
-            />
-          </select>
-        </label>
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[15px] font-bold">함께 사는 가족 (나 포함)</span>
+          <HouseholdStepper form={form} />
+        </div>
       </div>
       <label className={pLabel}>
         연소득 (세전)
@@ -197,7 +194,7 @@ export function WebProfile() {
 
   return (
     <div className="bg-bg text-text flex min-h-screen w-full flex-col">
-      <header className="border-line bg-surface border-b border-solid">
+      <header className="border-line bg-surface sticky top-0 z-20 border-b border-solid">
         <div className="mx-auto box-border flex min-h-[68px] w-full max-w-[1200px] items-center justify-between gap-[16px] px-[32px]">
           <Link
             href={routes.main}

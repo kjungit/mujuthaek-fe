@@ -69,10 +69,6 @@ function span(iso?: string | null) {
 }
 
 // ---------- 검수 (공고 + 혜택 정책) ----------
-type NoticeReviewList = {
-  total: number;
-  items: { id: string; reason: string; title: string; applyEndsOn: string | null }[];
-};
 type NoticeReviewDetail = {
   id: string;
   reason: string;
@@ -107,6 +103,8 @@ type BenefitReviewList = {
     reasons: string[];
     reported: boolean;
     sourceCode: string | null;
+    rawVersion: number;
+    queuedAt: string;
   }[];
 };
 type BenefitCondition = {
@@ -504,30 +502,76 @@ function benefitItem(d: BenefitReviewDetail): ReviewItem {
   };
 }
 
-export async function liveReviewQueue(): Promise<{ total: number; items: ReviewItem[] }> {
-  const [notices, benefits] = await Promise.all([
-    api.get<NoticeReviewList>("/api/admin/reviews"),
-    api.get<BenefitReviewList>("/api/admin/benefit-reviews"),
-  ]);
-  // 상세 하나가 실패(이미 처리됨 등)해도 대기열 전체가 멈추지 않게 성공한 것만 써요
-  const ok = <T>(rs: PromiseSettledResult<T>[]) =>
-    rs.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
-  const [nd, bd] = await Promise.all([
-    Promise.allSettled(
-      notices.items.map((i) => api.get<NoticeReviewDetail>(`/api/admin/reviews/${i.id}`)),
-    ).then(ok),
-    Promise.allSettled(
-      benefits.items.map((i) =>
-        api
-          .get<BenefitReviewDetail>(`/api/admin/benefit-reviews/${i.id}`)
-          .then((d) => ({ ...d, sourceCode: i.sourceCode })),
-      ),
-    ).then(ok),
-  ]);
-  const items = [...bd.map(benefitItem), ...nd.map(noticeItem)];
-  // 전체 건수는 목록 길이가 아니라 백엔드 total(공고) + 혜택 목록 길이
-  const total = (notices.total ?? notices.items.length) + benefits.items.length;
-  return { total, items: items.length ? items : [EMPTY_REVIEW] };
+/** 대기열 한 줄: 목록 응답만으로 만들어요. 원문·추출 결과는 고른 건만 {@link liveReviewDetail}로 받아요 */
+const ROW = { paras: [], fields: [], impact: "-", log: [] } satisfies Partial<ReviewItem>;
+/** 혜택 상세 응답에는 출처 코드가 없어 대기열 목록에서 기억해 둬요 */
+const benefitSourceCodes = new Map<string, string | null>();
+
+type ReviewQueuePage = {
+  total: number;
+  items: {
+    kind: "NOTICE" | "BENEFIT";
+    id: string;
+    reason: string;
+    title: string | null;
+    sourceCode: string | null;
+    rawVersion: number | null;
+    queuedAt: string | null;
+  }[];
+  nextCursor: string | null;
+};
+/** 화면의 사유 → 대기열 API의 reason */
+const REVIEW_REASON_API: Record<ReviewReason, string> = {
+  must: "MUST",
+  low: "CHECK",
+  format: "FORMAT",
+};
+/** 대기열 한 번에 받는 건수 (백엔드 최대 100) */
+const QUEUE_PAGE_SIZE = 50;
+
+/**
+ * 검수 대기열 한 페이지: 공고·혜택 검수를 들어온 시각 순으로 섞어 50건씩 받아요(무한 스크롤). 원문·추출 결과는 고른 건만
+ * {@link liveReviewDetail}로 받아요. kinds는 내 권한으로 볼 수 있는 종류(NOTICE·BENEFIT)예요
+ */
+export async function liveReviewQueuePage(
+  kinds: string[],
+  reason: ReviewReason | null,
+  cursor: string | null,
+): Promise<{ total: number; items: ReviewItem[]; nextCursor: string | null }> {
+  const q = new URLSearchParams({ kinds: kinds.join(","), size: String(QUEUE_PAGE_SIZE) });
+  if (reason) q.set("reason", REVIEW_REASON_API[reason]);
+  if (cursor) q.set("cursor", cursor);
+  const page = await api.get<ReviewQueuePage>(`/api/admin/reviews/queue?${q}`);
+  const items = page.items.map((i): ReviewItem => {
+    const benefit = i.kind === "BENEFIT";
+    const id = `${benefit ? "b" : "n"}:${i.id}`;
+    if (benefit) benefitSourceCodes.set(id, i.sourceCode);
+    const source = benefit
+      ? (BENEFIT_SOURCE[i.sourceCode ?? ""] ?? i.sourceCode ?? "정책")
+      : (i.sourceCode ?? "-").toUpperCase();
+    return {
+      ...ROW,
+      id,
+      reason: REASON[i.reason] ?? "low",
+      kind: benefit ? `혜택 정책 · ${source}` : "공고",
+      title: i.title ?? "(제목 없음)",
+      source,
+      version: i.rawVersion != null ? `v${i.rawVersion}` : "-",
+      received: when(i.queuedAt),
+      age: ago(i.queuedAt),
+    };
+  });
+  return { total: page.total, items, nextCursor: page.nextCursor };
+}
+
+/** 고른 검수 건 하나의 원문·추출 결과 (승인·반려에 쓰는 칸 정보도 이때 채워요) */
+export async function liveReviewDetail(itemId: string): Promise<ReviewItem> {
+  const id = itemId.slice(2);
+  if (itemId.startsWith("n:")) {
+    return noticeItem(await api.get<NoticeReviewDetail>(`/api/admin/reviews/${id}`));
+  }
+  const d = await api.get<BenefitReviewDetail>(`/api/admin/benefit-reviews/${id}`);
+  return benefitItem({ ...d, sourceCode: benefitSourceCodes.get(itemId) ?? null });
 }
 
 export const EMPTY_REVIEW: ReviewItem = {

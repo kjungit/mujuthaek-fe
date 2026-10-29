@@ -50,12 +50,20 @@ export function WebMe({ initialTab }: { initialTab?: MeTab }) {
   const reports = useMyReports();
   const replies = reports.items.filter((r) => r.reply).length;
   const fromUrl = params.get("tab");
-  const [tab, setTabState] = useState<MeTab>(
-    initialTab ?? (meTabs.includes(fromUrl as MeTab) ? (fromUrl as MeTab) : "conditions"),
-  );
+  const urlTab = meTabs.includes(fromUrl as MeTab) ? (fromUrl as MeTab) : null;
+  // 주소의 ?tab=이 먼저예요: /me/favorites에서 탭을 바꾸면 주소가 /me?tab=…가 되는데, 앞으로 가기로 돌아오면 그 화면이 다시 그려져요
+  const [tab, setTabState] = useState<MeTab>(urlTab ?? initialTab ?? "conditions");
+  // 링크로 주소의 탭이 바뀌면(헤더 「내 정보」 → /me, 「내 제보 보기」 → ?tab=reports) 화면 탭도 따라가요 (렌더 중 상태 맞추기)
+  const [seenUrlTab, setSeenUrlTab] = useState(urlTab);
+  if (urlTab !== seenUrlTab) {
+    setSeenUrlTab(urlTab);
+    setTabState(urlTab ?? initialTab ?? "conditions");
+  }
+  // 탭은 화면 상태만 바꾸고 주소는 history로만 고쳐요 (router.replace는 서버에 페이지를 다시 받아 와 탭마다 늦어요).
+  // Next가 history 변경을 useSearchParams에 반영해서 새로 고침·뒤로 가기에도 그 탭이 열려요
   const setTab = (t: MeTab) => {
     setTabState(t);
-    router.replace(`${routes.me}?tab=${t}`, { scroll: false });
+    window.history.replaceState(null, "", `${routes.me}?tab=${t}`);
   };
   const conditions = useConditionSummary();
   const saveOnDevice = conditions.status === "ready" ? conditions.saveOnDevice : true;
@@ -225,9 +233,7 @@ export function WebMe({ initialTab }: { initialTab?: MeTab }) {
 
           {tab === "favorites" && <FavoriteList />}
           {tab === "interests" && <InterestsPanel />}
-          {tab === "notifications" && (
-            <NotificationSettingsPanel onEmail={() => setTab("privacy")} />
-          )}
+          {tab === "notifications" && <NotificationSettingsPanel />}
 
           {tab === "privacy" && (
             <div className="flex flex-col gap-[16px]">

@@ -3,7 +3,7 @@
 import { NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Building, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
@@ -368,7 +368,31 @@ function ApiBlockUnits({
   );
 }
 
+/**
+ * 오른쪽 칸을 붙여 둘 위치: 처음 놓인 자리(문서 맨 위에서 칸까지의 거리). 그 자리에 그대로 붙어 있어서 본문을 내려도 칸이 움직이지 않고,
+ * 칸 위에서 휠을 굴릴 때만 칸 안이 내려가요. 위쪽 내용 높이가 바뀌면(창 크기·불러오기) 다시 재요
+ */
+function usePinnedTop() {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const [top, setTop] = useState<number | null>(null);
+  useEffect(() => {
+    const row = el?.parentElement;
+    if (!row) return;
+    // 칸은 줄(row)의 맨 위에 있어요. 붙어 있는 동안 칸 자체의 위치는 바뀌니 줄의 위치로 재요
+    const update = () => setTop(Math.round(row.getBoundingClientRect().top + window.scrollY));
+    const seen = new ResizeObserver(update);
+    seen.observe(document.body);
+    window.addEventListener("resize", update);
+    return () => {
+      seen.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [el]);
+  return [setEl, top] as const;
+}
+
 export function WebDetail({ id }: { id: string }) {
+  const [pinTo, pinTop] = usePinnedTop();
   const { data, loading, error } = useNotice(id);
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
@@ -413,6 +437,7 @@ export function WebDetail({ id }: { id: string }) {
   return (
     <WebPage>
       <div className={cn("flex flex-1 flex-col", pdf.open && pdfUrl && "pl-[min(46vw,680px)]")}>
+        {/* 상단 바는 화면마다 위에 붙어 있어요(높이 69px: 오른쪽 칸이 그 아래에 붙어요) */}
         <WebHeader mode="home" current={routes.homes} />
         <WebMain className="gap-[20px] pt-[24px] pb-[80px]">
           <nav
@@ -479,6 +504,9 @@ export function WebDetail({ id }: { id: string }) {
                 </div>
               </section>
 
+              {/* 이 공고 이야기는 공고 요약 바로 아래 (공급 주택 목록 위) */}
+              <NoticeChat noticeId={n.id} variant="web" />
+
               {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
               {n.hasUnits && (
                 <ApiBlockUnits notice={n} judgment={j.judgment} onShowLife={showLife} />
@@ -499,8 +527,6 @@ export function WebDetail({ id }: { id: string }) {
                 variant="web"
                 onOpenPage={pdfUrl ? openOriginal : undefined}
               />
-
-              <NoticeChat noticeId={n.id} variant="web" />
 
               {benefits.length > 0 && (
                 <section
@@ -534,7 +560,13 @@ export function WebDetail({ id }: { id: string }) {
               )}
             </div>
 
-            <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 360px" }}>
+            {/* 내 자격·관심 등록·원문 보기는 처음 자리에 붙어 있어서 본문을 내려도 움직이지 않아요(두 칸이 나란할 때만).
+                화면보다 길면 이 칸 위에서 휠을 굴릴 때만 칸 안이 내려가요(스크롤바는 숨겨요) */}
+            <aside
+              ref={pinTo}
+              className="flex min-w-0 flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:top-[var(--pin-top)] min-[1100px]:max-h-[calc(100dvh-var(--pin-top)-24px)] min-[1100px]:[scrollbar-width:none] min-[1100px]:overflow-x-hidden min-[1100px]:overflow-y-auto min-[1100px]:overscroll-contain min-[1100px]:[&::-webkit-scrollbar]:hidden"
+              style={{ flex: "1 1 360px", "--pin-top": `${pinTop ?? 93}px` } as React.CSSProperties}
+            >
               <EligibilityCard
                 judgment={j.judgment}
                 loading={j.loading}
@@ -573,30 +605,33 @@ export function WebDetail({ id }: { id: string }) {
                 </section>
               )}
 
-              <WebFavoriteButton
-                type="NOTICE"
-                id={n.id}
-                onAdd={() => track("notice_bookmark", noticeParams(n))}
-              />
-              <button
-                type="button"
-                aria-pressed={pdfUrl ? pdf.open : undefined}
-                onClick={() => (pdf.open ? pdf.close() : openOriginal())}
-                className="rounded-tile bg-surface text-text flex min-h-[56px] cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold"
-              >
-                <FileText size={18} aria-hidden />
-                {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
-              </button>
-              <div className="flex flex-col items-center gap-[2px] pt-[4px]">
-                <span className="text-text-sub text-[13px]">
-                  판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
-                </span>
-                <ReportButton
-                  target={{ kind: "notice", id: n.id }}
-                  screen="공고 상세"
-                  className="self-stretch"
-                  buttonClassName="text-[13px]"
+              {/* 관심 등록·원문 보기는 칸이 화면보다 길어도 아래에 늘 보이게 붙여 둬요 */}
+              <div className="bg-bg flex flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:bottom-0 min-[1100px]:pt-[4px]">
+                <WebFavoriteButton
+                  type="NOTICE"
+                  id={n.id}
+                  onAdd={() => track("notice_bookmark", noticeParams(n))}
                 />
+                <button
+                  type="button"
+                  aria-pressed={pdfUrl ? pdf.open : undefined}
+                  onClick={() => (pdf.open ? pdf.close() : openOriginal())}
+                  className="rounded-tile bg-surface text-text flex min-h-[56px] cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold"
+                >
+                  <FileText size={18} aria-hidden />
+                  {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
+                </button>
+                <div className="flex flex-col items-center gap-[2px] pt-[4px]">
+                  <span className="text-text-sub text-[13px]">
+                    판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
+                  </span>
+                  <ReportButton
+                    target={{ kind: "notice", id: n.id }}
+                    screen="공고 상세"
+                    className="self-stretch"
+                    buttonClassName="text-[13px]"
+                  />
+                </div>
               </div>
             </aside>
           </div>

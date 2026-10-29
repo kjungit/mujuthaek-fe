@@ -14,10 +14,10 @@ import {
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { VerdictBadge } from "@/components/ui/Badge";
+import { DeadlineAlertPrompt } from "@/components/alerts/DeadlineAlertPrompt";
 import { WebNoConditionsState } from "@/components/states/NoConditionsState";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useHomeSummary } from "@/features/home/queries";
-import { HomePushCard } from "@/components/alerts/HomePushCard";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { HomeNewsItem } from "@/mocks/home";
@@ -271,7 +271,7 @@ export function WebHome() {
                   ))}
                 </section>
 
-                <HomePushCard variant="web" />
+                <DeadlineAlertPrompt variant="web" />
               </aside>
             </div>
           </>

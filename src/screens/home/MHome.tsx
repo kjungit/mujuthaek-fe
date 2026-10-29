@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, ChevronRight } from "lucide-react";
-import { HomePushCard } from "@/components/alerts/HomePushCard";
+import { DeadlineAlertPrompt } from "@/components/alerts/DeadlineAlertPrompt";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
@@ -152,6 +152,7 @@ export function MHome() {
                 <h2 id="new-h" className="m-0 text-[17px] font-extrabold">
                   이번 주 새 소식
                 </h2>
+                {/* 새로 올라온 공고 전체는 공고 목록으로 (알림함이 아니에요) */}
                 <Link
                   href={routes.homes}
                   className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
@@ -187,7 +188,7 @@ export function MHome() {
               ))}
             </section>
 
-            <HomePushCard variant="mobile" />
+            <DeadlineAlertPrompt variant="mobile" />
 
             {data.suggestedBenefit && (
               <Link

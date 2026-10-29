@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { MBottomActions } from "@/components/layout/MBackHeader";
 import {
   ChipGroup,
+  HouseholdStepper,
   KidsStepper,
   PriorityChips,
   RankCriteriaFields,
@@ -95,6 +96,7 @@ export function MProfile() {
             <BirthField
               value={form.field("birth").value}
               onChange={(birth) => form.field("birth").onChange({ target: { value: birth } })}
+              showProblem={form.birthBlocked}
               selectClassName={mSelect}
             />
             <SearchRegionsField form={form} selectClassName={mSelect} />
@@ -131,15 +133,10 @@ export function MProfile() {
               <span className="text-[15px] font-bold">자녀 수</span>
               <KidsStepper form={form} className="min-h-[54px]" />
             </div>
-            <label className={pLabel}>
-              함께 사는 가족 (나 포함)
-              <select className={cn(mSelect, "font-medium")} {...form.field("householdSize")}>
-                <SelectOptions
-                  items={options.householdSize}
-                  value={form.field("householdSize").value}
-                />
-              </select>
-            </label>
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[15px] font-bold">함께 사는 가족 (나 포함)</span>
+              <HouseholdStepper form={form} className="min-h-[54px]" />
+            </div>
             <label className={pLabel}>
               연소득 (세전)
               <UnitInput
