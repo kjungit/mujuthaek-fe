@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { NoticeChat } from "@/components/chat/NoticeChat";
@@ -28,8 +30,10 @@ const pos = (u: NoticeUnit) => {
 
 export function MDetailUnits({ id }: { id: string }) {
   const { data: n } = useNotice(id);
-  const units = n?.kind === "units" ? n.units.slice(0, MOBILE_UNIT_COUNT) : [];
+  // 개수·신청 가능 수는 전체로 세고, 목록만 처음 몇 집을 보여줘요
+  const units = n?.kind === "units" ? n.units : [];
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
+  const [all, setAll] = useState(false);
   const pdf = usePdfViewer();
   useJudgmentViewed(id, n);
   if (n?.kind !== "units") return null;
@@ -123,7 +127,7 @@ export function MDetailUnits({ id }: { id: string }) {
             )}
           </div>
           <div className="flex flex-col gap-[8px]">
-            {shown.map((u) => {
+            {(all ? shown : shown.slice(0, MOBILE_UNIT_COUNT)).map((u) => {
               const on = u.id === selected?.id;
               return (
                 <button
@@ -156,6 +160,15 @@ export function MDetailUnits({ id }: { id: string }) {
                 </button>
               );
             })}
+            {!all && shown.length > MOBILE_UNIT_COUNT && (
+              <button
+                type="button"
+                onClick={() => setAll(true)}
+                className="bg-fill text-text min-h-[44px] cursor-pointer rounded-sm border-0 text-[14px] font-bold"
+              >
+                {shown.length - MOBILE_UNIT_COUNT}곳 더 보기
+              </button>
+            )}
           </div>
           <button
             type="button"
@@ -198,7 +211,12 @@ export function MDetailUnits({ id }: { id: string }) {
         <NoticeChat noticeId={n.id} variant="mobile" />
       </main>
       <MBottomActions>
-        <div className="flex w-full flex-col gap-[6px]">
+        <MFavoriteHeart
+          type="NOTICE"
+          id={n.id}
+          onAdd={() => track("notice_bookmark", noticeParams(n))}
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-[6px]">
           {selected && (
             <span className="text-text-sub text-center text-[13px]">
               {selected.name} · 준비할 돈 {selected.prep}

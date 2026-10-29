@@ -177,7 +177,7 @@ export function WebAlerts() {
               <div className="mb-[4px] flex items-center justify-between">
                 <h2 className="tracking-title m-0 text-[18px] font-extrabold">받는 알림</h2>
                 <Link
-                  href={routes.me}
+                  href={`${routes.me}?tab=notifications`}
                   className="text-brand-strong hover:text-brand-strong inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
                 >
                   설정

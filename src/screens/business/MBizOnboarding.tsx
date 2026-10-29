@@ -20,6 +20,7 @@ const control =
 const pickTone = (on: boolean) =>
   on ? "border-brand bg-brand-soft text-brand-strong" : "border-line bg-surface text-text";
 
+/** 숫자 칸. 단위(개월 · 명 · 만 원)는 입력한 뒤에도 칸 오른쪽에 남아요 (웹 UnitField와 같아요) */
 function NumField({
   label,
   placeholder,
@@ -28,6 +29,7 @@ function NumField({
   onChange,
 }: {
   label: string;
+  /** 단위 */
   placeholder: string;
   disabled: boolean;
   value: string;
@@ -36,15 +38,22 @@ function NumField({
   return (
     <label className="flex flex-col gap-[8px] text-[15px] font-bold">
       {label}
-      <input
-        type="text"
-        inputMode="numeric"
-        placeholder={placeholder}
-        disabled={disabled}
-        value={disabled ? "" : value}
-        onChange={(e) => onChange(e.target.value.replace(/[^\d,]/g, ""))}
-        className={cn(control, "bg-surface box-content min-w-0 px-[14px] font-normal")}
-      />
+      <span className="relative flex">
+        <input
+          type="text"
+          inputMode="numeric"
+          disabled={disabled}
+          value={disabled ? "" : value}
+          onChange={(e) => onChange(e.target.value.replace(/[^\d,]/g, ""))}
+          className={cn(
+            control,
+            "bg-surface box-content min-w-0 flex-1 pr-[56px] pl-[14px] font-normal",
+          )}
+        />
+        <span className="text-text-sub pointer-events-none absolute top-1/2 right-[14px] -translate-y-1/2 text-[15px] font-semibold">
+          {placeholder}
+        </span>
+      </span>
     </label>
   );
 }
@@ -65,7 +74,8 @@ export function MBizOnboarding() {
         <div className="flex flex-col gap-[6px]">
           <h2 className="tracking-h1 m-0 text-[24px] font-extrabold">사업 정보를 알려주세요</h2>
           <span className="text-text-sub text-[15px] leading-[1.6]">
-            창업 공간과 사업 지원을 내 조건으로 판정해요
+            창업 공간과 사업 지원을 내 조건으로 판정해요. 모르는 칸은 비워도 되고, 그 조건은
+            &apos;확인 필요&apos;로 보여드려요
           </span>
         </div>
 
@@ -123,6 +133,9 @@ export function MBizOnboarding() {
               </optgroup>
             ))}
           </select>
+          <span className="text-text-sub text-[13px] font-medium">
+            업종에 따라 들어갈 수 있는 공간이 달라져요
+          </span>
         </label>
 
         <label className="flex flex-col gap-[8px] text-[15px] font-bold">
@@ -137,7 +150,10 @@ export function MBizOnboarding() {
             className={cn(control, "bg-surface box-content min-w-0 px-[14px] font-normal")}
           />
           <span className="text-text-sub text-[13px] font-medium">
-            사업자등록증의 5자리 코드를 넣으면 이 코드로 판정해요
+            사업자등록증의 5자리 코드를 넣으면 이 코드로 판정해요 ·{" "}
+            <a href="https://kssc.kostat.go.kr" target="_blank" rel="noreferrer">
+              코드 찾기
+            </a>
             {draft.industryCode && !validIndustryCode(draft.industryCode) && " · 5자리 숫자로"}
           </span>
         </label>
@@ -228,6 +244,9 @@ export function MBizOnboarding() {
               ))}
             </select>
           </div>
+          <span className="text-text-sub text-[13px] font-medium">
+            지역 지원금과 세액감면 비율을 판정할 때 써요
+          </span>
         </div>
 
         <div className="flex flex-col gap-[8px]">
@@ -316,7 +335,8 @@ export function MBizOnboarding() {
       </main>
       <div className="border-line bg-surface sticky bottom-0 flex flex-col gap-[4px] border-t border-solid px-[16px] pt-[10px] pb-[28px]">
         <span className="text-text-sub text-center text-[13px]" aria-live="polite">
-          지금 조건으로 공간 {preview.spaces}곳 · 사업 지원 {preview.support}개
+          지금 조건으로 공간 {preview.spaces}곳 · 사업 지원 {preview.support}개 · 확인 필요{" "}
+          {preview.check}개
         </span>
         <button
           type="button"

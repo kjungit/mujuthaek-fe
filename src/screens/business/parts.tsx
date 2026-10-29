@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { Building, Store, Users, type LucideIcon } from "lucide-react";
 import { Badge, verdictLabel } from "@/components/ui/Badge";
 import { FilterChip } from "@/components/ui/Chip";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-import type { SpaceItem, SpaceType, SupportStatus } from "@/mocks/business";
+import type { SpaceItem, SpaceRule, SpaceType, SupportStatus } from "@/mocks/business";
 
 /** 공간 카드 링크: 상세 화면이 없는 공간(모집 정책)은 원문을 새 탭으로 */
 export const spaceLink = (it: SpaceItem) =>
@@ -211,5 +212,31 @@ export function AboutSection({
         출처 사이트가 준 정보를 그대로 옮겼어요 · 정확한 내용은 공고 원문을 확인해 주세요
       </span>
     </section>
+  );
+}
+
+/** 자격 조건 한 줄의 결과 (웹·모바일 공통): 질문이면 예 · 아니요, 아니면 충족 · 해당 안 돼요 · 확인 필요(사업 정보 입력으로).
+ * 오른쪽 칸: 질문이면 예 · 아니요, 아니면 결과 (확인 필요면 사업 정보 입력으로) */
+export function RuleAction({
+  r,
+  onAnswer,
+}: {
+  r: SpaceRule;
+  onAnswer?: (questionId: string, value: "YES" | "NO") => void;
+}) {
+  if (r.questionId && onAnswer)
+    return <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />;
+  if (r.met) return <span className="text-ok-text flex-none text-[14px] font-bold">충족</span>;
+  if (r.notMet)
+    return <span className="text-text-sub flex-none text-[14px] font-bold">해당 안 돼요</span>;
+  if (r.options)
+    return <span className="text-check-text flex-none text-[14px] font-bold">확인 필요</span>;
+  return (
+    <Link
+      href={routes.bizOnboarding}
+      className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
+    >
+      확인 필요 · 입력
+    </Link>
   );
 }
