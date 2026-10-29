@@ -16,6 +16,7 @@ import {
   liveCriteria,
   liveOverview,
   liveReports,
+  liveReviewDetail,
   liveReviewQueue,
   liveSources,
   liveBotTraffic,
@@ -43,6 +44,7 @@ export const adminKeys = {
   counts: ["admin", "counts"] as const,
   overview: ["admin", "overview"] as const,
   review: ["admin", "review"] as const,
+  reviewDetail: ["admin", "reviewDetail"] as const,
   sources: ["admin", "sources"] as const,
   criteria: ["admin", "criteria"] as const,
   reports: ["admin", "reports"] as const,
@@ -124,7 +126,7 @@ export function useReviewQueue() {
     const q = useQuery({
       queryKey: live(adminKeys.review),
       queryFn: liveReviewQueue,
-      staleTime: 0,
+      staleTime: 30 * 1000,
     });
     return {
       ...q,
@@ -133,6 +135,37 @@ export function useReviewQueue() {
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery(mockQuery(adminKeys.review, reviewQueue));
+}
+
+/** 고른 검수 건의 원문·추출 결과. 목업이면 대기열 항목에 이미 들어 있어 받지 않아요 */
+export function useReviewDetail(id: string) {
+  return useQuery({
+    queryKey: [...live(adminKeys.reviewDetail), id],
+    queryFn: () => liveReviewDetail(id),
+    enabled: LIVE && id !== "empty",
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
+
+/**
+ * 승인·반려 뒤: 대기열 목록과 사이드바 숫자만 다시 받아요. 관리자 화면 전체({@link useSetAdminCounts})를 다시 받으면
+ * 다른 화면의 데이터까지 모두 다시 불러요
+ */
+export function useReviewDecided() {
+  const queryClient = useQueryClient();
+  const setCounts = useSetAdminCounts();
+  return useCallback(
+    (pending: number) => {
+      if (!LIVE) {
+        setCounts({ reviewPending: pending });
+        return;
+      }
+      void queryClient.invalidateQueries({ queryKey: live(adminKeys.review), exact: true });
+      void queryClient.invalidateQueries({ queryKey: live(adminKeys.counts), exact: true });
+    },
+    [queryClient, setCounts],
+  );
 }
 
 export function useAdminSources() {

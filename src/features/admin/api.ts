@@ -71,7 +71,15 @@ function span(iso?: string | null) {
 // ---------- 검수 (공고 + 혜택 정책) ----------
 type NoticeReviewList = {
   total: number;
-  items: { id: string; reason: string; title: string; applyEndsOn: string | null }[];
+  items: {
+    id: string;
+    reason: string;
+    title: string;
+    sourceCode: string;
+    rawVersion: number | null;
+    receivedAt: string | null;
+    applyEndsOn: string | null;
+  }[];
 };
 type NoticeReviewDetail = {
   id: string;
@@ -107,6 +115,8 @@ type BenefitReviewList = {
     reasons: string[];
     reported: boolean;
     sourceCode: string | null;
+    rawVersion: number;
+    queuedAt: string;
   }[];
 };
 type BenefitCondition = {
@@ -504,30 +514,61 @@ function benefitItem(d: BenefitReviewDetail): ReviewItem {
   };
 }
 
+/** 대기열 한 줄: 목록 응답만으로 만들어요. 원문·추출 결과는 고른 건만 {@link liveReviewDetail}로 받아요 */
+const ROW = { paras: [], fields: [], impact: "-", log: [] } satisfies Partial<ReviewItem>;
+/** 혜택 상세 응답에는 출처 코드가 없어 대기열 목록에서 기억해 둬요 */
+const benefitSourceCodes = new Map<string, string | null>();
+
+/**
+ * 검수 대기열: 공고·혜택 목록 두 번만 불러요. 예전에는 대기 건마다 상세를 받아 처리할 때마다 대기 건수만큼 요청이 나갔어요
+ * (운영 1분 최대 368번)
+ */
 export async function liveReviewQueue(): Promise<{ total: number; items: ReviewItem[] }> {
   const [notices, benefits] = await Promise.all([
     api.get<NoticeReviewList>("/api/admin/reviews"),
     api.get<BenefitReviewList>("/api/admin/benefit-reviews"),
   ]);
-  // 상세 하나가 실패(이미 처리됨 등)해도 대기열 전체가 멈추지 않게 성공한 것만 써요
-  const ok = <T>(rs: PromiseSettledResult<T>[]) =>
-    rs.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
-  const [nd, bd] = await Promise.all([
-    Promise.allSettled(
-      notices.items.map((i) => api.get<NoticeReviewDetail>(`/api/admin/reviews/${i.id}`)),
-    ).then(ok),
-    Promise.allSettled(
-      benefits.items.map((i) =>
-        api
-          .get<BenefitReviewDetail>(`/api/admin/benefit-reviews/${i.id}`)
-          .then((d) => ({ ...d, sourceCode: i.sourceCode })),
-      ),
-    ).then(ok),
-  ]);
-  const items = [...bd.map(benefitItem), ...nd.map(noticeItem)];
+  const items: ReviewItem[] = [
+    ...benefits.items.map((i) => {
+      benefitSourceCodes.set(`b:${i.id}`, i.sourceCode);
+      const source = BENEFIT_SOURCE[i.sourceCode ?? ""] ?? i.sourceCode ?? "정책";
+      return {
+        ...ROW,
+        id: `b:${i.id}`,
+        reason: i.reasons.includes("REPORTED") ? ("must" as const) : ("low" as const),
+        kind: `혜택 정책 · ${source}`,
+        title: i.title,
+        source,
+        version: `v${i.rawVersion}`,
+        received: when(i.queuedAt),
+        age: ago(i.queuedAt),
+      };
+    }),
+    ...notices.items.map((i) => ({
+      ...ROW,
+      id: `n:${i.id}`,
+      reason: REASON[i.reason] ?? ("low" as const),
+      kind: "공고",
+      title: i.title,
+      source: i.sourceCode.toUpperCase(),
+      version: i.rawVersion != null ? `v${i.rawVersion}` : "-",
+      received: when(i.receivedAt),
+      age: ago(i.receivedAt),
+    })),
+  ];
   // 전체 건수는 목록 길이가 아니라 백엔드 total(공고) + 혜택 목록 길이
   const total = (notices.total ?? notices.items.length) + benefits.items.length;
   return { total, items: items.length ? items : [EMPTY_REVIEW] };
+}
+
+/** 고른 검수 건 하나의 원문·추출 결과 (승인·반려에 쓰는 칸 정보도 이때 채워요) */
+export async function liveReviewDetail(itemId: string): Promise<ReviewItem> {
+  const id = itemId.slice(2);
+  if (itemId.startsWith("n:")) {
+    return noticeItem(await api.get<NoticeReviewDetail>(`/api/admin/reviews/${id}`));
+  }
+  const d = await api.get<BenefitReviewDetail>(`/api/admin/benefit-reviews/${id}`);
+  return benefitItem({ ...d, sourceCode: benefitSourceCodes.get(itemId) ?? null });
 }
 
 export const EMPTY_REVIEW: ReviewItem = {

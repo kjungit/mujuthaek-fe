@@ -5,7 +5,7 @@ import { useState } from "react";
 import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/Badge";
 import { decideReview, reviewMeta } from "@/features/admin/api";
-import { useReviewQueue, useSetAdminCounts } from "@/features/admin/queries";
+import { useReviewDecided, useReviewDetail, useReviewQueue } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
 import type { ReviewReason, SourcePartKind } from "@/mocks/admin";
 import { USE_MOCKS } from "@/lib/api/config";
@@ -35,7 +35,7 @@ type Done = "ok" | "no";
 
 export function AdminWebReview() {
   const { data } = useReviewQueue();
-  const setCounts = useSetAdminCounts();
+  const decided = useReviewDecided();
   const items = data.items;
 
   const [filter, setFilter] = useState<"all" | ReviewReason>("all");
@@ -48,7 +48,12 @@ export function AdminWebReview() {
 
   const shown = items.filter((i) => filter === "all" || i.reason === filter);
   const selId = shown.some((i) => i.id === sel) ? sel : (shown[0]?.id ?? items[0].id);
-  const cur = items.find((i) => i.id === selId) ?? items[0];
+  const row = items.find((i) => i.id === selId) ?? items[0];
+  // 대기열 줄에는 원문·추출 결과가 없어요. 고른 건만 상세를 받아 채워요(목업은 줄에 다 있어요)
+  const detail = useReviewDetail(row.id);
+  const cur = detail.data ?? row;
+  /** 상세(승인·반려에 쓰는 칸 정보)를 받기 전에는 처리하지 않아요 */
+  const ready = USE_MOCKS || !!detail.data;
   const curEdits = edits[cur.id] ?? {};
   const edited = Object.keys(curEdits).length > 0;
   const curDone = done[cur.id];
@@ -90,7 +95,7 @@ export function AdminWebReview() {
     }
     const next = { ...done, [cur.id]: kind };
     setDone(next);
-    setCounts({ reviewPending: data.total - Object.keys(next).length });
+    decided(data.total - Object.keys(next).length);
   };
 
   const goNext = () => {
@@ -231,6 +236,13 @@ export function AdminWebReview() {
                   </span>
                 </div>
                 <div className="-mr-[12px] flex min-h-0 flex-col gap-[12px] overflow-x-hidden overflow-y-auto overscroll-contain pr-[12px] [overflow-wrap:anywhere]">
+                  {!ready && cur.id !== "empty" && (
+                    <p className="text-text-sub m-0 text-[15px]">
+                      {detail.isError
+                        ? "원문을 불러오지 못했어요 · 이미 처리된 건일 수 있어요. 새로고침해 주세요"
+                        : "원문을 불러오는 중이에요"}
+                    </p>
+                  )}
                   {cur.paras.map((p) => (
                     <p key={p.head} className="text-text-body-long m-0 text-[15px] leading-[1.85]">
                       <strong className="text-text">{p.head}</strong>{" "}
@@ -362,7 +374,7 @@ export function AdminWebReview() {
               <button
                 type="button"
                 onClick={() => finish("ok")}
-                disabled={busy || cur.id === "empty"}
+                disabled={busy || !ready || cur.id === "empty"}
                 className="rounded-control bg-brand min-h-[52px] cursor-pointer border-0 px-[22px] text-[16px] font-extrabold text-white"
               >
                 {edited ? "수정 후 승인" : "승인"}
@@ -370,7 +382,7 @@ export function AdminWebReview() {
               <button
                 type="button"
                 onClick={() => finish("no")}
-                disabled={busy || cur.id === "empty"}
+                disabled={busy || !ready || cur.id === "empty"}
                 className="rounded-control bg-fill text-text min-h-[52px] cursor-pointer border-0 px-[20px] text-[15px] font-bold"
               >
                 반려
