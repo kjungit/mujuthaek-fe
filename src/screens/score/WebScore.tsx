@@ -41,7 +41,7 @@ export function WebScore() {
 
   return (
     <WebPage>
-      <WebHeader mode="home" current={routes.homes} unread={3} />
+      <WebHeader mode="home" current={routes.homes} />
       <WebMain className="gap-[20px] pt-[24px]">
         <nav
           aria-label="위치"

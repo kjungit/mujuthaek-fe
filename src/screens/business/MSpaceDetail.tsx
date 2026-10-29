@@ -1,8 +1,9 @@
 "use client";
 
+import { NoticeChat } from "@/components/chat/NoticeChat";
+import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
 import { Building, Check, ChevronRight } from "lucide-react";
-import { useState } from "react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
@@ -85,7 +86,6 @@ function MSpaceDetailView({
   onAnswer?: OnAnswer;
 }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
-  const [fav, setFav] = useState(false);
   const met = data.rules.filter((r) => r.met).length;
   const no = data.rules.filter((r) => r.notMet).length;
   const unmet = data.rules.length - met - no;
@@ -295,6 +295,7 @@ function MSpaceDetailView({
             <ChevronRight size={20} aria-hidden />
           </Link>
         )}
+        {data.favoriteType === "NOTICE" && <NoticeChat noticeId={data.id} variant="mobile" />}
         <span className="text-text-sub px-[16px] pt-[4px] text-center text-[13px]">
           자격만 판정해요 · 선정 가능성은 알려드리지 않아요
         </span>
@@ -310,21 +311,11 @@ function MSpaceDetailView({
         >
           공고 원문
         </a>
-        <button
-          type="button"
-          aria-pressed={fav}
-          onClick={() => {
-            if (!fav) track("notice_bookmark", { notice_kind: "space" });
-            setFav((v) => !v);
-          }}
-          className={cn(
-            "rounded-control min-h-[56px] min-w-0 cursor-pointer border-0 text-[16px] font-extrabold",
-            fav ? "bg-brand-soft text-brand-strong" : "bg-brand text-white",
-          )}
-          style={{ flex: "1.6 1 0%" }}
-        >
-          {fav ? "마감 알림 받는 중" : "관심 등록 · 마감 알림"}
-        </button>
+        <MFavoriteHeart
+          type={data.favoriteType ?? "SPACE_RECRUITMENT"}
+          id={data.id}
+          onAdd={() => track("notice_bookmark", { notice_kind: "space" })}
+        />
       </MBottomActions>
     </MPage>
   );

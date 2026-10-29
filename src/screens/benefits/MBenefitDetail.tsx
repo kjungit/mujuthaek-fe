@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ReportButton } from "@/components/report/ReportButton";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
@@ -130,12 +130,7 @@ export function MBenefitDetail({ id }: { id: string }) {
           </ol>
           <span className="text-text-sub text-[14px]">필요 서류 · {b.docs}</span>
         </section>
-        <Link
-          href={routes.me}
-          className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center self-center text-[14px] font-semibold no-underline"
-        >
-          정보가 틀렸어요 · 제보하기
-        </Link>
+        <ReportButton target={{ kind: "benefit", id: b.id }} screen="혜택 상세 (모바일)" />
       </main>
       <MBottomActions>
         <a

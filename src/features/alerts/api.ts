@@ -100,4 +100,8 @@ export async function liveAlerts(): Promise<AlertsData> {
 }
 
 export const markAlertRead = (id: string) => api.post(`${endpoints.notifications}/${id}/read`);
+/** 눌러서 그 화면으로 감 (읽음도 함께, 관리자 알림 지표). 바로 화면을 옮겨도 요청이 끊기지 않게 keepalive */
+export const markAlertClicked = (id: string) =>
+  api.post(`${endpoints.notificationEvents}/${id}/clicked`, undefined, { keepalive: true });
+
 export const markAllAlertsRead = () => api.post(`${endpoints.notifications}/read-all`);

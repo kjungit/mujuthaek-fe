@@ -57,7 +57,7 @@ export function MHomes() {
 
   return (
     <MPage>
-      <MTopBar mode="home" unread={3} />
+      <MTopBar mode="home" />
       <main className="flex flex-1 flex-col gap-[14px] px-[16px] pt-[20px] pb-[28px]">
         <div className="flex items-end justify-between gap-[10px] px-[4px]">
           <div className="flex flex-col gap-[4px]">

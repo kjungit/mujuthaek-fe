@@ -1,8 +1,8 @@
 "use client";
 
+import { ReportButton } from "@/components/report/ReportButton";
 import { useState } from "react";
-import Link from "next/link";
-import { ArrowRight, MessageSquareWarning } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
@@ -153,13 +153,7 @@ function BenefitDetail({ b }: { b: Benefit }) {
       </div>
 
       <div className="border-line-soft flex flex-wrap items-center justify-between gap-[12px] border-t border-solid pt-[20px]">
-        <Link
-          href={routes.me}
-          className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[4px] text-[14px] font-semibold no-underline"
-        >
-          <MessageSquareWarning size={16} aria-hidden />
-          정보가 틀렸어요
-        </Link>
+        <ReportButton target={{ kind: "benefit", id: b.id }} screen="혜택 목록" />
         <div className="flex gap-[8px]">
           {b.policyUrl && (
             <a
@@ -203,7 +197,7 @@ export function WebBenefits({ initialId }: { initialId?: string }) {
 
   return (
     <WebPage>
-      <WebHeader mode="home" current={routes.benefits} unread={3} />
+      <WebHeader mode="home" current={routes.benefits} />
       <WebMain>
         <div className="flex flex-wrap items-end justify-between gap-[16px]">
           <div className="flex flex-col gap-[6px]">

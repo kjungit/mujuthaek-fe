@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
+import { AdminTitleRow } from "@/components/admin/AdminShell";
 import { isAreaReport, reopenFromReport, resolveReport } from "@/features/admin/api";
 import { useAdminReports, useSetAdminCounts } from "@/features/admin/queries";
 import { cn } from "@/lib/cn";
@@ -21,7 +21,8 @@ type Finish = "fix" | "same";
 const secondary =
   "rounded-control bg-fill text-text hover:text-text min-h-[52px] px-[18px] text-[15px] font-bold";
 
-export function AdminWebReports() {
+/** 정보 제보 (제보·신고 화면의 한 갈래). head: 제목 줄 왼쪽 */
+export function AdminWebReports({ head }: { head: React.ReactNode }) {
   const { data } = useAdminReports();
   const setCounts = useSetAdminCounts();
   const items = data.items;
@@ -61,10 +62,7 @@ export function AdminWebReports() {
   return (
     <>
       <AdminTitleRow>
-        <AdminTitle
-          title="제보"
-          desc="사용자가 '정보가 틀렸어요'로 보낸 내용이에요 · 같은 곳을 가리키는 제보는 묶어서 보여드려요"
-        />
+        {head}
         <div role="group" aria-label="처리 상태" className="flex flex-wrap gap-[6px]">
           {TABS.map((t) => {
             const on = t.key === tab;
@@ -140,12 +138,14 @@ export function AdminWebReports() {
                   <span className="text-text-sub text-[13px] font-bold">{cur.where}</span>
                   <h2 className="tracking-title m-0 text-[22px] font-extrabold">{cur.target}</h2>
                 </div>
-                <Link
-                  href={cur.link}
-                  className="bg-fill text-text hover:text-text inline-flex min-h-[44px] items-center gap-[6px] rounded-sm px-[14px] text-[14px] font-bold no-underline"
-                >
-                  사용자 화면에서 보기
-                </Link>
+                {cur.link && (
+                  <Link
+                    href={cur.link}
+                    className="bg-fill text-text hover:text-text inline-flex min-h-[44px] items-center gap-[6px] rounded-sm px-[14px] text-[14px] font-bold no-underline"
+                  >
+                    사용자 화면에서 보기
+                  </Link>
+                )}
               </div>
               <div
                 className="grid gap-[12px]"
@@ -232,8 +232,8 @@ export function AdminWebReports() {
                 >
                   원문과 같아요 · 답변만
                 </button>
-                {/* 생활권 제보는 AI 추출 값이 아니라 검수로 보내지 않아요 */}
-                {!isAreaReport(cur.id) && (
+                {/* 생활권 제보는 AI 추출 값이 아니라, 일반 제보는 대상이 없어 검수로 보내지 않아요 */}
+                {!isAreaReport(cur.id) && !cur.general && (
                   <Link
                     href={routes.adminReview}
                     onClick={async (e) => {

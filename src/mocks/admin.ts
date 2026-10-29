@@ -9,6 +9,8 @@ export type AdminCounts = {
   newReports: number | null;
   /** 검토 전 채팅 신고가 있는 메시지 수 */
   chatReports: number | null;
+  /** 처리 전 중복 의심 사업 수 */
+  policyDuplicates: number | null;
 };
 
 export const adminCounts: AdminCounts = {
@@ -16,6 +18,7 @@ export const adminCounts: AdminCounts = {
   sourceIssues: 2,
   newReports: 5,
   chatReports: 2,
+  policyDuplicates: 1,
 };
 
 export const adminOperator = "김○○";
@@ -537,6 +540,8 @@ export type ReportItem = {
   age: string;
   groupCount: number;
   link: string;
+  /** 일반 제보(공고·혜택·사업에 묶이지 않음): 볼 화면이 없고 검수로 보낼 수 없어요 */
+  general?: boolean;
   notes: { text: string; meta: string }[];
   reply: string;
 };

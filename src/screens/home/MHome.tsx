@@ -25,7 +25,7 @@ export function MHome() {
 
   return (
     <MPage>
-      <MTopBar mode="home" unread={3} />
+      <MTopBar mode="home" />
       <main className="flex flex-1 flex-col gap-[14px] px-[16px] pt-[20px] pb-[28px]">
         {conditions.status === "loading" ? null : !conditions.hasConditions ? (
           <MNoConditionsState />

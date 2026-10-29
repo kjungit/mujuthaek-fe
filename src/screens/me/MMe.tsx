@@ -1,18 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, Lock, User } from "lucide-react";
 import { ContactEmailCard } from "@/components/auth/ContactEmailParts";
+import { WithdrawButton } from "@/components/me/WithdrawButton";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
 import { Toggle } from "@/components/ui/Toggle";
 import { clearConditions, setSaveOnDevice } from "@/features/conditions/store";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
-import { useMe } from "@/features/me/queries";
+import { useFavorites } from "@/features/favorites/queries";
+import { useMyReports } from "@/features/me/api";
 import { cn } from "@/lib/cn";
-import { useLogout, useSession } from "@/features/auth/session";
+import { providerLabel, useLogout, useSession } from "@/features/auth/session";
 import { routes } from "@/lib/routes";
 
 const row =
@@ -40,14 +43,26 @@ function RowInner({ label, value, accent }: { label: string; value: string; acce
 export function MMe() {
   const logout = useLogout();
   const router = useRouter();
-  const { data } = useMe();
+  const params = useSearchParams();
   const { data: session } = useSession();
+  const favorites = useFavorites();
+  const reports = useMyReports();
+  const replies = reports.items.filter((r) => r.reply).length;
+  // 웹 주소(/me?tab=reports …)로 들어오면 모바일 세부 화면으로
+  const tab = params.get("tab");
+  useEffect(() => {
+    if (tab && ["favorites", "interests", "notifications", "reports"].includes(tab)) {
+      const rest = new URLSearchParams(params.toString());
+      rest.delete("tab");
+      router.replace(`${routes.me}/${tab}${rest.size ? `?${rest.toString()}` : ""}`);
+    }
+  }, [tab, params, router]);
   const conditions = useConditionSummary();
   const saveOnDevice = conditions.status === "ready" ? conditions.saveOnDevice : true;
 
   return (
     <MPage>
-      <MTopBar mode="home" unread={3} />
+      <MTopBar mode="home" />
       <main className="flex flex-1 flex-col gap-[12px] px-[16px] pt-[20px] pb-[28px]">
         <section
           aria-label="계정"
@@ -57,9 +72,20 @@ export function MMe() {
             <User size={26} aria-hidden />
           </span>
           <span className="flex min-w-0 flex-1 flex-col gap-[2px]">
-            <span className="text-[19px] font-extrabold">{data.account.name}</span>
+            <span className="text-[19px] font-extrabold">
+              {session ? `${session.nickname}님` : "로그인하지 않았어요"}
+            </span>
             <span className="text-text-sub text-[14px]">
-              {session?.email ?? "연락용 이메일 없음"} · {data.account.provider}
+              {session ? (
+                <>
+                  {session.email ?? "연락용 이메일 없음"} ·{" "}
+                  {session.providers.map((p) => providerLabel[p] ?? p).join(" · ")}
+                </>
+              ) : (
+                <Link href={routes.login} className="text-brand font-bold">
+                  로그인하기
+                </Link>
+              )}
             </span>
           </span>
         </section>
@@ -103,11 +129,17 @@ export function MMe() {
         </section>
 
         <nav aria-label="내 정보 메뉴" className="rounded-card bg-surface flex flex-col p-[6px]">
-          <Link href={routes.homes} className={row}>
-            <RowInner label="관심 공고" value={String(data.favorites.length)} />
+          <Link href={`${routes.me}/favorites`} className={row}>
+            <RowInner
+              label="관심 공고"
+              value={favorites.loggedIn ? String(favorites.items.length) : ""}
+            />
           </Link>
-          <Link href={routes.alerts} className={row}>
-            <RowInner label="알림 설정" value={data.mobileMenu.notif} />
+          <Link href={`${routes.me}/interests`} className={row}>
+            <RowInner label="관심 조건" value="새 공고 알림" />
+          </Link>
+          <Link href={`${routes.me}/notifications`} className={row}>
+            <RowInner label="알림 설정" value="" />
           </Link>
           <div className={cn(row, "justify-between")}>
             <span className="flex flex-col gap-[2px]">
@@ -126,15 +158,15 @@ export function MMe() {
             </button>
           )}
           <Link href={routes.bizOnboarding} className={row}>
-            <RowInner label="사업 정보" value={data.mobileMenu.business} />
+            <RowInner label="사업 정보" value="" />
           </Link>
-          {/* 내 제보 목록 화면은 아직 없어요 */}
-          <button
-            type="button"
-            className={cn(row, "cursor-pointer border-0 bg-transparent text-left")}
-          >
-            <RowInner label="내 제보" value={`답변 ${data.mobileMenu.reportReplies}`} />
-          </button>
+          <Link href={`${routes.me}/reports`} className={row}>
+            <RowInner
+              label="제보하기 · 내 제보"
+              value={replies ? `답변 ${replies}` : ""}
+              accent={replies > 0}
+            />
+          </Link>
         </nav>
 
         <nav aria-label="고객센터" className="rounded-card bg-surface flex flex-col p-[6px]">
@@ -153,21 +185,18 @@ export function MMe() {
           ))}
         </nav>
 
-        <div className="flex justify-between px-[8px]">
-          <button
-            type="button"
-            onClick={() => void logout().then(() => router.push(routes.main))}
-            className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-semibold"
-          >
-            로그아웃
-          </button>
-          <button
-            type="button"
-            className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-semibold"
-          >
-            회원 탈퇴
-          </button>
-        </div>
+        {session && (
+          <div className="flex flex-col gap-[4px] px-[8px]">
+            <button
+              type="button"
+              onClick={() => void logout().then(() => router.push(routes.main))}
+              className="text-text-sub hover:text-text-sub inline-flex min-h-[44px] cursor-pointer items-center self-start border-0 bg-transparent p-0 text-[14px] font-semibold"
+            >
+              로그아웃
+            </button>
+            <WithdrawButton />
+          </div>
+        )}
       </main>
       <MTabBar mode="home" current={routes.me} />
     </MPage>

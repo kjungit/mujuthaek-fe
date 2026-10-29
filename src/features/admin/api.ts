@@ -15,6 +15,8 @@ import type {
   AdminUsersPage,
 } from "@/mocks/admin-users";
 import type { ActivityData, ActivityItem } from "@/mocks/admin-activity";
+import type { NotificationStats } from "@/mocks/admin-notifications";
+import type { DuplicateList, DuplicateStatus } from "@/mocks/admin-duplicates";
 import type {
   ChatReport,
   ChatReportGroup,
@@ -236,6 +238,8 @@ const ISSUE_KO: Record<string, string> = {
   TIER_CONDITION_MISSING: "가구원 수·자녀 수별 기준이 구분되지 않았어요",
   VALUE_POSITION_SUSPECTED: "표의 다른 칸 값을 읽은 것 같아요",
   AI_OUTPUT_VALUE_CHANGED: "AI가 준 값을 프로그램이 바꾸거나 비웠어요(원문 확인 필요)",
+  DUPLICATE_SUSPECTED:
+    "같은 출처에 같은 정책이 따로 또 있어요(중복 의심 · 둘 중 하나를 반려할지 확인)",
   // 2026-10-26 원문 대조 뒤 더한 코드들(번역이 없으면 영어 코드가 그대로 보였음)
   AI_TEXT_FOREIGN_SCRIPT: "AI가 쓴 문장에 원문에 없는 외국 문자(일본어·한자)가 섞였어요",
   AI_OUTPUT_FIELD_CLEARED: "형식이 맞지 않는 칸을 비웠어요",
@@ -591,6 +595,19 @@ const REJECT: Record<string, string> = {
 };
 
 // ---------- 제보 ----------
+const reportTargetLabel: Record<string, string> = {
+  NOTICE: "공고",
+  BENEFIT: "혜택 정책",
+  PROGRAM: "창업지원·사업공간",
+  GENERAL: "일반 제보",
+};
+/** 일반 제보 종류 (백엔드 field) */
+const generalKindLabel: Record<string, string> = {
+  MISSING_NOTICE: "빠진 공고·정책",
+  WRONG_INFO: "틀린 정보",
+  APP_ERROR: "화면 오류",
+  ETC: "기타",
+};
 type ReportList = {
   counts: { newCount: number; doing: number; done: number };
   items: {
@@ -605,7 +622,8 @@ type ReportList = {
     benefitPolicyId: string | null;
     /** 혜택 화면(/benefits/{id})용 혜택 ID. 원본 정책 ID와 달라요. 아직 저장 전이면 null */
     benefitId: string | null;
-    noticeTitle: string;
+    /** 일반 제보(GENERAL)는 null */
+    noticeTitle: string | null;
     field: string;
     currentValue: string | null;
     reportedValue: string | null;
@@ -636,9 +654,13 @@ export async function liveReports(): Promise<{
     at: r.createdAt,
     id: r.id,
     st: STATUS[r.status] ?? "new",
-    where: `${r.screen ?? "-"} · ${r.targetType === "BENEFIT" ? "혜택 정책" : r.targetType === "PROGRAM" ? "창업지원" : "공고"}`,
-    target: r.noticeTitle,
-    field: r.field,
+    where: `${r.screen ?? "-"} · ${reportTargetLabel[r.targetType] ?? "공고"}`,
+    target:
+      r.targetType === "GENERAL"
+        ? (generalKindLabel[r.field] ?? "일반 제보")
+        : (r.noticeTitle ?? "-"),
+    field: r.targetType === "GENERAL" ? (generalKindLabel[r.field] ?? r.field) : r.field,
+    general: r.targetType === "GENERAL",
     current: r.currentValue ?? "-",
     reported: r.reportedValue ?? "-",
     source: details[i].note ?? r.summary ?? "-", // 화면에서는 「제보 설명」으로 보여요(기관 원문이 아님)
@@ -654,7 +676,7 @@ export async function liveReports(): Promise<{
           : routes.benefits
         : r.programId
           ? `${routes.bizSupport}/${r.programId}`
-          : routes.adminReports,
+          : "",
     notes: (details[i].notes ?? []).map((n) => ({
       text: n.text,
       meta: `사용자 · ${when(n.createdAt)}`,
@@ -757,19 +779,21 @@ export async function reopenFromReport(id: string) {
 export async function liveCounts(): Promise<AdminCounts> {
   // 숫자마다 따로 받아요. 추출·수집 서비스가 꺼져 있어도 다른 숫자는 보이고, 못 받은 숫자는 0 대신 비워요(null)
   const settle = <T>(p: Promise<T>) => p.catch(() => null);
-  const [n, b, r, area, src, chat] = await Promise.all([
+  const [n, b, r, area, src, chat, dup] = await Promise.all([
     settle(api.get<{ reviewPending: number }>("/api/admin/reviews/counts")),
     settle(api.get<BenefitReviewList>("/api/admin/benefit-reviews")),
     settle(api.get<{ newCount: number }>("/api/admin/reports/counts")),
     settle(api.get<{ newCount: number }>("/api/admin/area-reports/counts")),
     settle(api.get<CollectorStatus>("/api/admin/sources")),
     settle(chatReportPage("PENDING")),
+    settle(api.get<{ pending: number }>("/api/admin/policy-duplicates/counts")),
   ]);
   return {
     reviewPending: n && b ? n.reviewPending + b.items.length : null,
     sourceIssues: src ? src.summary.fail + src.summary.late + src.summary.paused : null,
     newReports: r ? r.newCount + (area?.newCount ?? 0) : null,
     chatReports: chat ? new Set(chat.items.map((x) => x.messageId)).size : null,
+    policyDuplicates: dup ? dup.pending : null,
   };
 }
 
@@ -1289,6 +1313,23 @@ const CRITERIA_KINDS: Record<string, string> = {
 };
 
 /** 검수·제보 처리(notice) + 기준값 바꾼 기록(eligibility) + 권한 변경(user)을 최근 순으로 합쳐요. 하나가 실패해도 나머지는 보여요 */
+/** GET /api/admin/notifications/stats (알림 서버 발송 결과 + 알림함 지표) */
+/** GET /api/admin/policy-duplicates?status= (중복 의심 사업 쌍 · 상태별 건수) */
+export function livePolicyDuplicates(status: DuplicateStatus): Promise<DuplicateList> {
+  return api.get<DuplicateList>(`/api/admin/policy-duplicates?status=${status}`);
+}
+
+/** 「둘 다 둠」(KEEP_BOTH) 또는 「나중 것 숨김」(HIDE_LATER) */
+export const decidePolicyDuplicate = (
+  later: string,
+  earlier: string,
+  action: "KEEP_BOTH" | "HIDE_LATER",
+) => api.post(`/api/admin/policy-duplicates/${later}/${earlier}/decide`, { action });
+
+export function liveNotificationStats(days: number): Promise<NotificationStats> {
+  return api.get<NotificationStats>(`/api/admin/notifications/stats?days=${days}`);
+}
+
 export async function liveActivity(days: number): Promise<ActivityData> {
   const since = Date.now() - days * 86_400_000;
   const [main, criteria, roles, chatKept, chatRestored] = await Promise.all([

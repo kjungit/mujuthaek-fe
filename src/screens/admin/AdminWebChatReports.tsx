@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AdminTitle, AdminTitleRow } from "@/components/admin/AdminShell";
+import { AdminTitleRow } from "@/components/admin/AdminShell";
 import { reviewChatMessage } from "@/features/admin/api";
 import { useAdminChatReports, useSetAdminCounts } from "@/features/admin/queries";
 import { USE_MOCKS } from "@/lib/api/config";
@@ -53,7 +53,8 @@ function reasonSummary(g: ChatReportGroup) {
   return [...n.entries()].map(([k, v]) => `${REASON[k]} ${v}`).join(" · ");
 }
 
-export function AdminWebChatReports() {
+/** 채팅 신고 (제보·신고 화면의 한 갈래). head: 제목 줄 왼쪽 */
+export function AdminWebChatReports({ head }: { head: React.ReactNode }) {
   const [tab, setTab] = useState<ChatReviewStatus>("PENDING");
   const { data, isPending, isError } = useAdminChatReports(tab);
   const groups = data ?? [];
@@ -90,10 +91,7 @@ export function AdminWebChatReports() {
   return (
     <>
       <AdminTitleRow>
-        <AdminTitle
-          title="채팅 신고"
-          desc="공고 채팅에서 신고된 글이에요 · 같은 글에 들어온 신고는 묶어서 보여드려요 · 신고 3건이면 검토 전에 자동으로 가려져요"
-        />
+        {head}
         <div role="group" aria-label="검토 상태" className="flex flex-wrap gap-[6px]">
           {TABS.map((t) => {
             const on = t.key === tab;

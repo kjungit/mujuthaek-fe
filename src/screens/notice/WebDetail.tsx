@@ -1,16 +1,11 @@
 "use client";
 
+import { NoticeChat } from "@/components/chat/NoticeChat";
+import { ReportButton } from "@/components/report/ReportButton";
+import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Building,
-  ChevronRight,
-  FileText,
-  Heart,
-  MapPin,
-  MessageSquareWarning,
-} from "lucide-react";
+import { ArrowRight, Building, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
@@ -375,7 +370,7 @@ export function WebDetail({ id }: { id: string }) {
   if (!n) {
     return (
       <WebPage>
-        <WebHeader mode="home" current={routes.homes} unread={3} />
+        <WebHeader mode="home" current={routes.homes} />
         <WebMain className="pt-[24px] pb-[80px]">
           {(loading || error) && (
             <div
@@ -410,7 +405,7 @@ export function WebDetail({ id }: { id: string }) {
   return (
     <WebPage>
       <div className={cn("flex flex-1 flex-col", pdf.open && pdfUrl && "pl-[min(46vw,680px)]")}>
-        <WebHeader mode="home" current={routes.homes} unread={3} />
+        <WebHeader mode="home" current={routes.homes} />
         <WebMain className="gap-[20px] pt-[24px] pb-[80px]">
           <nav
             aria-label="위치"
@@ -497,6 +492,8 @@ export function WebDetail({ id }: { id: string }) {
                 onOpenPage={pdfUrl ? openOriginal : undefined}
               />
 
+              <NoticeChat noticeId={n.id} variant="web" />
+
               {benefits.length > 0 && (
                 <section
                   aria-label="이 지역 정책"
@@ -568,14 +565,11 @@ export function WebDetail({ id }: { id: string }) {
                 </section>
               )}
 
-              <button
-                type="button"
-                onClick={() => track("notice_bookmark", noticeParams(n))}
-                className="bg-brand rounded-tile flex min-h-[60px] cursor-pointer items-center justify-center gap-[8px] border-0 text-[18px] font-extrabold text-white"
-              >
-                <Heart size={20} strokeWidth={2.2} aria-hidden />
-                관심 등록하고 마감 알림 받기
-              </button>
+              <WebFavoriteButton
+                type="NOTICE"
+                id={n.id}
+                onAdd={() => track("notice_bookmark", noticeParams(n))}
+              />
               <button
                 type="button"
                 aria-pressed={pdfUrl ? pdf.open : undefined}
@@ -589,13 +583,12 @@ export function WebDetail({ id }: { id: string }) {
                 <span className="text-text-sub text-[13px]">
                   판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
                 </span>
-                <button
-                  type="button"
-                  className="text-text-sub inline-flex min-h-[44px] cursor-pointer items-center gap-[4px] border-0 bg-transparent p-0 text-[13px] font-bold"
-                >
-                  <MessageSquareWarning size={15} aria-hidden />
-                  정보가 틀렸어요 · 제보하기
-                </button>
+                <ReportButton
+                  target={{ kind: "notice", id: n.id }}
+                  screen="공고 상세"
+                  className="self-stretch"
+                  buttonClassName="text-[13px]"
+                />
               </div>
             </aside>
           </div>

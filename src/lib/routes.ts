@@ -32,7 +32,6 @@ export const routes = {
   adminCriteria: "/admin/criteria",
   adminReports: "/admin/reports",
   adminTraffic: "/admin/traffic",
-  adminChat: "/admin/chat",
   adminUsers: "/admin/users",
   adminActivity: "/admin/activity",
 } as const;
