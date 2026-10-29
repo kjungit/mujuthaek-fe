@@ -3,7 +3,7 @@
 import { NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Building, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
@@ -360,7 +360,30 @@ function ApiBlockUnits({
   );
 }
 
+/**
+ * 오른쪽 칸(내 자격·관심 등록·원문 보기)을 스크롤해도 따라오게 붙여 둘 위치(sticky top). 칸이 화면보다 길면 칸의 아래 끝이 화면
+ * 아래에 닿을 때까지 같이 내려가고 거기서 멈춰요(칸 모양은 그대로)
+ */
+function useStickyTop(gap = 24) {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const [top, setTop] = useState(gap);
+  useEffect(() => {
+    if (!el) return;
+    const update = () => setTop(Math.min(gap, window.innerHeight - el.offsetHeight - gap));
+    // 처음 붙일 때 한 번, 칸 높이(판정 결과가 들어오면 바뀌어요)나 창 높이가 바뀔 때마다
+    const seen = new ResizeObserver(update);
+    seen.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      seen.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [el, gap]);
+  return [setEl, top] as const;
+}
+
 export function WebDetail({ id }: { id: string }) {
+  const [stickTo, stickyTop] = useStickyTop();
   const { data, loading, error } = useNotice(id);
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
@@ -526,10 +549,11 @@ export function WebDetail({ id }: { id: string }) {
               )}
             </div>
 
-            {/* 내 자격·관심 등록·원문 보기는 본문을 내려도 계속 보이게 붙여 둬요(두 칸이 나란할 때만). 화면보다 길면 이 칸만 따로 휠로 내려요 */}
+            {/* 두 칸이 나란할 때만 붙여 둬요(좁으면 오른쪽 칸이 본문 아래로 내려가요) */}
             <aside
-              className="flex min-w-0 flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:top-[24px] min-[1100px]:max-h-[calc(100dvh-48px)] min-[1100px]:overflow-x-hidden min-[1100px]:overflow-y-auto min-[1100px]:overscroll-contain"
-              style={{ flex: "1 1 360px" }}
+              ref={stickTo}
+              className="flex min-w-0 flex-col gap-[16px] min-[1100px]:sticky"
+              style={{ flex: "1 1 360px", top: stickyTop }}
             >
               <EligibilityCard
                 judgment={j.judgment}
@@ -569,33 +593,30 @@ export function WebDetail({ id }: { id: string }) {
                 </section>
               )}
 
-              {/* 관심 등록·원문 보기는 칸이 화면보다 길어도 아래에 늘 보이게 붙여 둬요 */}
-              <div className="bg-bg flex flex-col gap-[16px] min-[1100px]:sticky min-[1100px]:bottom-0 min-[1100px]:pt-[4px]">
-                <WebFavoriteButton
-                  type="NOTICE"
-                  id={n.id}
-                  onAdd={() => track("notice_bookmark", noticeParams(n))}
+              <WebFavoriteButton
+                type="NOTICE"
+                id={n.id}
+                onAdd={() => track("notice_bookmark", noticeParams(n))}
+              />
+              <button
+                type="button"
+                aria-pressed={pdfUrl ? pdf.open : undefined}
+                onClick={() => (pdf.open ? pdf.close() : openOriginal())}
+                className="rounded-tile bg-surface text-text flex min-h-[56px] cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold"
+              >
+                <FileText size={18} aria-hidden />
+                {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
+              </button>
+              <div className="flex flex-col items-center gap-[2px] pt-[4px]">
+                <span className="text-text-sub text-[13px]">
+                  판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
+                </span>
+                <ReportButton
+                  target={{ kind: "notice", id: n.id }}
+                  screen="공고 상세"
+                  className="self-stretch"
+                  buttonClassName="text-[13px]"
                 />
-                <button
-                  type="button"
-                  aria-pressed={pdfUrl ? pdf.open : undefined}
-                  onClick={() => (pdf.open ? pdf.close() : openOriginal())}
-                  className="rounded-tile bg-surface text-text flex min-h-[56px] cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold"
-                >
-                  <FileText size={18} aria-hidden />
-                  {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
-                </button>
-                <div className="flex flex-col items-center gap-[2px] pt-[4px]">
-                  <span className="text-text-sub text-[13px]">
-                    판정은 참고용이에요. 신청 전에 원문을 확인해 주세요
-                  </span>
-                  <ReportButton
-                    target={{ kind: "notice", id: n.id }}
-                    screen="공고 상세"
-                    className="self-stretch"
-                    buttonClassName="text-[13px]"
-                  />
-                </div>
               </div>
             </aside>
           </div>
