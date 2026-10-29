@@ -12,14 +12,14 @@ import { USE_MOCKS } from "@/lib/api/config";
 
 const REASON: Record<ReviewReason, { label: string; tone: "ok" | "check" | "danger" }> = {
   must: { label: "필수 검수", tone: "ok" },
-  low: { label: "확인 필요", tone: "check" },
+  low: { label: "검수 필요", tone: "check" },
   format: { label: "형식 오류", tone: "danger" },
 };
 
 const FILTERS: { key: "all" | ReviewReason; label: string }[] = [
   { key: "all", label: "전체" },
   { key: "must", label: "필수 검수" },
-  { key: "low", label: "확인 필요" },
+  { key: "low", label: "검수 필요" },
   { key: "format", label: "형식 오류" },
 ];
 
@@ -130,7 +130,7 @@ export function AdminWebReview() {
       <AdminTitleRow>
         <AdminTitle
           title="검수"
-          desc="AI가 원문에서 뽑은 조건을 확인하고 서비스에 내보내요 · 필수 검수·형식 오류는 승인 전까지 안 보이고, 확인 필요는 이미 공개 중이며 보류 칸만 승인 전까지 안 보여요"
+          desc="AI가 원문에서 뽑은 조건을 확인하고 서비스에 내보내요 · 필수 검수·형식 오류는 승인 전까지 안 보이고, 검수 필요는 이미 공개 중이며 보류 칸만 승인 전까지 안 보여요"
         />
       </AdminTitleRow>
 
@@ -261,7 +261,7 @@ export function AdminWebReview() {
                     </span>
                     <span className="inline-flex items-center gap-[4px]">
                       <span className="bg-check-bg size-[10px] rounded-[3px]" aria-hidden />
-                      확인 필요
+                      검수 필요
                     </span>
                   </span>
                 </div>
