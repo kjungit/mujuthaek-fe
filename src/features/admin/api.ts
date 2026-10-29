@@ -96,17 +96,6 @@ type NoticeReviewDetail = {
   impact: string | null;
   log: { at: string; who: string; text: string }[];
 };
-type BenefitReviewList = {
-  items: {
-    id: string;
-    title: string;
-    reasons: string[];
-    reported: boolean;
-    sourceCode: string | null;
-    rawVersion: number;
-    queuedAt: string;
-  }[];
-};
 type BenefitCondition = {
   type: string;
   value: unknown;
@@ -825,7 +814,8 @@ export async function liveCounts(): Promise<AdminCounts> {
   const settle = <T>(p: Promise<T>) => p.catch(() => null);
   const [n, b, r, area, src, chat, dup] = await Promise.all([
     settle(api.get<{ reviewPending: number }>("/api/admin/reviews/counts")),
-    settle(api.get<BenefitReviewList>("/api/admin/benefit-reviews")),
+    // 혜택은 건수만 받아요(목록 전체를 받아 세지 않게)
+    settle(api.get<{ benefitPending: number }>("/api/admin/benefit-reviews/counts")),
     settle(api.get<{ newCount: number }>("/api/admin/reports/counts")),
     settle(api.get<{ newCount: number }>("/api/admin/area-reports/counts")),
     settle(api.get<CollectorStatus>("/api/admin/sources")),
@@ -833,7 +823,7 @@ export async function liveCounts(): Promise<AdminCounts> {
     settle(api.get<{ pending: number }>("/api/admin/policy-duplicates/counts")),
   ]);
   return {
-    reviewPending: n && b ? n.reviewPending + b.items.length : null,
+    reviewPending: n && b ? n.reviewPending + b.benefitPending : null,
     sourceIssues: src ? src.summary.fail + src.summary.late + src.summary.paused : null,
     newReports: r ? r.newCount + (area?.newCount ?? 0) : null,
     chatReports: chat ? new Set(chat.items.map((x) => x.messageId)).size : null,
@@ -848,7 +838,7 @@ export async function liveOverview(base: AdminOverview): Promise<AdminOverview> 
     api
       .get<{ reviewPending: number; oldestReceivedAt: string | null }>("/api/admin/reviews/counts")
       .catch(none),
-    api.get<BenefitReviewList>("/api/admin/benefit-reviews").catch(none),
+    api.get<{ benefitPending: number }>("/api/admin/benefit-reviews/counts").catch(none),
     api
       .get<{ newCount: number; doing: number; done: number }>("/api/admin/reports/counts")
       .catch(none),
@@ -921,7 +911,7 @@ export async function liveOverview(base: AdminOverview): Promise<AdminOverview> 
       minute: "2-digit",
     }),
     review: n
-      ? { count: n.reviewPending + (b?.items.length ?? 0), oldest: span(n.oldestReceivedAt) }
+      ? { count: n.reviewPending + (b?.benefitPending ?? 0), oldest: span(n.oldestReceivedAt) }
       : { count: null, oldest: FAILED },
     reports: reports
       ? {
