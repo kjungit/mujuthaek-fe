@@ -5,6 +5,7 @@ import { ArrowRight, BellRing } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { AuthWebHeader } from "@/components/auth/parts";
 import {
+  AlertError,
   AlertToggle,
   ConditionTags,
   ConfirmCondButton,
@@ -49,6 +50,7 @@ export function WebWelcome() {
             <span className="text-text-sub text-[14px]">
               새 공고와 관심 공고 마감 3일·1일 전에 알려드려요
             </span>
+            <AlertError setup={setup} />
           </span>
           <AlertToggle setup={setup} />
         </section>

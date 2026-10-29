@@ -18,7 +18,7 @@ import { VerdictBadge } from "@/components/ui/Badge";
 import { WebNoConditionsState } from "@/components/states/NoConditionsState";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useHomeSummary } from "@/features/home/queries";
-import { subscribePush } from "@/lib/push";
+import { usePush } from "@/features/alerts/usePush";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { HomeNewsItem } from "@/mocks/home";
@@ -67,6 +67,7 @@ function SummaryCard({
 
 export function WebHome() {
   const { data, loading, error } = useHomeSummary();
+  const push = usePush();
   const n = (v: number, unit: string) => (loading ? "…" : `${v}${unit}`);
   const conditions = useConditionSummary();
 
@@ -279,15 +280,30 @@ export function WebHome() {
                   </span>
                   <span className="flex flex-1 flex-col gap-[2px]">
                     <span className="text-[16px] font-bold">마감 전에 알려드릴까요?</span>
-                    <span className="text-text-sub text-[14px]">관심 공고 D-3, D-1에 알림</span>
+                    <span className="text-text-sub text-[14px]">
+                      {push.enabled
+                        ? "이 브라우저에서 알림을 받고 있어요"
+                        : "관심 공고 D-3, D-1에 알림"}
+                    </span>
+                    {/* 예전에는 실패 이유를 버려서 눌러도 아무 일 없는 것처럼 보였어요(알림 차단 등) */}
+                    {push.error && (
+                      <span role="alert" className="text-danger-text text-[13px] font-bold">
+                        {push.error}
+                      </span>
+                    )}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => subscribePush().catch(() => {})}
-                    className="bg-brand min-h-[40px] flex-none cursor-pointer rounded-[10px] border-0 px-[14px] text-[14px] font-bold text-white"
-                  >
-                    켜기
-                  </button>
+                  {push.enabled ? (
+                    <span className="text-brand-strong flex-none text-[14px] font-bold">켜짐</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void push.turnOn()}
+                      aria-disabled={push.pending || undefined}
+                      className="bg-brand min-h-[40px] flex-none cursor-pointer rounded-[10px] border-0 px-[14px] text-[14px] font-bold text-white"
+                    >
+                      {push.pending ? "켜는 중…" : "켜기"}
+                    </button>
+                  )}
                 </section>
               </aside>
             </div>
