@@ -19,8 +19,6 @@ export type HomeListing = {
   due: string;
   /** PC 카드에서 쓰는 마감 표시 (없으면 due) */
   dueLong?: string;
-  /** 전세임대처럼 원하는 집을 직접 구하는 공고 */
-  findYourOwn?: boolean;
   /** 공고 지역 코드 (시·군·구 5자리). 전국 대상이면 "nationwide" */
   region: string;
   /** 서버가 준 지역 이름 ("경남 양산시"). 없으면 region 코드로 이름을 찾아요 */
@@ -83,7 +81,6 @@ export const homesSummary: HomesSummary = {
       tags: ["원하는 집 직접 구하기"],
       prepAmount: "240만 원부터",
       due: "상시",
-      findYourOwn: true,
       liked: false,
     },
     {

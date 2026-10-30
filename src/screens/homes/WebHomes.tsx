@@ -45,13 +45,7 @@ function ListingCard({
         className="rounded-card text-text hover:text-text flex flex-1 flex-col gap-[8px] px-[20px] pt-[18px] pb-[20px] no-underline"
       >
         <span className="flex min-h-[28px] flex-wrap items-center gap-[4px] pr-[40px]">
-          {item.findYourOwn ? (
-            <span className="rounded-badge bg-ok-bg text-ok-text px-[10px] py-[5px] text-[13px] font-bold">
-              지원 가능
-            </span>
-          ) : (
-            <VerdictBadge verdict={item.verdict} />
-          )}
+          <VerdictBadge verdict={item.verdict} />
           {item.rank && <RankChip rank={item.rank} />}
         </span>
         <span className="text-text-tertiary text-[13px]">

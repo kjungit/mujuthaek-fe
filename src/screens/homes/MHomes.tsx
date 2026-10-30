@@ -215,13 +215,7 @@ export function MHomes() {
                 <span className="flex min-w-0 flex-1 flex-col gap-[5px] pr-[36px]">
                   <span className="flex items-center justify-between gap-[6px]">
                     <span className="flex gap-[4px]">
-                      {h.findYourOwn ? (
-                        <span className="rounded-badge bg-ok-bg text-ok-text px-[8px] py-[3px] text-[12px] font-bold">
-                          지원 가능
-                        </span>
-                      ) : (
-                        <VerdictBadge verdict={h.verdict} size="xs" />
-                      )}
+                      <VerdictBadge verdict={h.verdict} size="xs" />
                       {h.rank && <RankChip rank={h.rank} size="xs" />}
                     </span>
                     <span className="text-[13px] font-extrabold">{h.dueLong ?? h.due}</span>
