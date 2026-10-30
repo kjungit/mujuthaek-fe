@@ -55,24 +55,50 @@ const iconBtn =
 
 export function NoticeChat({ noticeId, variant }: Props) {
   const web = variant === "web";
-  const panel = usePanel();
+  // 뒤로 가기로 닫기는 모바일 시트만 (PC 패널은 PDF 원문 패널과 함께 열 수 있어서 방문 기록을 쓰지 않아요)
+  const { open, show, hide } = usePanel(noticeId, !web);
   // 실시간 연결은 채팅 창을 열었을 때만 (닫혀 있으면 방 정보와 첫 쪽만 받아 미리보기에 써요)
-  const chat = useNoticeChat(noticeId, { live: panel.open });
+  const chat = useNoticeChat(noticeId, { live: open });
   const readOnly = !!chat.room?.readOnly;
   const opener = useRef<HTMLButtonElement>(null);
+  // 쓰던 글과 답장 대상은 창을 닫았다 열어도 남아요
+  const [draft, setDraft] = useState("");
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 
-  // 방이 없는 공고(404 등)면 채팅을 보여 주지 않아요
-  if (chat.roomError) return null;
+  // 닫히면(X · Esc · 뒤로 가기 · 다시 누르기) 포커스를 여는 단추로 돌려줘요
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !open) {
+      const active = document.activeElement;
+      if (!active || active === document.body || !document.contains(active)) {
+        opener.current?.focus();
+      }
+    }
+    wasOpen.current = open;
+  }, [open]);
+
+  // 열린 채로 화면 크기가 PC ↔ 모바일 경계(1024px)를 넘으면 닫아요 (보이지 않는 쪽 창이 남지 않게)
+  useEffect(() => {
+    if (!open) return;
+    const wide = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => wide.matches !== web && hide();
+    wide.addEventListener("change", onChange);
+    return () => wide.removeEventListener("change", onChange);
+  }, [open, web, hide]);
+
+  // 방이 없는 공고(404 등)면 채팅을 보여 주지 않아요. 열린 뒤 다시 받다 실패한 건 그대로 둬요
+  if (chat.roomError && !chat.room) return null;
 
   const visible = chat.messages.filter((m) => m.status === "VISIBLE");
   const latest = visible.at(-1);
-  const openLabel = chat.loading
-    ? "이야기 열기"
-    : visible.length === 0
-      ? readOnly
-        ? "이야기 보기"
-        : "첫 이야기 남기기"
-      : `이야기 ${visible.length}개${chat.hasOlder ? "+" : ""} 보기`;
+  const openLabel =
+    chat.loading || chat.error || !chat.room
+      ? "이야기 열기"
+      : visible.length === 0
+        ? readOnly || chat.hasOlder
+          ? "이야기 보기"
+          : "첫 이야기 남기기"
+        : `이야기 ${visible.length}개${chat.hasOlder ? "+" : ""} 보기`;
 
   return (
     <section
@@ -96,36 +122,43 @@ export function NoticeChat({ noticeId, variant }: Props) {
         다른 사람들은 이 공고를 어떻게 준비하고 있을까요? 궁금한 점을 묻고 준비 팁을 나눠 보세요.
         {readOnly && " 접수 마감 30일이 지나 지금은 읽기만 할 수 있어요."}
       </p>
-      {latest && (
-        <p className="bg-bg rounded-tile m-0 flex min-w-0 items-baseline gap-[8px] px-[14px] py-[10px] text-[14px]">
-          <span className="text-text-sub flex-none text-[12px] font-bold">
-            {latest.authorNickname ?? "이름 없음"}
-          </span>
-          <span className="line-clamp-1 min-w-0">{latest.content}</span>
+      {chat.error ? (
+        <p className="bg-bg rounded-tile text-text-sub m-0 px-[14px] py-[10px] text-[14px]">
+          이야기를 불러오지 못했어요. 열어서 다시 받아 볼 수 있어요
         </p>
+      ) : (
+        latest && (
+          <p className="bg-bg rounded-tile m-0 flex min-w-0 items-baseline gap-[8px] px-[14px] py-[10px] text-[14px]">
+            <span className="text-text-sub flex-none text-[12px] font-bold">
+              {latest.authorNickname ?? "이름 없음"}
+            </span>
+            <span className="line-clamp-1 min-w-0">{latest.content}</span>
+          </p>
+        )
       )}
       <button
         ref={opener}
         type="button"
         aria-haspopup="dialog"
-        aria-expanded={panel.open}
-        onClick={panel.show}
+        aria-expanded={open}
+        onClick={open ? hide : show}
         className="rounded-control bg-brand-soft text-brand-strong inline-flex min-h-[48px] cursor-pointer items-center justify-center gap-[6px] self-stretch border-0 text-[15px] font-extrabold"
       >
         <MessageCircle size={18} aria-hidden />
-        {openLabel}
+        {open && web ? "이야기 닫기" : openLabel}
       </button>
 
-      {panel.open &&
+      {open &&
         createPortal(
           <ChatWindow
             chat={chat}
             noticeId={noticeId}
             web={web}
-            onClose={() => {
-              panel.hide();
-              opener.current?.focus();
-            }}
+            onClose={hide}
+            draft={draft}
+            onDraft={setDraft}
+            replyTo={replyTo}
+            onReplyTo={setReplyTo}
           />,
           document.body,
         )}
@@ -134,68 +167,126 @@ export function NoticeChat({ noticeId, variant }: Props) {
 }
 
 /**
- * 채팅 창 열고 닫기. 열 때 방문 기록을 하나 쌓아서 뒤로 가기(모바일 뒤로 가기 포함)로 닫혀요.
- * 다른 화면으로 가지 않고 같은 주소에 기록만 하나 더해요
+ * 채팅 창 열고 닫기. withHistory(모바일 시트)면 열 때 같은 주소에 방문 기록을 하나 쌓아 뒤로 가기로 닫혀요.
+ * 쌓은 기록에는 표시({ noticeChat })를 남겨서, 다른 창이 쌓은 기록이나 뒤로 가기와 헷갈리지 않아요
  */
-function usePanel() {
+function usePanel(noticeId: string, withHistory: boolean) {
   const [open, setOpen] = useState(false);
-  const pushed = useRef(false);
+  const opened = useRef(false);
+  const mine = useCallback(
+    () => (window.history.state as { noticeChat?: string } | null)?.noticeChat === noticeId,
+    [noticeId],
+  );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !withHistory) return;
+    // 내 기록에서 벗어나면(뒤로 가기) 닫혀요
     const onPop = () => {
-      pushed.current = false;
+      if (mine()) return;
+      opened.current = false;
       setOpen(false);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [open]);
+  }, [open, withHistory, mine]);
 
   const show = useCallback(() => {
-    window.history.pushState(null, "");
-    pushed.current = true;
+    if (opened.current) return;
+    opened.current = true;
+    if (withHistory) window.history.pushState({ noticeChat: noticeId }, "");
     setOpen(true);
-  }, []);
+  }, [noticeId, withHistory]);
 
   const hide = useCallback(() => {
-    if (pushed.current) {
+    if (!opened.current) return;
+    if (withHistory && mine()) {
       // 쌓아 둔 기록을 되돌리면 popstate가 와서 닫혀요
-      pushed.current = false;
       window.history.back();
-    } else {
-      setOpen(false);
+      return;
     }
-  }, []);
+    opened.current = false;
+    setOpen(false);
+  }, [withHistory, mine]);
 
   return { open, show, hide };
 }
 
 type Chat = ReturnType<typeof useNoticeChat>;
 
-/** 열린 채팅 창: PC는 오른쪽 패널(공고는 그대로 보여요), 모바일은 아래에서 올라오는 시트. Esc로 닫아요 */
+/**
+ * 열린 채팅 창. PC는 오른쪽 패널이고 공고 본문을 그만큼 왼쪽으로 좁혀서 가리지 않아요.
+ * 모바일은 아래에서 올라오는 시트이고, 열린 동안 뒤 화면은 누르거나 읽히지 않고 스크롤도 멈춰요
+ */
 function ChatWindow({
   chat,
   noticeId,
   web,
   onClose,
+  draft,
+  onDraft,
+  replyTo,
+  onReplyTo,
 }: {
   chat: Chat;
   noticeId: string;
   web: boolean;
   onClose: () => void;
+  draft: string;
+  onDraft: (text: string) => void;
+  replyTo: ChatMessage | null;
+  onReplyTo: (m: ChatMessage | null) => void;
 }) {
   const now = useNow();
   const readOnly = !!chat.room?.readOnly;
   const canWrite = chat.loggedIn && !readOnly;
-  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const root = useRef<HTMLElement & HTMLDivElement>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
 
+  // 열 때 한 번만 닫기 단추로 포커스 (다시 그려질 때 입력칸 포커스를 뺏지 않게)
   useEffect(() => {
     closeBtn.current?.focus();
-    const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && onClose();
+  }, []);
+
+  // Esc로 닫아요. 한글 조합 중이거나 입력칸이 먼저 처리했으면(답장 취소) 닫지 않고, PC는 패널 안에 포커스가 있을 때만
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape" || e.isComposing || e.defaultPrevented) return;
+      if (web && !root.current?.contains(document.activeElement)) return;
+      e.preventDefault();
+      onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, web]);
+
+  // PC: 패널 너비만큼 본문을 좁혀요 (PDF 원문 패널처럼). 패널이 오른쪽 칸(내 자격·관심 등록)을 가리지 않게
+  useEffect(() => {
+    if (!web) return;
+    const body = document.body.style;
+    const before = body.paddingRight;
+    body.paddingRight = "min(440px, 100vw)";
+    return () => {
+      body.paddingRight = before;
+    };
+  }, [web]);
+
+  // 모바일: 시트 밖은 inert(누르기·Tab·읽기 막음)로, 뒤 화면 스크롤은 멈춰요
+  useEffect(() => {
+    if (web) return;
+    const sheet = root.current;
+    const others = [...document.body.children].filter(
+      (el): el is HTMLElement => el instanceof HTMLElement && el !== sheet,
+    );
+    const inertBefore = others.map((el) => el.inert);
+    others.forEach((el) => (el.inert = true));
+    const html = document.documentElement.style;
+    const overflowBefore = html.overflow;
+    html.overflow = "hidden";
+    return () => {
+      others.forEach((el, i) => (el.inert = inertBefore[i]));
+      html.overflow = overflowBefore;
+    };
+  }, [web]);
 
   const body = (
     <>
@@ -210,13 +301,15 @@ function ChatWindow({
           )}
         </p>
       )}
-      <MessageList chat={chat} now={now} canWrite={canWrite} onReply={(m) => setReplyTo(m)} />
+      <MessageList chat={chat} now={now} canWrite={canWrite} onReply={(m) => onReplyTo(m)} />
       {readOnly ? null : (
-        <div className="border-line-soft bg-surface border-0 border-t border-solid px-[12px] pt-[10px] pb-[max(10px,env(safe-area-inset-bottom))]">
+        <div className="border-line-soft bg-surface border-0 border-t border-solid px-[12px] py-[10px]">
           {!chat.loggedIn ? (
             chat.sessionPending ? null : (
               <Link
                 href={routes.login}
+                // 모바일 시트가 쌓은 기록을 로그인 화면으로 바꿔서, 돌아온 뒤 뒤로 가기가 헛돌지 않게
+                replace={!web}
                 className="rounded-control border-line text-brand-strong flex min-h-[44px] items-center justify-center border border-solid text-[15px] font-bold no-underline"
               >
                 로그인하고 이야기 남기기
@@ -225,11 +318,13 @@ function ChatWindow({
           ) : (
             <Composer
               key={noticeId}
+              text={draft}
+              onText={onDraft}
               replyTo={replyTo}
-              onCancelReply={() => setReplyTo(null)}
+              onCancelReply={() => onReplyTo(null)}
               onSend={async (content) => {
                 await chat.send(content, replyTo?.id);
-                setReplyTo(null);
+                onReplyTo(null);
               }}
             />
           )}
@@ -257,7 +352,7 @@ function ChatWindow({
 
   if (!web) {
     return (
-      <div className="fixed inset-0 z-[40] flex flex-col justify-end">
+      <div ref={root} className="fixed inset-0 z-[40] flex flex-col justify-end">
         <button
           type="button"
           aria-label="이야기 닫기"
@@ -269,7 +364,7 @@ function ChatWindow({
           role="dialog"
           aria-modal="true"
           aria-labelledby="chat-window-h"
-          className="bg-surface relative flex h-[92dvh] flex-col gap-[8px] overflow-hidden rounded-t-[20px]"
+          className="bg-surface relative flex h-[92dvh] flex-col gap-[8px] overflow-hidden rounded-t-[20px] pb-[env(safe-area-inset-bottom,0px)]"
         >
           <span aria-hidden className="bg-line mx-auto mt-[8px] h-[4px] w-[40px] rounded-[2px]" />
           {header}
@@ -281,6 +376,7 @@ function ChatWindow({
 
   return (
     <section
+      ref={root}
       role="dialog"
       aria-modal="false"
       aria-labelledby="chat-window-h"
@@ -727,16 +823,20 @@ function MessageItem({
   );
 }
 
+/** 입력칸. 쓰던 글(text)은 바깥(NoticeChat)이 들고 있어서 창을 닫았다 열어도 남아요 */
 function Composer({
+  text,
+  onText,
   replyTo,
   onCancelReply,
   onSend,
 }: {
+  text: string;
+  onText: (text: string) => void;
   replyTo: ChatMessage | null;
   onCancelReply: () => void;
   onSend: (content: string) => Promise<void>;
 }) {
-  const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** 1분에 5개를 넘겨 막힌 동안 남은 초 */
@@ -769,7 +869,7 @@ function Composer({
     setError(null);
     try {
       await onSend(content);
-      setText("");
+      onText("");
     } catch (e) {
       if (e instanceof ApiError && e.code === "CHAT_RATE_LIMITED") setWait(e.retryAfter ?? 60);
       else setError(chatErrorMessage(e));
@@ -779,6 +879,12 @@ function Composer({
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Esc는 답장 중이면 답장만 취소해요 (창은 닫지 않아요)
+    if (e.key === "Escape" && replyTo && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      onCancelReply();
+      return;
+    }
     // 한글 입력 중(조합 중) Enter는 글자 확정이라 보내지 않아요
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
@@ -811,7 +917,7 @@ function Composer({
             ref={input}
             rows={1}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => onText(e.target.value)}
             onKeyDown={onKeyDown}
             aria-label="메시지 보내기"
             placeholder="메시지 보내기"
