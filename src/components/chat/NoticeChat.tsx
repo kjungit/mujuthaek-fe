@@ -1,8 +1,18 @@
 "use client";
 
-// 「이 공고 이야기」: 공고마다 하나인 채팅방 (공고 상세 본문 아래). 읽기는 누구나, 쓰기는 로그인한 회원만
-// 채팅 창처럼 보여요: 내 메시지는 오른쪽, 다른 사람은 왼쪽 말풍선. 같은 사람이 이어 보낸 건 이름·시각을 한 번만
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+// 「이 공고 이야기」: 공고마다 하나인 채팅방. 공고 상세에는 안내 카드만 두고, 누르면 채팅 창이 열려요
+// (PC는 오른쪽 패널, 모바일은 아래에서 올라오는 시트. 공고 원문 PDF 보기와 같은 방식). 읽기는 누구나, 쓰기는 로그인한 회원만
+// 채팅 창: 내 메시지는 오른쪽, 다른 사람은 왼쪽 말풍선. 같은 사람이 이어 보낸 건 이름·시각을 한 번만
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -40,24 +50,37 @@ const GROUP_GAP_MS = 3 * 60 * 1000;
 /** 글자 수는 한도에 가까워지면 보여 줘요 */
 const COUNT_FROM = MAX_LENGTH - 50;
 
+const iconBtn =
+  "text-text inline-flex size-[44px] flex-none cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent";
+
 export function NoticeChat({ noticeId, variant }: Props) {
   const web = variant === "web";
-  const chat = useNoticeChat(noticeId);
-  const now = useNow();
+  const panel = usePanel();
+  // 실시간 연결은 채팅 창을 열었을 때만 (닫혀 있으면 방 정보와 첫 쪽만 받아 미리보기에 써요)
+  const chat = useNoticeChat(noticeId, { live: panel.open });
   const readOnly = !!chat.room?.readOnly;
-  const canWrite = chat.loggedIn && !readOnly;
-  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const opener = useRef<HTMLButtonElement>(null);
 
   // 방이 없는 공고(404 등)면 채팅을 보여 주지 않아요
   if (chat.roomError) return null;
+
+  const visible = chat.messages.filter((m) => m.status === "VISIBLE");
+  const latest = visible.at(-1);
+  const openLabel = chat.loading
+    ? "이야기 열기"
+    : visible.length === 0
+      ? readOnly
+        ? "이야기 보기"
+        : "첫 이야기 남기기"
+      : `이야기 ${visible.length}개${chat.hasOlder ? "+" : ""} 보기`;
 
   return (
     <section
       aria-labelledby={`chat-h-${variant}`}
       className={
         web
-          ? "rounded-card-lg bg-surface flex flex-col gap-[14px] px-[30px] py-[24px]"
-          : "rounded-card bg-surface mx-[16px] flex flex-col gap-[12px] px-[20px] py-[18px]"
+          ? "rounded-card-lg bg-surface flex flex-col gap-[12px] px-[30px] py-[24px]"
+          : "rounded-card bg-surface mx-[16px] flex flex-col gap-[10px] px-[20px] py-[18px]"
       }
     >
       <h2
@@ -69,8 +92,115 @@ export function NoticeChat({ noticeId, variant }: Props) {
       >
         <MessageCircle size={web ? 22 : 19} className="text-brand" aria-hidden />이 공고 이야기
       </h2>
+      <p className="text-text-sub m-0 text-[14px] leading-[1.6]">
+        다른 사람들은 이 공고를 어떻게 준비하고 있을까요? 궁금한 점을 묻고 준비 팁을 나눠 보세요.
+        {readOnly && " 접수 마감 30일이 지나 지금은 읽기만 할 수 있어요."}
+      </p>
+      {latest && (
+        <p className="bg-bg rounded-tile m-0 flex min-w-0 items-baseline gap-[8px] px-[14px] py-[10px] text-[14px]">
+          <span className="text-text-sub flex-none text-[12px] font-bold">
+            {latest.authorNickname ?? "이름 없음"}
+          </span>
+          <span className="line-clamp-1 min-w-0">{latest.content}</span>
+        </p>
+      )}
+      <button
+        ref={opener}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={panel.open}
+        onClick={panel.show}
+        className="rounded-control bg-brand-soft text-brand-strong inline-flex min-h-[48px] cursor-pointer items-center justify-center gap-[6px] self-stretch border-0 text-[15px] font-extrabold"
+      >
+        <MessageCircle size={18} aria-hidden />
+        {openLabel}
+      </button>
+
+      {panel.open &&
+        createPortal(
+          <ChatWindow
+            chat={chat}
+            noticeId={noticeId}
+            web={web}
+            onClose={() => {
+              panel.hide();
+              opener.current?.focus();
+            }}
+          />,
+          document.body,
+        )}
+    </section>
+  );
+}
+
+/**
+ * 채팅 창 열고 닫기. 열 때 방문 기록을 하나 쌓아서 뒤로 가기(모바일 뒤로 가기 포함)로 닫혀요.
+ * 다른 화면으로 가지 않고 같은 주소에 기록만 하나 더해요
+ */
+function usePanel() {
+  const [open, setOpen] = useState(false);
+  const pushed = useRef(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPop = () => {
+      pushed.current = false;
+      setOpen(false);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [open]);
+
+  const show = useCallback(() => {
+    window.history.pushState(null, "");
+    pushed.current = true;
+    setOpen(true);
+  }, []);
+
+  const hide = useCallback(() => {
+    if (pushed.current) {
+      // 쌓아 둔 기록을 되돌리면 popstate가 와서 닫혀요
+      pushed.current = false;
+      window.history.back();
+    } else {
+      setOpen(false);
+    }
+  }, []);
+
+  return { open, show, hide };
+}
+
+type Chat = ReturnType<typeof useNoticeChat>;
+
+/** 열린 채팅 창: PC는 오른쪽 패널(공고는 그대로 보여요), 모바일은 아래에서 올라오는 시트. Esc로 닫아요 */
+function ChatWindow({
+  chat,
+  noticeId,
+  web,
+  onClose,
+}: {
+  chat: Chat;
+  noticeId: string;
+  web: boolean;
+  onClose: () => void;
+}) {
+  const now = useNow();
+  const readOnly = !!chat.room?.readOnly;
+  const canWrite = chat.loggedIn && !readOnly;
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const closeBtn = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeBtn.current?.focus();
+    const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const body = (
+    <>
       {chat.room && (
-        <p className="bg-bg rounded-tile text-text-sub m-0 px-[14px] py-[10px] text-[13px] leading-[1.6]">
+        <p className="bg-bg rounded-tile text-text-sub m-0 mx-[16px] px-[14px] py-[10px] text-[13px] leading-[1.6]">
           {chat.room.guide} 전화번호 등 개인정보는 올리지 마세요.
           {readOnly && (
             <>
@@ -80,42 +210,84 @@ export function NoticeChat({ noticeId, variant }: Props) {
           )}
         </p>
       )}
+      <MessageList chat={chat} now={now} canWrite={canWrite} onReply={(m) => setReplyTo(m)} />
+      {readOnly ? null : (
+        <div className="border-line-soft bg-surface border-0 border-t border-solid px-[12px] pt-[10px] pb-[max(10px,env(safe-area-inset-bottom))]">
+          {!chat.loggedIn ? (
+            chat.sessionPending ? null : (
+              <Link
+                href={routes.login}
+                className="rounded-control border-line text-brand-strong flex min-h-[44px] items-center justify-center border border-solid text-[15px] font-bold no-underline"
+              >
+                로그인하고 이야기 남기기
+              </Link>
+            )
+          ) : (
+            <Composer
+              key={noticeId}
+              replyTo={replyTo}
+              onCancelReply={() => setReplyTo(null)}
+              onSend={async (content) => {
+                await chat.send(content, replyTo?.id);
+                setReplyTo(null);
+              }}
+            />
+          )}
+        </div>
+      )}
+    </>
+  );
 
-      {/* 채팅 창: 메시지 목록 + 아래 입력칸 */}
-      <div className="bg-bg rounded-tile flex flex-col overflow-hidden">
-        <MessageList
-          chat={chat}
-          now={now}
-          maxHeight={web ? 460 : 400}
-          canWrite={canWrite}
-          onReply={(m) => setReplyTo(m)}
+  const header = (
+    <div className="flex items-center justify-between gap-[12px] px-[20px] pt-[14px] pb-[10px]">
+      <span id="chat-window-h" className="flex items-center gap-[8px] text-[18px] font-extrabold">
+        <MessageCircle size={20} className="text-brand" aria-hidden />이 공고 이야기
+      </span>
+      <button
+        ref={closeBtn}
+        type="button"
+        aria-label="이야기 닫기"
+        onClick={onClose}
+        className={iconBtn}
+      >
+        <X size={22} aria-hidden />
+      </button>
+    </div>
+  );
+
+  if (!web) {
+    return (
+      <div className="fixed inset-0 z-[40] flex flex-col justify-end">
+        <button
+          type="button"
+          aria-label="이야기 닫기"
+          tabIndex={-1}
+          onClick={onClose}
+          className="absolute inset-0 cursor-default border-0 bg-[rgba(25,31,40,0.45)]"
         />
-
-        {readOnly ? null : (
-          <div className="border-line-soft bg-surface border-0 border-t border-solid px-[12px] py-[10px]">
-            {!chat.loggedIn ? (
-              chat.sessionPending ? null : (
-                <Link
-                  href={routes.login}
-                  className="rounded-control border-line text-brand-strong flex min-h-[44px] items-center justify-center border border-solid text-[15px] font-bold no-underline"
-                >
-                  로그인하고 이야기 남기기
-                </Link>
-              )
-            ) : (
-              <Composer
-                key={noticeId}
-                replyTo={replyTo}
-                onCancelReply={() => setReplyTo(null)}
-                onSend={async (content) => {
-                  await chat.send(content, replyTo?.id);
-                  setReplyTo(null);
-                }}
-              />
-            )}
-          </div>
-        )}
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="chat-window-h"
+          className="bg-surface relative flex h-[92dvh] flex-col gap-[8px] overflow-hidden rounded-t-[20px]"
+        >
+          <span aria-hidden className="bg-line mx-auto mt-[8px] h-[4px] w-[40px] rounded-[2px]" />
+          {header}
+          {body}
+        </section>
       </div>
+    );
+  }
+
+  return (
+    <section
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="chat-window-h"
+      className="bg-surface border-line shadow-float fixed top-0 right-0 bottom-0 z-[30] flex w-[min(440px,100vw)] flex-col gap-[8px] border-l border-solid"
+    >
+      {header}
+      {body}
     </section>
   );
 }
@@ -132,18 +304,15 @@ function useNow() {
   return now;
 }
 
-type Chat = ReturnType<typeof useNoticeChat>;
-
+/** 메시지 목록: 채팅 창의 남은 높이를 채우고 그 안에서 스크롤해요 */
 function MessageList({
   chat,
   now,
-  maxHeight,
   canWrite,
   onReply,
 }: {
   chat: Chat;
   now: number | null;
-  maxHeight: number;
   canWrite: boolean;
   onReply: (m: ChatMessage) => void;
 }) {
@@ -192,7 +361,7 @@ function MessageList({
   };
 
   return (
-    <div className="relative">
+    <div className="bg-bg relative flex min-h-0 flex-1 flex-col">
       <div
         ref={box}
         role="log"
@@ -206,8 +375,7 @@ function MessageList({
           setBottom(near);
           if (near) setSeenLast(lastId);
         }}
-        className="flex flex-col gap-[3px] overflow-y-auto overscroll-contain p-[12px]"
-        style={{ maxHeight, minHeight: 200 }}
+        className="flex min-h-0 flex-1 flex-col gap-[3px] overflow-y-auto overscroll-contain p-[12px]"
       >
         {chat.hasOlder && (
           <button
