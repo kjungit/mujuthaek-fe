@@ -1,15 +1,26 @@
 "use client";
 
 // 「이 공고 이야기」: 공고마다 하나인 채팅방 (공고 상세 본문 아래). 읽기는 누구나, 쓰기는 로그인한 회원만
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+// 채팅 창처럼 보여요: 내 메시지는 오른쪽, 다른 사람은 왼쪽 말풍선. 같은 사람이 이어 보낸 건 이름·시각을 한 번만
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CornerDownRight, Heart, MessageCircle, Send, X } from "lucide-react";
+import {
+  ArrowDown,
+  CornerDownRight,
+  Heart,
+  MessageCircle,
+  MoreHorizontal,
+  Send,
+  X,
+} from "lucide-react";
 import { outlineChip } from "@/components/me/MePanels";
 import {
+  chatClock,
+  chatDay,
+  chatDayKey,
   chatErrorMessage,
   chatReasons,
-  chatTime,
   hiddenText,
   MAX_LENGTH,
   type ChatMessage,
@@ -24,6 +35,10 @@ type Props = { noticeId: string; variant: "web" | "mobile" };
 
 /** 아래에서 이만큼 안이면 「맨 아래에 있다」로 보고 새 메시지를 따라 내려가요 */
 const BOTTOM_SLACK = 60;
+/** 같은 사람이 이 안에 이어 보낸 메시지는 한 묶음 (이름·시각을 한 번만) */
+const GROUP_GAP_MS = 3 * 60 * 1000;
+/** 글자 수는 한도에 가까워지면 보여 줘요 */
+const COUNT_FROM = MAX_LENGTH - 50;
 
 export function NoticeChat({ noticeId, variant }: Props) {
   const web = variant === "web";
@@ -56,7 +71,7 @@ export function NoticeChat({ noticeId, variant }: Props) {
       </h2>
       {chat.room && (
         <p className="bg-bg rounded-tile text-text-sub m-0 px-[14px] py-[10px] text-[13px] leading-[1.6]">
-          {chat.room.guide}
+          {chat.room.guide} 전화번호 등 개인정보는 올리지 마세요.
           {readOnly && (
             <>
               <br />
@@ -66,39 +81,46 @@ export function NoticeChat({ noticeId, variant }: Props) {
         </p>
       )}
 
-      <MessageList
-        chat={chat}
-        now={now}
-        maxHeight={web ? 420 : 360}
-        canWrite={canWrite}
-        onReply={(m) => setReplyTo(m)}
-      />
-
-      {readOnly ? null : !chat.loggedIn ? (
-        chat.sessionPending ? null : (
-          <Link
-            href={routes.login}
-            className="rounded-control border-line text-brand-strong flex min-h-[48px] items-center justify-center border border-solid text-[15px] font-bold no-underline"
-          >
-            로그인하고 이야기 남기기
-          </Link>
-        )
-      ) : (
-        <Composer
-          key={noticeId}
-          replyTo={replyTo}
-          onCancelReply={() => setReplyTo(null)}
-          onSend={async (content) => {
-            await chat.send(content, replyTo?.id);
-            setReplyTo(null);
-          }}
+      {/* 채팅 창: 메시지 목록 + 아래 입력칸 */}
+      <div className="bg-bg rounded-tile flex flex-col overflow-hidden">
+        <MessageList
+          chat={chat}
+          now={now}
+          maxHeight={web ? 460 : 400}
+          canWrite={canWrite}
+          onReply={(m) => setReplyTo(m)}
         />
-      )}
+
+        {readOnly ? null : (
+          <div className="border-line-soft bg-surface border-0 border-t border-solid px-[12px] py-[10px]">
+            {!chat.loggedIn ? (
+              chat.sessionPending ? null : (
+                <Link
+                  href={routes.login}
+                  className="rounded-control border-line text-brand-strong flex min-h-[44px] items-center justify-center border border-solid text-[15px] font-bold no-underline"
+                >
+                  로그인하고 이야기 남기기
+                </Link>
+              )
+            ) : (
+              <Composer
+                key={noticeId}
+                replyTo={replyTo}
+                onCancelReply={() => setReplyTo(null)}
+                onSend={async (content) => {
+                  await chat.send(content, replyTo?.id);
+                  setReplyTo(null);
+                }}
+              />
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
 
-/** 상대 시간을 1분마다 다시 그려요. 처음 그릴 때(서버)는 시간 없이 */
+/** 날짜 구분선(오늘·어제)을 1분마다 다시 그려요. 처음 그릴 때(서버)는 시각·날짜 없이 (시간대가 달라서) */
 function useNow() {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
@@ -129,6 +151,11 @@ function MessageList({
   const atBottom = useRef(true);
   const prev = useRef<{ first?: string; last?: string; height: number }>({ height: 0 });
   const { messages } = chat;
+  const lastId = messages.at(-1)?.id;
+  // 위를 보고 있을 때 새 메시지가 오면 「새 메시지」 단추를 띄워요 (맨 아래에서 본 마지막 메시지와 비교)
+  const [bottom, setBottom] = useState(true);
+  const [seenLast, setSeenLast] = useState<string | undefined>(undefined);
+  const unseen = !bottom && !!lastId && lastId !== seenLast;
 
   // 새 메시지는 맨 아래에 있을 때(또는 내가 보냈을 때)만 따라 내려가고, 이전 이야기를 불러오면 보던 자리를 지켜요
   useLayoutEffect(() => {
@@ -146,68 +173,138 @@ function MessageList({
     prev.current = { first, last, height: el.scrollHeight };
   }, [messages, chat]);
 
+  // 날짜 구분선·시각은 브라우저에서 나중에 붙어 높이가 늘어요: 맨 아래에 있었으면 계속 맨 아래로
+  const ready = now !== null;
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (ready && el && atBottom.current) el.scrollTop = el.scrollHeight;
+  }, [ready]);
+
+  const loadOlder = () => {
+    // 메뉴를 열어 높이가 바뀌었을 수 있어서, 불러오기 직전 높이로 보던 자리를 지켜요
+    if (box.current) prev.current.height = box.current.scrollHeight;
+    chat.loadOlder();
+  };
+
+  const toBottom = () => {
+    const el = box.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  };
+
   return (
-    <div
-      ref={box}
-      role="log"
-      aria-label="공고 이야기 메시지"
-      aria-busy={chat.loading}
-      tabIndex={0}
-      onScroll={(e) => {
-        const el = e.currentTarget;
-        atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_SLACK;
-      }}
-      className="flex flex-col gap-[10px] overflow-y-auto overscroll-contain pr-[2px]"
-      style={{ maxHeight, minHeight: 140 }}
-    >
-      {chat.hasOlder && (
+    <div className="relative">
+      <div
+        ref={box}
+        role="log"
+        aria-label="공고 이야기 메시지"
+        aria-busy={chat.loading}
+        tabIndex={0}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const near = el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_SLACK;
+          atBottom.current = near;
+          setBottom(near);
+          if (near) setSeenLast(lastId);
+        }}
+        className="flex flex-col gap-[3px] overflow-y-auto overscroll-contain p-[12px]"
+        style={{ maxHeight, minHeight: 200 }}
+      >
+        {chat.hasOlder && (
+          <button
+            type="button"
+            disabled={chat.loadingOlder}
+            onClick={loadOlder}
+            className="text-text-sub min-h-[40px] flex-none cursor-pointer self-center border-0 bg-transparent text-[13px] font-bold disabled:opacity-60"
+          >
+            {chat.loadingOlder ? "불러오는 중…" : "이전 이야기 더 보기"}
+          </button>
+        )}
+        {chat.loading ? (
+          <p className="text-text-sub m-auto text-[14px]">이야기를 불러오는 중이에요</p>
+        ) : chat.error ? (
+          <p role="alert" className="text-text-sub m-auto text-[14px]">
+            이야기를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요
+          </p>
+        ) : messages.length === 0 ? (
+          <p className="text-text-sub m-auto text-center text-[14px] leading-[1.6]">
+            아직 이야기가 없어요.
+            <br />이 공고를 준비하며 궁금한 점을 먼저 남겨 보세요
+          </p>
+        ) : (
+          messages.map((m, i) => {
+            const before = messages[i - 1];
+            const after = messages[i + 1];
+            // 날짜는 보는 사람 시간대라 브라우저에서만 나눠요
+            const newDay =
+              now !== null && (!before || chatDayKey(before.createdAt) !== chatDayKey(m.createdAt));
+            const nextDay =
+              now !== null && !!after && chatDayKey(after.createdAt) !== chatDayKey(m.createdAt);
+            return (
+              <Fragment key={m.id}>
+                {newDay && now !== null && (
+                  <p className="text-text-sub bg-surface m-0 my-[8px] flex-none self-center rounded-full px-[12px] py-[3px] text-[12px] font-bold">
+                    {chatDay(m.createdAt, now)}
+                  </p>
+                )}
+                {m.status !== "VISIBLE" ? (
+                  <p className="text-text-tertiary m-0 my-[6px] flex-none self-center text-[12px]">
+                    {hiddenText[m.status]}
+                  </p>
+                ) : (
+                  <MessageItem
+                    message={m}
+                    mine={chat.isMine(m)}
+                    first={newDay || !sameRun(before, m, chat.isMine)}
+                    last={nextDay || !sameRun(m, after, chat.isMine)}
+                    showTime={now !== null}
+                    canWrite={canWrite}
+                    loggedIn={chat.loggedIn}
+                    onReply={() => onReply(m)}
+                    onLike={() => chat.toggleLike(m)}
+                    onDelete={() => chat.remove(m.id)}
+                    onReport={(reason, detail) => chat.report(m.id, reason, detail)}
+                  />
+                )}
+              </Fragment>
+            );
+          })
+        )}
+      </div>
+      {unseen && (
         <button
           type="button"
-          disabled={chat.loadingOlder}
-          onClick={chat.loadOlder}
-          className="text-text-sub min-h-[40px] flex-none cursor-pointer self-center border-0 bg-transparent text-[14px] font-bold disabled:opacity-60"
+          onClick={toBottom}
+          className="bg-text absolute bottom-[12px] left-1/2 inline-flex min-h-[36px] -translate-x-1/2 cursor-pointer items-center gap-[4px] rounded-full border-0 px-[14px] text-[13px] font-bold text-white"
         >
-          {chat.loadingOlder ? "불러오는 중…" : "이전 이야기 더 보기"}
+          <ArrowDown size={14} aria-hidden />새 메시지
         </button>
-      )}
-      {chat.loading ? (
-        <p className="text-text-sub m-auto text-[14px]">이야기를 불러오는 중이에요</p>
-      ) : chat.error ? (
-        <p role="alert" className="text-text-sub m-auto text-[14px]">
-          이야기를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요
-        </p>
-      ) : messages.length === 0 ? (
-        <p className="text-text-sub m-auto text-center text-[14px] leading-[1.6]">
-          아직 이야기가 없어요.
-          <br />이 공고를 준비하며 궁금한 점을 먼저 남겨 보세요
-        </p>
-      ) : (
-        messages.map((m) => (
-          <MessageItem
-            key={m.id}
-            message={m}
-            mine={chat.isMine(m)}
-            now={now}
-            canWrite={canWrite}
-            loggedIn={chat.loggedIn}
-            onReply={() => onReply(m)}
-            onLike={() => chat.toggleLike(m)}
-            onDelete={() => chat.remove(m.id)}
-            onReport={(reason, detail) => chat.report(m.id, reason, detail)}
-          />
-        ))
       )}
     </div>
   );
 }
 
-const actionBtn =
-  "text-text-sub inline-flex min-h-[32px] cursor-pointer items-center gap-[4px] border-0 bg-transparent px-[2px] text-[13px] font-bold disabled:opacity-60";
+/** b가 a에 이어지는 같은 사람의 메시지인지 (같은 묶음이면 이름·시각을 한 번만) */
+function sameRun(
+  a: ChatMessage | undefined,
+  b: ChatMessage | undefined,
+  isMine: (m: ChatMessage) => boolean,
+) {
+  if (!a || !b || a.status !== "VISIBLE" || b.status !== "VISIBLE") return false;
+  if (isMine(a) !== isMine(b)) return false;
+  if (!isMine(a) && a.authorNickname !== b.authorNickname) return false;
+  const gap = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  return Math.abs(gap) <= GROUP_GAP_MS;
+}
+
+const menuBtn =
+  "bg-surface border-line text-text-sub inline-flex min-h-[32px] cursor-pointer items-center gap-[4px] rounded-full border border-solid px-[10px] text-[13px] font-bold disabled:opacity-60";
 
 function MessageItem({
   message: m,
   mine,
-  now,
+  first,
+  last,
+  showTime,
   canWrite,
   loggedIn,
   onReply,
@@ -217,7 +314,11 @@ function MessageItem({
 }: {
   message: ChatMessage;
   mine: boolean;
-  now: number | null;
+  /** 묶음의 첫 메시지: 이름과 말풍선 꼬리 */
+  first: boolean;
+  /** 묶음의 마지막 메시지: 시각 */
+  last: boolean;
+  showTime: boolean;
   canWrite: boolean;
   loggedIn: boolean;
   onReply: () => void;
@@ -226,12 +327,14 @@ function MessageItem({
   onReport: (reason: ChatReportReason, detail?: string) => Promise<void>;
 }) {
   const router = useRouter();
+  // 좋아요·답장·삭제·신고는 말풍선이나 ⋯를 누르면 열려요 (PC는 마우스를 올리면 ⋯가 보여요)
+  const [menu, setMenu] = useState(false);
   const [panel, setPanel] = useState<"none" | "delete" | "report">("none");
   const [reason, setReason] = useState<ChatReportReason>("AD");
   const [detail, setDetail] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const visible = m.status === "VISIBLE";
+  const name = m.authorNickname ?? "이름 없음";
 
   const run = async (work: () => Promise<void>, done?: string) => {
     setBusy(true);
@@ -239,6 +342,7 @@ function MessageItem({
     try {
       await work();
       setPanel("none");
+      setMenu(false);
       if (done) setNote(done);
     } catch (error) {
       setNote(chatErrorMessage(error));
@@ -248,59 +352,121 @@ function MessageItem({
     }
   };
 
+  const like = () => (loggedIn ? void run(onLike) : router.push(routes.login));
+  const likeOff = busy || (loggedIn && !canWrite);
+
   return (
     <article
       className={cn(
-        "flex flex-none flex-col gap-[4px] rounded-[18px] px-[14px] py-[10px]",
-        mine ? "bg-brand-soft" : "bg-bg",
+        "group flex flex-none flex-col",
+        mine ? "items-end" : "items-start",
+        first && "mt-[8px]",
       )}
     >
-      <div className="flex items-baseline gap-[6px]">
-        <span className="text-text text-[14px] font-extrabold">
-          {visible ? (m.authorNickname ?? "이름 없음") : " "}
-        </span>
-        {mine && visible && <span className="text-brand-strong text-[12px] font-bold">내 글</span>}
-        {now !== null && (
-          <time dateTime={m.createdAt} className="text-text-tertiary ml-auto text-[12px]">
-            {chatTime(m.createdAt, now)}
-          </time>
-        )}
+      {!mine && first && (
+        <span className="text-text-sub mb-[4px] ml-[4px] text-[12px] font-bold">{name}</span>
+      )}
+      <div className={cn("flex w-full items-end gap-[6px]", mine && "flex-row-reverse")}>
+        <div
+          onClick={() => {
+            // 글자를 고르는 중이면 메뉴를 열지 않아요
+            if (window.getSelection()?.toString()) return;
+            setMenu((v) => !v);
+          }}
+          className={cn(
+            "max-w-[78%] min-w-0 cursor-pointer rounded-[18px] px-[13px] py-[8px]",
+            mine ? "bg-brand-soft" : "bg-surface",
+            first && (mine ? "rounded-tr-[6px]" : "rounded-tl-[6px]"),
+          )}
+        >
+          {/* 화면 읽기: 이름이 위에 보이는 묶음 첫 메시지는 이름을 다시 읽지 않아요 */}
+          {(mine || !first) && <span className="sr-only">{mine ? "내 메시지" : name}: </span>}
+          {m.parent && (
+            <span className="text-text-sub border-line mb-[4px] flex items-start gap-[4px] border-0 border-l-2 border-solid pl-[8px] text-[12px] leading-[1.5]">
+              <CornerDownRight size={13} className="mt-[2px] flex-none" aria-hidden />
+              <span className="line-clamp-1">
+                {m.parent.status === "VISIBLE"
+                  ? `${m.parent.authorNickname ?? "이름 없음"}: ${m.parent.content ?? ""}`
+                  : hiddenText[m.parent.status]}
+              </span>
+            </span>
+          )}
+          <p className="text-text m-0 text-[15px] leading-[1.55] break-words whitespace-pre-wrap">
+            {m.content}
+          </p>
+        </div>
+
+        <div
+          className={cn(
+            "flex flex-none flex-col gap-[2px] pb-[2px]",
+            mine ? "items-end" : "items-start",
+          )}
+        >
+          {m.likeCount > 0 && (
+            <button
+              type="button"
+              aria-pressed={m.likedByMe}
+              aria-label={`좋아요 ${m.likeCount}개`}
+              disabled={likeOff}
+              onClick={like}
+              className={cn(
+                "inline-flex min-h-[20px] cursor-pointer items-center gap-[2px] border-0 bg-transparent p-0 text-[12px] font-bold disabled:cursor-default",
+                m.likedByMe ? "text-brand-strong" : "text-text-tertiary",
+              )}
+            >
+              <Heart size={12} fill={m.likedByMe ? "currentColor" : "none"} aria-hidden />
+              {m.likeCount}
+            </button>
+          )}
+          <span className={cn("flex items-center gap-[2px]", mine && "flex-row-reverse")}>
+            {last && showTime && (
+              <time
+                dateTime={m.createdAt}
+                className="text-text-tertiary text-[11px] whitespace-nowrap"
+              >
+                {chatClock(m.createdAt)}
+              </time>
+            )}
+            <button
+              type="button"
+              aria-label="메시지 메뉴"
+              aria-expanded={menu}
+              onClick={() => setMenu((v) => !v)}
+              className={cn(
+                "text-text-tertiary inline-flex size-[24px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 transition-opacity",
+                menu
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+              )}
+            >
+              <MoreHorizontal size={16} aria-hidden />
+            </button>
+          </span>
+        </div>
       </div>
 
-      {m.parent && (
-        <p className="text-text-sub border-line m-0 flex items-start gap-[4px] border-0 border-l-2 border-solid pl-[8px] text-[12px] leading-[1.5]">
-          <CornerDownRight size={13} className="mt-[2px] flex-none" aria-hidden />
-          <span className="line-clamp-1">
-            {m.parent.status === "VISIBLE"
-              ? `${m.parent.authorNickname ?? "이름 없음"}: ${m.parent.content ?? ""}`
-              : hiddenText[m.parent.status]}
-          </span>
-        </p>
-      )}
-
-      {visible ? (
-        <p className="text-text m-0 text-[15px] leading-[1.6] break-words whitespace-pre-wrap">
-          {m.content}
-        </p>
-      ) : (
-        <p className="text-text-tertiary m-0 text-[14px]">{hiddenText[m.status]}</p>
-      )}
-
-      {visible && (
-        <div className="-ml-[2px] flex flex-wrap items-center gap-[10px]">
+      {menu && (
+        <div className={cn("mt-[4px] flex flex-wrap gap-[6px]", mine && "justify-end")}>
           <button
             type="button"
             aria-pressed={m.likedByMe}
-            aria-label={`좋아요 ${m.likeCount}개`}
-            disabled={busy || (loggedIn && !canWrite)}
-            onClick={() => (loggedIn ? void run(onLike) : router.push(routes.login))}
-            className={cn(actionBtn, m.likedByMe && "text-brand-strong")}
+            disabled={likeOff}
+            onClick={like}
+            className={cn(menuBtn, m.likedByMe && "text-brand-strong")}
           >
             <Heart size={14} fill={m.likedByMe ? "currentColor" : "none"} aria-hidden />
-            {m.likeCount > 0 ? m.likeCount : "좋아요"}
+            좋아요
           </button>
           {canWrite && !m.parent && (
-            <button type="button" onClick={onReply} className={actionBtn}>
+            <button
+              type="button"
+              onClick={() => {
+                onReply();
+                setMenu(false);
+              }}
+              className={menuBtn}
+            >
+              <CornerDownRight size={14} aria-hidden />
               답장
             </button>
           )}
@@ -308,7 +474,7 @@ function MessageItem({
             <button
               type="button"
               onClick={() => setPanel(panel === "delete" ? "none" : "delete")}
-              className={actionBtn}
+              className={menuBtn}
             >
               삭제
             </button>
@@ -318,7 +484,7 @@ function MessageItem({
                 type="button"
                 aria-expanded={panel === "report"}
                 onClick={() => setPanel(panel === "report" ? "none" : "report")}
-                className={actionBtn}
+                className={menuBtn}
               >
                 신고
               </button>
@@ -328,7 +494,7 @@ function MessageItem({
       )}
 
       {panel === "delete" && (
-        <div className="flex items-center gap-[10px] pt-[2px] text-[14px]">
+        <div className="mt-[6px] flex items-center gap-[10px] text-[14px]">
           <span>이 메시지를 지울까요?</span>
           <button
             type="button"
@@ -349,7 +515,7 @@ function MessageItem({
       )}
 
       {panel === "report" && (
-        <div className="flex flex-col gap-[8px] pt-[4px]">
+        <div className="bg-surface rounded-tile mt-[6px] flex w-full max-w-[420px] flex-col gap-[8px] p-[12px]">
           <div role="group" aria-label="신고 사유" className="flex flex-wrap gap-[6px]">
             {chatReasons.map((r) => (
               <button
@@ -385,7 +551,7 @@ function MessageItem({
       )}
 
       {note && (
-        <span role="status" className="text-text-sub text-[13px]">
+        <span role="status" className="text-text-sub mt-[4px] text-[13px]">
           {note}
         </span>
       )}
@@ -421,6 +587,14 @@ function Composer({
     if (replyTo) input.current?.focus();
   }, [replyTo]);
 
+  // 한 줄에서 시작해 글이 길어지면 5줄까지 늘어나요
+  useLayoutEffect(() => {
+    const el = input.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }, [text]);
+
   const submit = async () => {
     if (!content || length > MAX_LENGTH || sending || wait > 0) return;
     setSending(true);
@@ -445,7 +619,7 @@ function Composer({
   };
 
   return (
-    <div className="flex flex-col gap-[8px]">
+    <div className="flex flex-col gap-[6px]">
       {replyTo && (
         <div className="text-text-sub flex items-center gap-[6px] text-[13px]">
           <CornerDownRight size={14} aria-hidden />
@@ -463,44 +637,50 @@ function Composer({
           </button>
         </div>
       )}
-      <div className="rounded-control border-line focus-within:border-brand flex items-end gap-[8px] border border-solid px-[12px] py-[8px]">
-        <textarea
-          ref={input}
-          rows={2}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={onKeyDown}
-          aria-label="이야기 남기기"
-          placeholder="궁금한 점이나 준비 팁을 나눠 주세요 (전화번호 등 개인정보는 올리지 마세요)"
-          className="text-text placeholder:text-text-tertiary min-h-[44px] flex-1 resize-none border-0 bg-transparent text-[15px] leading-[1.5] outline-none"
-        />
+      <div className="flex items-end gap-[8px]">
+        <div className="border-line focus-within:border-brand bg-bg flex min-h-[44px] flex-1 items-center rounded-[22px] border border-solid px-[16px] py-[6px]">
+          <textarea
+            ref={input}
+            rows={1}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={onKeyDown}
+            aria-label="메시지 보내기"
+            placeholder="메시지 보내기"
+            className="text-text placeholder:text-text-tertiary max-h-[120px] flex-1 resize-none border-0 bg-transparent p-0 text-[15px] leading-[1.5] outline-none"
+          />
+        </div>
         <button
           type="button"
           disabled={!content || length > MAX_LENGTH || sending || wait > 0}
           onClick={() => void submit()}
           aria-label="보내기"
-          className="bg-brand inline-flex size-[40px] flex-none cursor-pointer items-center justify-center rounded-full border-0 text-white disabled:opacity-40"
+          className="bg-brand inline-flex size-[44px] flex-none cursor-pointer items-center justify-center rounded-full border-0 text-white disabled:opacity-40"
         >
           <Send size={18} aria-hidden />
         </button>
       </div>
-      <div className="flex items-center gap-[8px] text-[12px]">
-        {(wait > 0 || error) && (
-          <span role="alert" className="text-danger-text flex-1">
-            {wait > 0
-              ? `메시지는 1분에 5개까지 보낼 수 있어요. ${wait}초 뒤 다시 보내 주세요`
-              : error}
-          </span>
-        )}
-        <span
-          className={cn(
-            "ml-auto",
-            length > MAX_LENGTH ? "text-danger-text font-bold" : "text-text-tertiary",
+      {(wait > 0 || error || length > COUNT_FROM) && (
+        <div className="flex items-center gap-[8px] px-[4px] text-[12px]">
+          {(wait > 0 || error) && (
+            <span role="alert" className="text-danger-text flex-1">
+              {wait > 0
+                ? `메시지는 1분에 5개까지 보낼 수 있어요. ${wait}초 뒤 다시 보내 주세요`
+                : error}
+            </span>
           )}
-        >
-          {length}/{MAX_LENGTH}
-        </span>
-      </div>
+          {length > COUNT_FROM && (
+            <span
+              className={cn(
+                "ml-auto",
+                length > MAX_LENGTH ? "text-danger-text font-bold" : "text-text-tertiary",
+              )}
+            >
+              {length}/{MAX_LENGTH}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

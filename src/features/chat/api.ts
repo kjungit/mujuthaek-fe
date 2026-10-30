@@ -115,14 +115,28 @@ export function chatErrorMessage(error: unknown): string {
   }
 }
 
-/** 방금 · N분 전 · N시간 전 · 10월 29일 14:05 */
-export function chatTime(iso: string, now: number): string {
-  const min = Math.floor((now - new Date(iso).getTime()) / 60000);
-  if (min < 1) return "방금";
-  if (min < 60) return `${min}분 전`;
-  if (min < 24 * 60) return `${Math.floor(min / 60)}시간 전`;
+/** 말풍선 옆 시각: 오전 9:04 · 오후 2:30 */
+export function chatClock(iso: string): string {
   const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
+  const h = d.getHours();
   const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${hh}:${mm}`;
+  return `${h < 12 ? "오전" : "오후"} ${h % 12 === 0 ? 12 : h % 12}:${mm}`;
+}
+
+/** 같은 날인지 가르는 키 (보는 사람 시간대 기준) */
+export function chatDayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+/** 날짜 구분선: 오늘 · 어제 · 10월 28일 (화). 올해가 아니면 2025년 12월 30일 (화) */
+export function chatDay(iso: string, now: number): string {
+  const d = new Date(iso);
+  const today = new Date(now);
+  const yesterday = new Date(now - 24 * 60 * 60 * 1000);
+  if (chatDayKey(iso) === chatDayKey(today.toISOString())) return "오늘";
+  if (chatDayKey(iso) === chatDayKey(yesterday.toISOString())) return "어제";
+  const weekday = "일월화수목금토"[d.getDay()];
+  const year = d.getFullYear() === today.getFullYear() ? "" : `${d.getFullYear()}년 `;
+  return `${year}${d.getMonth() + 1}월 ${d.getDate()}일 (${weekday})`;
 }
