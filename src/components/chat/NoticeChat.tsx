@@ -50,6 +50,9 @@ const GROUP_GAP_MS = 3 * 60 * 1000;
 /** 글자 수는 한도에 가까워지면 보여 줘요 */
 const COUNT_FROM = MAX_LENGTH - 50;
 
+/** 모바일 아래 고정 줄의 「이야기」 단추가 보내는 신호: 그 공고의 채팅 창을 열어요 (detail = 공고 ID) */
+const OPEN_EVENT = "noticechat:open";
+
 const iconBtn =
   "text-text inline-flex size-[44px] flex-none cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent";
 
@@ -65,17 +68,33 @@ export function NoticeChat({ noticeId, variant }: Props) {
   const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 
-  // 닫히면(X · Esc · 뒤로 가기 · 다시 누르기) 포커스를 여는 단추로 돌려줘요
+  // 닫히면(X · Esc · 뒤로 가기 · 다시 누르기) 포커스를 연 단추로 돌려줘요 (아래 고정 줄에서 열었으면 그 단추로, 화면은 움직이지 않게)
+  const returnTo = useRef<HTMLElement | null>(null);
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !open) {
       const active = document.activeElement;
       if (!active || active === document.body || !document.contains(active)) {
-        opener.current?.focus();
+        const target = returnTo.current?.isConnected ? returnTo.current : opener.current;
+        target?.focus({ preventScroll: true });
       }
+      returnTo.current = null;
     }
     wasOpen.current = open;
   }, [open]);
+
+  // 아래 고정 줄의 「이야기」 단추(MNoticeChatButton)로도 열어요. 웹·모바일 화면이 둘 다 그려져 있어서, 보이는 쪽만 열어요
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      if ((e as CustomEvent<string>).detail !== noticeId) return;
+      if (!opener.current || opener.current.offsetParent === null) return;
+      returnTo.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      show();
+    };
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
+  }, [noticeId, show]);
 
   // 열린 채로 화면 크기가 PC ↔ 모바일 경계(1024px)를 넘으면 닫아요 (보이지 않는 쪽 창이 남지 않게)
   useEffect(() => {
@@ -163,6 +182,36 @@ export function NoticeChat({ noticeId, variant }: Props) {
           document.body,
         )}
     </section>
+  );
+}
+
+/**
+ * 모바일 아래 고정 줄(관심 하트 옆)의 「이야기」 단추. 공고 상세를 끝까지 내리지 않아도 채팅을 열 수 있어요.
+ * 목록은 안내 카드와 같은 캐시를 읽어서 요청이 더 가지 않고, 이야기 수를 작은 숫자로 보여 줘요
+ */
+export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
+  const chat = useNoticeChat(noticeId, { live: false });
+  if (chat.roomError && !chat.room) return null;
+  const count = chat.messages.filter((m) => m.status === "VISIBLE").length;
+  const countLabel = count > 0 ? `${count}${chat.hasOlder ? "+" : ""}` : null;
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      aria-label={countLabel ? `이 공고 이야기 ${countLabel}개 보기` : "이 공고 이야기 열기"}
+      onClick={() => window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: noticeId }))}
+      className="rounded-control bg-fill text-text-sub relative flex min-h-[56px] w-[56px] flex-none cursor-pointer items-center justify-center border-0"
+    >
+      <MessageCircle size={24} aria-hidden />
+      {countLabel && (
+        <span
+          aria-hidden
+          className="bg-brand absolute top-[6px] right-[6px] min-w-[18px] rounded-full px-[4px] text-center text-[11px] leading-[18px] font-bold text-white"
+        >
+          {countLabel}
+        </span>
+      )}
+    </button>
   );
 }
 

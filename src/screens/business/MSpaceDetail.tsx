@@ -1,6 +1,6 @@
 "use client";
 
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import { MNoticeChatButton, NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
@@ -330,6 +330,7 @@ function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
         >
           공고 원문
         </a>
+        {data.favoriteType === "NOTICE" && <MNoticeChatButton noticeId={data.id} />}
         <MFavoriteHeart
           type={data.favoriteType ?? "SPACE_RECRUITMENT"}
           id={data.id}
