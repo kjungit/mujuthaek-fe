@@ -88,7 +88,7 @@ export const useSupportDetail = USE_MOCKS ? useMockSupportDetail : useApiSupport
 function useMockSpaceDetail(id: string) {
   const detail = spaceDetails.find((s) => s.id === id) ?? spaceDetails[0];
   const { data } = useQuery(mockQuery(businessKeys.space(id), detail));
-  return { data, loading: false, error: false, answer: undefined };
+  return { data, loading: false, error: false };
 }
 
 export const useSpaceDetail = USE_MOCKS ? useMockSpaceDetail : useApiSpaceDetail;

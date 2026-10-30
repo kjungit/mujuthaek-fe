@@ -9,6 +9,8 @@ export type BenefitEligibility = {
   result: "ok" | "check" | "no";
   /** 충족이 아닐 때 이유 (기준만, 내 값은 없어요) */
   reason?: string;
+  /** 확인 필요일 때 넣으면 정해지는 입력을 받는 화면. 없으면 원문 확인 (실제 API) */
+  inputHref?: string;
 };
 
 export type Benefit = {

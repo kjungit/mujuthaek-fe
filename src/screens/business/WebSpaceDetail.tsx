@@ -19,8 +19,6 @@ import { AboutSection, RuleAction } from "./parts";
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
 
-type OnAnswer = (questionId: string, value: "YES" | "NO") => void;
-
 /** 조건 상태 동그라미: 충족 ✓ · 해당 안 됨 ✕ · 확인 필요 ? */
 function RuleMark({ met, notMet, small }: { met: boolean; notMet?: boolean; small?: boolean }) {
   const size = small ? "size-[22px]" : "size-[28px]";
@@ -60,7 +58,7 @@ function RuleMark({ met, notMet, small }: { met: boolean; notMet?: boolean; smal
   );
 }
 
-function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?: OnAnswer }) {
+function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
   return (
     <div className="flex flex-col">
       {rules.map((r, i) => {
@@ -84,7 +82,7 @@ function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?:
                   </span>
                 )}
               </span>
-              <RuleAction r={r} onAnswer={onAnswer} />
+              <RuleAction r={r} web />
             </div>
             {r.options && (
               <ol className="m-0 ml-[40px] flex list-none flex-col gap-[8px] p-0">
@@ -100,7 +98,7 @@ function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?:
                     {o.rules.map((x, m) => (
                       <div key={m} className="flex items-center gap-[10px]">
                         <span className="flex-1 text-[14px]">{x.rule || o.label}</span>
-                        <RuleAction r={x} onAnswer={onAnswer} />
+                        <RuleAction r={x} web />
                       </div>
                     ))}
                   </li>
@@ -140,13 +138,11 @@ function WebBizDetail({
   loading,
   error,
   back,
-  answer,
 }: {
   data: SpaceDetail | undefined;
   loading: boolean;
   error: boolean;
   back: Back;
-  answer?: OnAnswer;
 }) {
   if (!data) {
     return (
@@ -167,18 +163,10 @@ function WebBizDetail({
       </WebPage>
     );
   }
-  return <WebSpaceDetailView data={data} back={back} onAnswer={answer} />;
+  return <WebSpaceDetailView data={data} back={back} />;
 }
 
-function WebSpaceDetailView({
-  data,
-  back,
-  onAnswer,
-}: {
-  data: SpaceDetail;
-  back: Back;
-  onAnswer?: OnAnswer;
-}) {
+function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   // 모집 정책은 공간 정보 대신 자격 조건이 많아서 넓은 칸에 보여줘요
   const wideRules = data.rules.length > 0 && Boolean(data.summaryNote);
@@ -255,7 +243,7 @@ function WebSpaceDetailView({
                   공고 원문에서 뽑은 조건이에요 · 확인 필요는 사업 정보를 넣거나 원문으로 확인해
                   주세요
                 </span>
-                <RuleList rules={data.rules} onAnswer={onAnswer} />
+                <RuleList rules={data.rules} />
               </section>
             )}
 
@@ -418,7 +406,7 @@ function WebSpaceDetailView({
                   ? "자격 조건을 정리하고 있어요 · 원문을 확인해 주세요"
                   : `${data.rules.length}개 조건 중 ${met}개 충족 · ${unmet}개 확인 필요${no ? ` · ${no}개 해당 안 됨` : ""}`}
               </div>
-              {!wideRules && <RuleList rules={data.rules} onAnswer={onAnswer} />}
+              {!wideRules && <RuleList rules={data.rules} />}
             </section>
 
             <section aria-label="신청" className={cn(card, "gap-[10px] p-[22px]")}>

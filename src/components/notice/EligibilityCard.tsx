@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ChevronDown, CircleAlert, CircleCheck, CircleX, FileText } from "lucide-react";
+import { ChevronDown, CircleCheck, CircleX, FileText } from "lucide-react";
 import { VerdictBadge, verdictLabel } from "@/components/ui/Badge";
+import { CheckAction } from "@/components/ui/CheckAction";
 import type { JudgedItem, JudgedTarget, NoticeJudgment } from "@/features/notice/judgment";
 import { cn } from "@/lib/cn";
-import { routes } from "@/lib/routes";
 
 type Props = {
   judgment: NoticeJudgment | null;
@@ -42,23 +41,7 @@ function Status({ item, web }: { item: JudgedItem; web: boolean }) {
       </span>
     );
   }
-  if (item.needsInput) {
-    return (
-      <Link
-        href={routes.profile}
-        className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center gap-[5px] rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-      >
-        {web && <CircleAlert size={17} aria-hidden />}
-        입력하고 확인
-      </Link>
-    );
-  }
-  return (
-    <span className="text-check-text inline-flex flex-none items-center gap-[5px] text-[14px] font-bold">
-      {web && <CircleAlert size={17} aria-hidden />}
-      원문 확인
-    </span>
-  );
+  return <CheckAction inputHref={item.inputHref} web={web} />;
 }
 
 function Row({ item, last, web }: { item: JudgedItem; last: boolean; web: boolean }) {
