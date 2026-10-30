@@ -21,9 +21,8 @@ import {
   SupportBadge,
   TypeFilters,
   spaceFilters,
-  spaceIcon,
   spaceLink,
-  spaceThumb,
+  SpaceTypeTag,
 } from "./parts";
 
 const ASIDE_SUPPORT_COUNT = 3;
@@ -157,31 +156,18 @@ export function WebBusiness() {
               className="grid gap-[16px]"
               style={{ gridTemplateColumns: "repeat(auto-fill, minmax(262px, 1fr))" }}
             >
+              {/* 공간 사진이 없어서 이미지 칸 없이 글자만: 판정 · 공간 종류를 첫 줄에. 카드를 자르지 않아야 키보드 초점 테두리가 보여요 */}
               {visible.map((it) => {
-                const Icon = spaceIcon[it.type];
                 return (
-                  <article
-                    key={it.id}
-                    className="rounded-card bg-surface flex flex-col overflow-hidden"
-                  >
-                    <div
-                      className={cn(
-                        "relative flex h-[140px] items-center justify-center",
-                        spaceThumb(it.type),
-                      )}
-                    >
-                      <Icon size={44} strokeWidth={1.4} aria-hidden />
-                      {it.verdict && (
-                        <VerdictBadge
-                          verdict={it.verdict}
-                          className="absolute top-[14px] left-[14px]"
-                        />
-                      )}
-                    </div>
+                  <article key={it.id} className="rounded-card bg-surface flex flex-col">
                     <Link
                       {...spaceLink(it)}
-                      className="text-text hover:text-text flex flex-1 flex-col gap-[8px] px-[20px] pt-[18px] pb-[20px] no-underline"
+                      className="rounded-card text-text hover:text-text flex flex-1 flex-col gap-[8px] px-[20px] pt-[18px] pb-[20px] no-underline"
                     >
+                      <span className="flex flex-wrap items-center gap-[8px]">
+                        {it.verdict && <VerdictBadge verdict={it.verdict} />}
+                        <SpaceTypeTag type={it.type} />
+                      </span>
                       <span className="text-text-tertiary text-[13px]">{it.org}</span>
                       <span className="tracking-title text-[18px] font-extrabold">{it.title}</span>
                       <span className="text-[15px] font-semibold">{it.info}</span>

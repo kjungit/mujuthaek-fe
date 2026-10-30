@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Building, House, SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 import { CardFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { HomesFilterPanel } from "@/components/homes/HomesFilterPanel";
 import { MTabBar } from "@/components/layout/MTabBar";
@@ -204,34 +204,18 @@ export function MHomes() {
           </div>
         )}
 
+        {/* 공고 사진이 없어서 왼쪽 이미지 칸 없이 글자만 */}
         {items.map((h) => {
-          const Icon = h.findYourOwn ? House : Building;
           return (
             <article key={h.id} className="relative">
               <Link
                 href={routes.notice(h.id)}
                 className="bg-surface text-text hover:text-text flex gap-[14px] rounded-[22px] p-[16px] no-underline"
               >
-                <span
-                  className={cn(
-                    "rounded-tile relative flex size-[84px] flex-none items-center justify-center",
-                    h.findYourOwn
-                      ? "bg-brand-soft text-brand"
-                      : "bg-placeholder-bg text-placeholder-icon",
-                  )}
-                >
-                  <Icon size={32} strokeWidth={1.4} aria-hidden />
-                </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-[5px] pr-[36px]">
                   <span className="flex items-center justify-between gap-[6px]">
                     <span className="flex gap-[4px]">
-                      {h.findYourOwn ? (
-                        <span className="rounded-badge bg-ok-bg text-ok-text px-[8px] py-[3px] text-[12px] font-bold">
-                          지원 가능
-                        </span>
-                      ) : (
-                        <VerdictBadge verdict={h.verdict} size="xs" />
-                      )}
+                      <VerdictBadge verdict={h.verdict} size="xs" />
                       {h.rank && <RankChip rank={h.rank} size="xs" />}
                     </span>
                     <span className="text-[13px] font-extrabold">{h.dueLong ?? h.due}</span>

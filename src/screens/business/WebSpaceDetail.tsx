@@ -4,7 +4,7 @@ import { NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
-import { Building, Check, ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
@@ -189,9 +189,6 @@ function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
         <div className="flex flex-wrap items-start gap-[24px]">
           <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 560px" }}>
             <section aria-label="공고 요약" className={cn(card, "overflow-hidden")}>
-              <div className="bg-brand-soft text-brand flex h-[240px] items-center justify-center">
-                <Building size={64} strokeWidth={1.2} aria-hidden />
-              </div>
               <div className="flex flex-col gap-[20px] px-[32px] pt-[28px] pb-[32px]">
                 <div className="flex flex-col gap-[10px]">
                   <div className="flex flex-wrap gap-[6px]">

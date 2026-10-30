@@ -3,7 +3,6 @@
 import { CardFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { Building, House } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { RankChip, VerdictBadge } from "@/components/ui/Badge";
@@ -31,37 +30,24 @@ function ListingCard({
   /** 관심 등록할 때 (GA 기록) */
   onLike: () => void;
 }) {
-  const Icon = item.findYourOwn ? House : Building;
+  // 공고 사진이 없어서 이미지 칸 없이 글자만: 판정 · 순위를 첫 줄에, 관심 하트는 오른쪽 위에.
+  // 링크가 카드를 채워서 카드를 자르지 않아요 (overflow-hidden이면 키보드 초점 테두리가 잘려요)
   return (
-    <article className="rounded-card bg-surface flex flex-col overflow-hidden">
-      <div
-        className={cn(
-          "relative flex h-[148px] items-center justify-center",
-          item.findYourOwn ? "bg-brand-soft text-brand" : "bg-placeholder-bg text-off",
-        )}
-      >
-        <Icon size={44} strokeWidth={1.4} aria-hidden />
-        <span className="absolute top-[14px] left-[14px] flex gap-[4px]">
-          {item.findYourOwn ? (
-            <span className="rounded-badge bg-surface text-ok-text px-[10px] py-[5px] text-[13px] font-bold">
-              지원 가능
-            </span>
-          ) : (
-            <VerdictBadge verdict={item.verdict} />
-          )}
-          {item.rank && <RankChip rank={item.rank} />}
-        </span>
-        <CardFavoriteHeart
-          type="NOTICE"
-          id={item.id}
-          onAdd={onLike}
-          className="absolute top-[10px] right-[10px]"
-        />
-      </div>
+    <article className="rounded-card bg-surface relative flex flex-col">
+      <CardFavoriteHeart
+        type="NOTICE"
+        id={item.id}
+        onAdd={onLike}
+        className="absolute top-[10px] right-[10px]"
+      />
       <Link
         href={routes.notice(item.id)}
-        className="text-text hover:text-text flex flex-col gap-[8px] px-[20px] pt-[18px] pb-[20px] no-underline"
+        className="rounded-card text-text hover:text-text flex flex-1 flex-col gap-[8px] px-[20px] pt-[18px] pb-[20px] no-underline"
       >
+        <span className="flex min-h-[28px] flex-wrap items-center gap-[4px] pr-[40px]">
+          <VerdictBadge verdict={item.verdict} />
+          {item.rank && <RankChip rank={item.rank} />}
+        </span>
         <span className="text-text-tertiary text-[13px]">
           {item.org} · {regionLabel}
         </span>

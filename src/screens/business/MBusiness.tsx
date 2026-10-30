@@ -21,9 +21,8 @@ import {
   SupportBadge,
   TypeFilters,
   spaceFilters,
-  spaceIcon,
   spaceLink,
-  spaceThumb,
+  SpaceTypeTag,
 } from "./parts";
 
 /** 첫 화면에 보여 줄 사업 지원 수 (웹 오른쪽 칸과 같아요) */
@@ -120,20 +119,11 @@ export function MBusiness() {
             {...spaceLink(it)}
             className="bg-surface text-text hover:text-text flex gap-[14px] rounded-[22px] p-[16px] no-underline"
           >
-            <span
-              className={cn(
-                "flex size-[76px] flex-none items-center justify-center rounded-[16px]",
-                spaceThumb(it.type),
-              )}
-            >
-              {(() => {
-                const Icon = spaceIcon[it.type];
-                return <Icon size={30} aria-hidden />;
-              })()}
-            </span>
+            {/* 공간 사진이 없어서 왼쪽 이미지 칸 없이 글자만: 판정 · 공간 종류를 첫 줄에 */}
             <span className="flex min-w-0 flex-1 flex-col gap-[5px]">
               <span className="flex items-center justify-between gap-[6px]">
                 {it.verdict && <VerdictBadge verdict={it.verdict} size="xs" />}
+                <SpaceTypeTag type={it.type} />
                 <span className="flex-1" />
                 <span className="text-[13px] font-extrabold">{it.due}</span>
               </span>

@@ -102,7 +102,6 @@ export function toListing(item: SearchItem): HomeListing {
         ? (prepareNoteLabel[item.prepareCostNote ?? ""] ?? "준비할 돈 확인 필요")
         : undefined,
     due: dueOf(item),
-    findYourOwn: item.noticeType === "JEONSE_RENTAL",
     region: item.regionCode ?? "nationwide",
     regionName: item.regionName ?? undefined,
     liked: false,
