@@ -4,7 +4,7 @@ import { useState } from "react";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import { MNoticeChatButton, NoticeChat } from "@/components/chat/NoticeChat";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
@@ -216,6 +216,7 @@ export function MDetailUnits({ id }: { id: string }) {
           id={n.id}
           onAdd={() => track("notice_bookmark", noticeParams(n))}
         />
+        <MNoticeChatButton noticeId={n.id} />
         <div className="flex min-w-0 flex-1 flex-col gap-[6px]">
           {selected && (
             <span className="text-text-sub text-center text-[13px]">
