@@ -1,6 +1,6 @@
 "use client";
 
-// 「이 공고 이야기」: 공고마다 하나인 채팅방. 공고 상세에는 안내 카드만 두고, 누르면 채팅 창이 열려요
+// 「이 공고 이야기」: 공고마다 하나인 채팅방. 「이야기」 단추(PC 오른쪽 단추 묶음 · 모바일 아래 고정 줄)와 그 위 말풍선으로 열어요
 // (PC는 오른쪽 패널, 모바일은 아래에서 올라오는 시트. 공고 원문 PDF 보기와 같은 방식). 읽기는 누구나, 쓰기는 로그인한 회원만
 // 채팅 창: 내 메시지는 오른쪽, 다른 사람은 왼쪽 말풍선. 같은 사람이 이어 보낸 건 이름·시각을 한 번만
 import {
@@ -67,34 +67,32 @@ export function NoticeChat({ noticeId, variant }: Props) {
   const { open, show, hide } = usePanel(noticeId, !web);
   // 실시간 연결은 채팅 창을 열었을 때만 (닫혀 있으면 방 정보와 첫 쪽만 받아 미리보기에 써요)
   const chat = useNoticeChat(noticeId, { live: open });
-  const readOnly = !!chat.room?.readOnly;
-  const opener = useRef<HTMLButtonElement>(null);
+  // 이 화면(PC 또는 모바일)이 지금 보이는지 가리는 빈 표시. 웹·모바일 화면이 둘 다 그려져 있어서 보이는 쪽 채팅만 움직여요
+  const anchor = useRef<HTMLSpanElement>(null);
   // 쓰던 글과 답장 대상은 창을 닫았다 열어도 남아요
   const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 
-  // 닫히면(X · Esc · 뒤로 가기 · 다시 누르기) 포커스를 연 단추로 돌려줘요 (아래 고정 줄에서 열었으면 그 단추로, 화면은 움직이지 않게)
+  // 닫히면(X · Esc · 뒤로 가기 · 다시 누르기) 포커스를 연 단추로 돌려줘요 (화면은 움직이지 않게)
   const returnTo = useRef<HTMLElement | null>(null);
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !open) {
       const active = document.activeElement;
       if (!active || active === document.body || !document.contains(active)) {
-        const target = returnTo.current?.isConnected ? returnTo.current : opener.current;
-        target?.focus({ preventScroll: true });
+        if (returnTo.current?.isConnected) returnTo.current.focus({ preventScroll: true });
       }
       returnTo.current = null;
     }
     wasOpen.current = open;
   }, [open]);
 
-  // 다른 「이야기」 단추(모바일 아래 고정 줄 · PC 오른쪽 단추 묶음)로도 열고 닫아요.
-  // 웹·모바일 화면이 둘 다 그려져 있어서, 보이는 쪽 채팅만 움직여요
+  // 「이야기」 단추(모바일 아래 고정 줄 · PC 오른쪽 단추 묶음)와 말풍선이 보내는 신호로 열고 닫아요
   useEffect(() => {
     const mineAndVisible = (e: Event) =>
       (e as CustomEvent<string>).detail === noticeId &&
-      !!opener.current &&
-      opener.current.offsetParent !== null;
+      !!anchor.current &&
+      anchor.current.offsetParent !== null;
     const openFrom = () => {
       returnTo.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -130,68 +128,16 @@ export function NoticeChat({ noticeId, variant }: Props) {
     return () => wide.removeEventListener("change", onChange);
   }, [open, web, hide]);
 
-  // 방이 없는 공고(404 등)면 채팅을 보여 주지 않아요. 열린 뒤 다시 받다 실패한 건 그대로 둬요
+  // 방이 없는 공고(404 등)면 채팅을 그리지 않아요. 열린 뒤 다시 받다 실패한 건 그대로 둬요
   if (chat.roomError && !chat.room) return null;
 
-  const visible = chat.messages.filter((m) => m.status === "VISIBLE");
-  const latest = visible.at(-1);
-  const openLabel =
-    chat.loading || chat.error || !chat.room
-      ? "이야기 열기"
-      : visible.length === 0
-        ? readOnly || chat.hasOlder
-          ? "이야기 보기"
-          : "첫 이야기 남기기"
-        : `이야기 ${visible.length}개${chat.hasOlder ? "+" : ""} 보기`;
-
   return (
-    <section
-      aria-labelledby={`chat-h-${variant}`}
-      className={
-        web
-          ? "rounded-card-lg bg-surface flex flex-col gap-[12px] px-[30px] py-[24px]"
-          : "rounded-card bg-surface mx-[16px] flex flex-col gap-[10px] px-[20px] py-[18px]"
-      }
-    >
-      <h2
-        id={`chat-h-${variant}`}
-        className={cn(
-          "m-0 flex items-center gap-[8px] font-extrabold",
-          web ? "tracking-title text-[21px]" : "text-[17px]",
-        )}
-      >
-        <MessageCircle size={web ? 22 : 19} className="text-brand" aria-hidden />이 공고 이야기
-      </h2>
-      <p className="text-text-sub m-0 text-[14px] leading-[1.6]">
-        다른 사람들은 이 공고를 어떻게 준비하고 있을까요? 궁금한 점을 묻고 준비 팁을 나눠 보세요.
-        {readOnly && " 접수 마감 30일이 지나 지금은 읽기만 할 수 있어요."}
-      </p>
-      {chat.error ? (
-        <p className="bg-bg rounded-tile text-text-sub m-0 px-[14px] py-[10px] text-[14px]">
-          이야기를 불러오지 못했어요. 열어서 다시 받아 볼 수 있어요
-        </p>
-      ) : (
-        latest && (
-          <p className="bg-bg rounded-tile m-0 flex min-w-0 items-baseline gap-[8px] px-[14px] py-[10px] text-[14px]">
-            <span className="text-text-sub flex-none text-[12px] font-bold">
-              {latest.authorNickname ?? "이름 없음"}
-            </span>
-            <span className="line-clamp-1 min-w-0">{latest.content}</span>
-          </p>
-        )
-      )}
-      <button
-        ref={opener}
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={open ? hide : show}
-        className="rounded-control bg-brand-soft text-brand-strong inline-flex min-h-[48px] cursor-pointer items-center justify-center gap-[6px] self-stretch border-0 text-[15px] font-extrabold"
-      >
-        <MessageCircle size={18} aria-hidden />
-        {open && web ? "이야기 닫기" : openLabel}
-      </button>
-
+    <>
+      <span
+        ref={anchor}
+        aria-hidden
+        className="pointer-events-none absolute size-0 overflow-hidden"
+      />
       {open &&
         createPortal(
           <ChatWindow
@@ -206,7 +152,7 @@ export function NoticeChat({ noticeId, variant }: Props) {
           />,
           document.body,
         )}
-    </section>
+    </>
   );
 }
 
@@ -226,13 +172,11 @@ function useChatOpen(noticeId: string) {
 
 /** 말풍선은 공고마다 이 기기에서 한 번만 띄워요 */
 const nudgeKey = (noticeId: string) => `mujuthaek:chat-nudge:${noticeId}`;
-/** 상세를 열고 이만큼 뒤에 떠요 (화면을 먼저 읽게) */
+/** 상세를 열고 이만큼 뒤에 떠요 (화면을 먼저 읽게). 저절로 사라지지 않고 X를 누르거나 채팅을 열면 닫혀요 */
 const NUDGE_DELAY_MS = 2500;
-/** 떠 있는 시간 */
-const NUDGE_SHOW_MS = 6000;
 
 /**
- * 「이야기」 단추 위에 잠깐 띄우는 말풍선 (다른 사람과 이 공고 이야기를 해 보라는 안내).
+ * 「이야기」 단추 위에 띄우는 말풍선 (다른 사람과 이 공고 이야기를 해 보라는 안내). X를 누르거나 채팅을 열 때까지 떠 있어요.
  * 웹·모바일 단추가 둘 다 그려져 있어서, 그때 보이는 단추에서만 띄우고 그때 「봤다」고 적어요
  */
 function useChatNudge(
@@ -260,11 +204,6 @@ function useChatNudge(
     }, NUDGE_DELAY_MS);
     return () => clearTimeout(t);
   }, [noticeId, anchor, ready, open]);
-  useEffect(() => {
-    if (!visible) return;
-    const t = setTimeout(() => setVisible(false), NUDGE_SHOW_MS);
-    return () => clearTimeout(t);
-  }, [visible]);
   return { shown: visible && !open, dismiss: () => setVisible(false) };
 }
 

@@ -504,7 +504,7 @@ export function WebDetail({ id }: { id: string }) {
                 </div>
               </section>
 
-              {/* 이 공고 이야기는 공고 요약 바로 아래 (공급 주택 목록 위) */}
+              {/* 이 공고 이야기 창 (여는 곳은 오른쪽 「이야기」 단추) */}
               <NoticeChat noticeId={n.id} variant="web" />
 
               {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
