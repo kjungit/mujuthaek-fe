@@ -132,7 +132,7 @@ export function useAdminOverview() {
 type QueuePage = Awaited<ReturnType<typeof liveReviewQueuePage>>;
 
 /**
- * 검수 대기열 (무한 스크롤): 사유(reason)로 거른 대기열을 50건씩 이어 받아요. 내 권한으로 볼 수 있는 종류(공고 검수·혜택 검수)만 물어요.
+ * 검수 대기열 (무한 스크롤): 사유(reason)로 거른 대기열을 20건씩 이어 받아요. 내 권한으로 볼 수 있는 종류(공고 검수·혜택 검수)만 물어요.
  * 화면을 떠나면 받아 둔 페이지를 버려요(돌아왔을 때 수천 건을 페이지마다 다시 받지 않게 첫 페이지부터).
  */
 export function useReviewQueue(reason: ReviewReason | null) {
@@ -163,7 +163,7 @@ export function useReviewQueue(reason: ReviewReason | null) {
       : [{ ...EMPTY_REVIEW, title: q.isPending ? "불러오는 중…" : EMPTY_REVIEW.title }],
     more: q.hasNextPage,
     loadingMore: q.isFetchingNextPage,
-    /** 대기열 아래 끝이 보이면 다음 50건 */
+    /** 대기열 아래 끝이 보이면 다음 20건 */
     loadMore: () => {
       if (q.hasNextPage && !q.isFetchingNextPage) void q.fetchNextPage();
     },

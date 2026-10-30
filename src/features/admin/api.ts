@@ -516,10 +516,10 @@ const REVIEW_REASON_API: Record<ReviewReason, string> = {
   format: "FORMAT",
 };
 /** 대기열 한 번에 받는 건수 (백엔드 최대 100) */
-const QUEUE_PAGE_SIZE = 50;
+const QUEUE_PAGE_SIZE = 20;
 
 /**
- * 검수 대기열 한 페이지: 공고·혜택 검수를 들어온 시각 순으로 섞어 50건씩 받아요(무한 스크롤). 원문·추출 결과는 고른 건만
+ * 검수 대기열 한 페이지: 공고·혜택 검수를 들어온 시각 순으로 섞어 20건씩 받아요(무한 스크롤). 원문·추출 결과는 고른 건만
  * {@link liveReviewDetail}로 받아요. kinds는 내 권한으로 볼 수 있는 종류(NOTICE·BENEFIT)예요
  */
 export async function liveReviewQueuePage(

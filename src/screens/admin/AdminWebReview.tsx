@@ -35,7 +35,7 @@ type Done = "ok" | "no";
 
 export function AdminWebReview() {
   const [filter, setFilter] = useState<"all" | ReviewReason>("all");
-  // 사유로 거르기는 서버가 해요(대기열을 50건씩 이어 받아서, 받은 것만 거르면 뒤 페이지의 건이 빠져요)
+  // 사유로 거르기는 서버가 해요(대기열을 20건씩 이어 받아서, 받은 것만 거르면 뒤 페이지의 건이 빠져요)
   const queue = useReviewQueue(filter === "all" ? null : filter);
   const decided = useReviewDecided();
   const items = queue.items;
@@ -50,7 +50,7 @@ export function AdminWebReview() {
   const shown = items;
   const selId = shown.some((i) => i.id === sel) ? sel : items[0].id;
   const row = items.find((i) => i.id === selId) ?? items[0];
-  // 대기열 아래 끝이 보이면 다음 50건을 받아요
+  // 대기열 아래 끝이 보이면 다음 20건을 받아요
   const listRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const { more, loadMore } = queue;
@@ -113,7 +113,7 @@ export function AdminWebReview() {
     decided(queue.total - Object.keys(next).length);
   };
 
-  /** 다음 건. 받은 마지막 건이면 다음 50건을 받고(받으면 그때 다시 눌러요), 다 받았으면 처음으로 */
+  /** 다음 건. 받은 마지막 건이면 다음 20건을 받고(받으면 그때 다시 눌러요), 다 받았으면 처음으로 */
   const goNext = () => {
     const idx = items.findIndex((i) => i.id === cur.id);
     if (idx === items.length - 1 && more) {
