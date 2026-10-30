@@ -195,7 +195,7 @@ function openStream(
 
 /**
  * 공고 채팅. live면 실시간(SSE)으로 붙어요: 채팅 창을 열었을 때만 붙여서, 공고만 보는 사람은 연결을 쥐지 않아요.
- * 닫혀 있을 때는 방 정보와 첫 쪽만 받아요 (안내 카드의 최근 이야기 미리보기)
+ * 닫혀 있을 때는 방 정보와 첫 쪽만 받아요 (「이야기」 단추의 이야기 수 · 말풍선의 최근 이야기 미리보기)
  */
 export function useNoticeChat(noticeId: string, { live = true }: { live?: boolean } = {}) {
   const client = useQueryClient();

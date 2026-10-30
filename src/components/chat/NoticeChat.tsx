@@ -174,10 +174,23 @@ function useChatOpen(noticeId: string) {
 const nudgeKey = (noticeId: string) => `mujuthaek:chat-nudge:${noticeId}`;
 /** 상세를 열고 이만큼 뒤에 떠요 (화면을 먼저 읽게). 저절로 사라지지 않고 X를 누르거나 채팅을 열면 닫혀요 */
 const NUDGE_DELAY_MS = 2500;
+/** 말풍선에 보여 줄 최근 이야기 길이. 넘치면 「…」로 줄여요 (한 줄만 보여서) */
+const NUDGE_PREVIEW_CHARS = 60;
+
+/** 「봤다」고 적어요. 못 적어도 그냥 넘어가요 */
+function markNudged(noticeId: string) {
+  try {
+    localStorage.setItem(nudgeKey(noticeId), "1");
+  } catch {
+    // 저장소를 못 쓰면 이번 화면에서만 기억해요
+  }
+}
 
 /**
- * 「이야기」 단추 위에 띄우는 말풍선 (다른 사람과 이 공고 이야기를 해 보라는 안내). X를 누르거나 채팅을 열 때까지 떠 있어요.
- * 웹·모바일 단추가 둘 다 그려져 있어서, 그때 보이는 단추에서만 띄우고 그때 「봤다」고 적어요
+ * 「이야기」 단추에 붙여 띄우는 말풍선 (다른 사람과 이 공고 이야기를 해 보라는 안내). X를 누르거나 채팅을 열 때까지 떠 있어요.
+ * 웹·모바일 단추가 둘 다 그려져 있어서, 그때 보이는 단추에서만 띄우고 그때 「봤다」고 적어요.
+ * 말풍선이 뜨기 전에 채팅을 열어도 「봤다」로 쳐요 (이미 써 본 사람에게 다시 권하지 않게).
+ * 읽기 전용 방(접수 마감 뒤)에는 띄우지 않아요
  */
 function useChatNudge(
   noticeId: string,
@@ -187,7 +200,11 @@ function useChatNudge(
 ) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
-    if (!ready || open) return;
+    if (open) {
+      markNudged(noticeId);
+      return;
+    }
+    if (!ready) return;
     try {
       if (localStorage.getItem(nudgeKey(noticeId)) !== null) return;
     } catch {
@@ -195,11 +212,7 @@ function useChatNudge(
     }
     const t = setTimeout(() => {
       if (!anchor.current || anchor.current.offsetParent === null) return;
-      try {
-        localStorage.setItem(nudgeKey(noticeId), "1");
-      } catch {
-        // 못 적어도 이번 한 번은 띄워요
-      }
+      markNudged(noticeId);
       setVisible(true);
     }, NUDGE_DELAY_MS);
     return () => clearTimeout(t);
@@ -207,30 +220,12 @@ function useChatNudge(
   return { shown: visible && !open, dismiss: () => setVisible(false) };
 }
 
-/**
- * 단추의 화면 위치를 따라가요 (PC 말풍선용). 오른쪽 칸이 넘치는 부분을 잘라서(overflow), 말풍선은 칸 밖에 따로 그려요
- */
-function useAnchorRect(anchor: RefObject<HTMLElement | null>, active: boolean) {
-  const [rect, setRect] = useState<DOMRect | null>(null);
-  useEffect(() => {
-    if (!active) return;
-    let frame = 0;
-    const update = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        if (anchor.current) setRect(anchor.current.getBoundingClientRect());
-      });
-    };
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [anchor, active]);
-  return active ? rect : null;
+/** 말풍선 미리보기 문구: 최근 이야기가 있으면 앞부분만, 없으면 권하는 말 */
+function nudgePreview(latest: ChatMessage | undefined) {
+  const text = latest?.content?.trim();
+  if (!text) return "궁금한 점을 묻고 준비 팁을 나눠 보세요";
+  const short = text.length > NUDGE_PREVIEW_CHARS ? `${text.slice(0, NUDGE_PREVIEW_CHARS)}…` : text;
+  return `「${short}」`;
 }
 
 /** 말풍선 안쪽: 누르면 채팅이 열리고, X로 닫아요. 최근 이야기가 있으면 한 줄 보여 줘요 */
@@ -239,15 +234,18 @@ function NudgeBody({
   onOpen,
   onDismiss,
   arrow,
+  arrowLeft,
 }: {
   latest: ChatMessage | undefined;
   onOpen: () => void;
   onDismiss: () => void;
-  /** 꼬리 방향: down(아래 단추를 가리켜요) · right(오른쪽 단추를 가리켜요) */
-  arrow: "down" | "right";
+  /** 꼬리 방향: up(위 단추를 가리켜요) · down(아래 단추를 가리켜요) */
+  arrow: "up" | "down";
+  /** 꼬리 가운데의 가로 위치(px). 없으면 말풍선 가운데예요 */
+  arrowLeft?: number;
 }) {
   return (
-    <div className="bg-text shadow-float relative rounded-[14px] py-[12px] pr-[34px] pl-[14px]">
+    <div className="bg-text shadow-float relative rounded-[14px] py-[12px] pr-[44px] pl-[16px]">
       <button
         type="button"
         onClick={onOpen}
@@ -257,40 +255,59 @@ function NudgeBody({
           이 공고, 다른 사람들은 어떻게 준비할까요?
         </span>
         <span className="line-clamp-1 text-[13px] leading-[1.5] text-white/80">
-          {latest?.content ? `「${latest.content}」` : "궁금한 점을 묻고 준비 팁을 나눠 보세요"}
+          {nudgePreview(latest)}
         </span>
       </button>
       <button
         type="button"
         aria-label="안내 닫기"
         onClick={onDismiss}
-        className="absolute top-[6px] right-[6px] inline-flex size-[28px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-white/80"
+        className="absolute top-[4px] right-[4px] inline-flex size-[36px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-white/80"
       >
         <X size={16} aria-hidden />
       </button>
       <span
         aria-hidden
         className={cn(
-          "bg-text absolute size-[12px] rotate-45",
-          arrow === "down"
-            ? "top-full left-[22px] -mt-[6px]"
-            : "top-1/2 left-full -mt-[6px] -ml-[6px]",
+          "bg-text absolute size-[12px] -translate-x-1/2 rotate-45",
+          arrow === "up" ? "bottom-full -mb-[6px]" : "top-full -mt-[6px]",
         )}
+        style={{ left: arrowLeft ?? "50%" }}
       />
     </div>
   );
 }
 
+/** 바깥 여백: 모바일 아래 고정 줄의 좌우 여백과 같아요 (말풍선을 줄 폭에 맞춰요) */
+const M_BAR_GUTTER = 16;
+
 /**
- * 모바일 아래 고정 줄(관심 하트 옆)의 「이야기」 단추. 공고 상세를 끝까지 내리지 않아도 채팅을 열 수 있어요.
- * 목록은 안내 카드와 같은 캐시를 읽어서 요청이 더 가지 않고, 이야기 수를 작은 숫자로 보여 줘요.
- * 처음 보는 공고면 잠깐 말풍선으로 이야기해 보라고 알려요
+ * 모바일 아래 고정 줄의 「이야기」 단추. 공고 상세를 끝까지 내리지 않아도 채팅을 열 수 있어요.
+ * 목록은 채팅 창과 같은 캐시를 읽어서 요청이 더 가지 않고, 이야기 수를 작은 숫자로 보여 줘요.
+ * 처음 보는 공고면 말풍선으로 이야기해 보라고 알려요. 말풍선은 고정 줄 바로 위에 줄 폭만큼 띄우고(단추 순서와 상관없이 화면 안),
+ * 꼬리로 이 단추를 가리켜요. 고정 줄(MBottomActions)이 sticky라 말풍선 위치의 기준 상자예요
  */
 export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
   const chat = useNoticeChat(noticeId, { live: false });
   const open = useChatOpen(noticeId);
   const anchor = useRef<HTMLButtonElement>(null);
-  const nudge = useChatNudge(noticeId, anchor, !!chat.room && !chat.loading, open);
+  const nudge = useChatNudge(
+    noticeId,
+    anchor,
+    !!chat.room && !chat.room.readOnly && !chat.loading,
+    open,
+  );
+  const [arrowLeft, setArrowLeft] = useState<number>();
+  useLayoutEffect(() => {
+    if (!nudge.shown) return;
+    const measure = () => {
+      const b = anchor.current;
+      if (b) setArrowLeft(b.offsetLeft + b.offsetWidth / 2 - M_BAR_GUTTER);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [nudge.shown]);
   if (chat.roomError && !chat.room) return null;
   const visible = chat.messages.filter((m) => m.status === "VISIBLE");
   const count = visible.length;
@@ -300,17 +317,18 @@ export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
     window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: noticeId }));
   };
   return (
-    <span className="relative flex flex-none">
+    <span className="flex flex-none">
       {nudge.shown && (
         <div
-          role="status"
-          className="absolute bottom-full left-0 z-[5] mb-[12px] w-[270px] max-w-[calc(100vw-32px)]"
+          className="absolute bottom-full z-[5] mb-[10px]"
+          style={{ left: M_BAR_GUTTER, right: M_BAR_GUTTER }}
         >
           <NudgeBody
             latest={visible.at(-1)}
             onOpen={openChat}
             onDismiss={nudge.dismiss}
             arrow="down"
+            arrowLeft={arrowLeft}
           />
         </div>
       )}
@@ -337,9 +355,9 @@ export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
 }
 
 /**
- * PC 오른쪽 단추 묶음(관심 등록 · 원문 보기 아래)의 「이야기」 단추. 스크롤해도 늘 보이는 자리라 공고를 읽다가 바로 열 수 있어요.
+ * PC 오른쪽 단추 묶음(관심 등록 · 원문 보기 아래)의 「이야기」 단추. 공고를 읽다가 바로 열 수 있어요.
  * 열려 있으면 「이야기 닫기」로 바뀌고 누르면 닫혀요. 모양은 옆 단추에 맞춰 className으로 받아요.
- * 처음 보는 공고면 잠깐 말풍선으로 이야기해 보라고 알려요
+ * 처음 보는 공고면 단추 바로 아래에 말풍선을 붙여 이야기해 보라고 알려요 (오른쪽 칸 안에 들어가서 본문·다른 단추를 가리지 않아요)
  */
 export function WebNoticeChatButton({
   noticeId,
@@ -351,9 +369,12 @@ export function WebNoticeChatButton({
   const chat = useNoticeChat(noticeId, { live: false });
   const open = useChatOpen(noticeId);
   const anchor = useRef<HTMLButtonElement>(null);
-  const nudge = useChatNudge(noticeId, anchor, !!chat.room && !chat.loading, open);
-  // 말풍선은 단추 왼쪽(본문 쪽)에 띄워요. 위쪽 관심 등록 · 원문 보기 단추를 가리지 않게
-  const rect = useAnchorRect(anchor, nudge.shown);
+  const nudge = useChatNudge(
+    noticeId,
+    anchor,
+    !!chat.room && !chat.room.readOnly && !chat.loading,
+    open,
+  );
   if (chat.roomError && !chat.room) return null;
   const visible = chat.messages.filter((m) => m.status === "VISIBLE");
   const count = visible.length;
@@ -367,28 +388,7 @@ export function WebNoticeChatButton({
     window.dispatchEvent(new CustomEvent(TOGGLE_EVENT, { detail: noticeId }));
   };
   return (
-    <div className="relative flex flex-col">
-      {nudge.shown &&
-        rect &&
-        createPortal(
-          <div
-            role="status"
-            className="fixed z-[25] w-[330px]"
-            style={{
-              top: rect.top + rect.height / 2,
-              left: rect.left - 14,
-              transform: "translate(-100%, -50%)",
-            }}
-          >
-            <NudgeBody
-              latest={visible.at(-1)}
-              onOpen={toggle}
-              onDismiss={nudge.dismiss}
-              arrow="right"
-            />
-          </div>,
-          document.body,
-        )}
+    <div className="flex flex-col gap-[12px]">
       <button
         ref={anchor}
         type="button"
@@ -403,6 +403,9 @@ export function WebNoticeChatButton({
         <MessageCircle size={18} aria-hidden />
         {label}
       </button>
+      {nudge.shown && (
+        <NudgeBody latest={visible.at(-1)} onOpen={toggle} onDismiss={nudge.dismiss} arrow="up" />
+      )}
     </div>
   );
 }
