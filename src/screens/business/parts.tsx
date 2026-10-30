@@ -18,9 +18,23 @@ export const spaceIcon: Record<SpaceType, LucideIcon> = {
   room: Users,
 };
 
-/** 창업 공간은 연한 초록, 나머지는 이미지 자리 회색 */
-export const spaceThumb = (type: SpaceType) =>
-  type === "startup" ? "bg-brand-soft text-brand" : "bg-placeholder-bg text-placeholder-icon";
+/** 공간 종류 이름 */
+export const spaceTypeLabel: Record<SpaceType, string> = {
+  startup: "창업 공간",
+  shop: "공공 상가",
+  room: "회의실",
+};
+
+/** 카드 첫 줄의 공간 종류: 작은 아이콘 + 이름 (공간 사진이 없어서 큰 이미지 칸 대신 써요) */
+export function SpaceTypeTag({ type }: { type: SpaceType }) {
+  const Icon = spaceIcon[type];
+  return (
+    <span className="text-text-sub inline-flex flex-none items-center gap-[4px] text-[13px] font-bold">
+      <Icon size={14} aria-hidden />
+      {spaceTypeLabel[type]}
+    </span>
+  );
+}
 
 export const spaceFilters = (mobile: boolean) =>
   [

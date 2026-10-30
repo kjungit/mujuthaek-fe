@@ -4,7 +4,7 @@ import { NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
-import { Building, Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
@@ -85,9 +85,6 @@ function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
       <MBackHeader title={back.title} backHref={back.href} />
       <main className="flex flex-1 flex-col gap-[12px] pb-[24px]">
         <section className="bg-surface flex flex-col">
-          <div className="bg-brand-soft text-brand flex h-[180px] items-center justify-center">
-            <Building size={56} strokeWidth={1.2} aria-hidden />
-          </div>
           <div className="flex flex-col gap-[10px] p-[20px]">
             <div className="flex flex-wrap gap-[6px]">
               <VerdictBadge verdict={data.verdict} size="md" />

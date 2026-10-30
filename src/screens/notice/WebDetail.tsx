@@ -5,7 +5,7 @@ import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Building, ChevronRight, FileText, MapPin } from "lucide-react";
+import { ArrowRight, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
@@ -460,9 +460,6 @@ export function WebDetail({ id }: { id: string }) {
                 aria-label="공고 요약"
                 className="rounded-card-lg bg-surface overflow-hidden"
               >
-                <div className="bg-placeholder-bg text-off flex h-[220px] items-center justify-center">
-                  <Building size={64} strokeWidth={1.2} aria-hidden />
-                </div>
                 <div className="flex flex-col gap-[20px] px-[30px] pt-[28px] pb-[30px]">
                   <div className="flex flex-col gap-[10px]">
                     <NoticeTags
