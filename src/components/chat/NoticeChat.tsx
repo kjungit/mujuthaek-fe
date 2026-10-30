@@ -207,56 +207,76 @@ function useChatNudge(
   return { shown: visible && !open, dismiss: () => setVisible(false) };
 }
 
-/** 말풍선: 누르면 채팅이 열리고, X로 닫아요. 최근 이야기가 있으면 한 줄 보여 줘요 */
-function ChatNudge({
+/**
+ * 단추의 화면 위치를 따라가요 (PC 말풍선용). 오른쪽 칸이 넘치는 부분을 잘라서(overflow), 말풍선은 칸 밖에 따로 그려요
+ */
+function useAnchorRect(anchor: RefObject<HTMLElement | null>, active: boolean) {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  useEffect(() => {
+    if (!active) return;
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (anchor.current) setRect(anchor.current.getBoundingClientRect());
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [anchor, active]);
+  return active ? rect : null;
+}
+
+/** 말풍선 안쪽: 누르면 채팅이 열리고, X로 닫아요. 최근 이야기가 있으면 한 줄 보여 줘요 */
+function NudgeBody({
   latest,
   onOpen,
   onDismiss,
-  align,
+  arrow,
 }: {
   latest: ChatMessage | undefined;
   onOpen: () => void;
   onDismiss: () => void;
-  /** start: 단추 왼쪽 끝에 맞춰요 (모바일 아래 고정 줄) · center: 단추 가운데 (PC) */
-  align: "start" | "center";
+  /** 꼬리 방향: down(아래 단추를 가리켜요) · right(오른쪽 단추를 가리켜요) */
+  arrow: "down" | "right";
 }) {
   return (
-    <div
-      role="status"
-      className={cn(
-        "absolute bottom-full z-[5] mb-[12px] max-w-[calc(100vw-32px)]",
-        align === "start" ? "left-0 w-[270px]" : "left-1/2 w-[330px] -translate-x-1/2",
-      )}
-    >
-      <div className="bg-text shadow-float relative rounded-[14px] py-[12px] pr-[34px] pl-[14px]">
-        <button
-          type="button"
-          onClick={onOpen}
-          className="block w-full cursor-pointer border-0 bg-transparent p-0 text-left text-white"
-        >
-          <span className="block text-[14px] leading-[1.5] font-bold">
-            이 공고, 다른 사람들은 어떻게 준비할까요?
-          </span>
-          <span className="line-clamp-1 text-[13px] leading-[1.5] text-white/80">
-            {latest?.content ? `「${latest.content}」` : "궁금한 점을 묻고 준비 팁을 나눠 보세요"}
-          </span>
-        </button>
-        <button
-          type="button"
-          aria-label="안내 닫기"
-          onClick={onDismiss}
-          className="absolute top-[6px] right-[6px] inline-flex size-[28px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-white/80"
-        >
-          <X size={16} aria-hidden />
-        </button>
-        <span
-          aria-hidden
-          className={cn(
-            "bg-text absolute top-full -mt-[6px] size-[12px] rotate-45",
-            align === "start" ? "left-[22px]" : "left-1/2 -translate-x-1/2",
-          )}
-        />
-      </div>
+    <div className="bg-text shadow-float relative rounded-[14px] py-[12px] pr-[34px] pl-[14px]">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="block w-full cursor-pointer border-0 bg-transparent p-0 text-left text-white"
+      >
+        <span className="block text-[14px] leading-[1.5] font-bold">
+          이 공고, 다른 사람들은 어떻게 준비할까요?
+        </span>
+        <span className="line-clamp-1 text-[13px] leading-[1.5] text-white/80">
+          {latest?.content ? `「${latest.content}」` : "궁금한 점을 묻고 준비 팁을 나눠 보세요"}
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label="안내 닫기"
+        onClick={onDismiss}
+        className="absolute top-[6px] right-[6px] inline-flex size-[28px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-white/80"
+      >
+        <X size={16} aria-hidden />
+      </button>
+      <span
+        aria-hidden
+        className={cn(
+          "bg-text absolute size-[12px] rotate-45",
+          arrow === "down"
+            ? "top-full left-[22px] -mt-[6px]"
+            : "top-1/2 left-full -mt-[6px] -ml-[6px]",
+        )}
+      />
     </div>
   );
 }
@@ -282,12 +302,17 @@ export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
   return (
     <span className="relative flex flex-none">
       {nudge.shown && (
-        <ChatNudge
-          latest={visible.at(-1)}
-          onOpen={openChat}
-          onDismiss={nudge.dismiss}
-          align="start"
-        />
+        <div
+          role="status"
+          className="absolute bottom-full left-0 z-[5] mb-[12px] w-[270px] max-w-[calc(100vw-32px)]"
+        >
+          <NudgeBody
+            latest={visible.at(-1)}
+            onOpen={openChat}
+            onDismiss={nudge.dismiss}
+            arrow="down"
+          />
+        </div>
       )}
       <button
         ref={anchor}
@@ -327,6 +352,8 @@ export function WebNoticeChatButton({
   const open = useChatOpen(noticeId);
   const anchor = useRef<HTMLButtonElement>(null);
   const nudge = useChatNudge(noticeId, anchor, !!chat.room && !chat.loading, open);
+  // 말풍선은 단추 왼쪽(본문 쪽)에 띄워요. 위쪽 관심 등록 · 원문 보기 단추를 가리지 않게
+  const rect = useAnchorRect(anchor, nudge.shown);
   if (chat.roomError && !chat.room) return null;
   const visible = chat.messages.filter((m) => m.status === "VISIBLE");
   const count = visible.length;
@@ -341,14 +368,27 @@ export function WebNoticeChatButton({
   };
   return (
     <div className="relative flex flex-col">
-      {nudge.shown && (
-        <ChatNudge
-          latest={visible.at(-1)}
-          onOpen={toggle}
-          onDismiss={nudge.dismiss}
-          align="center"
-        />
-      )}
+      {nudge.shown &&
+        rect &&
+        createPortal(
+          <div
+            role="status"
+            className="fixed z-[25] w-[330px]"
+            style={{
+              top: rect.top + rect.height / 2,
+              left: rect.left - 14,
+              transform: "translate(-100%, -50%)",
+            }}
+          >
+            <NudgeBody
+              latest={visible.at(-1)}
+              onOpen={toggle}
+              onDismiss={nudge.dismiss}
+              arrow="right"
+            />
+          </div>,
+          document.body,
+        )}
       <button
         ref={anchor}
         type="button"
