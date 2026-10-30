@@ -1,20 +1,21 @@
 "use client";
 
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import { MNoticeChatButton, NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
-import { Building, Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
+import { CheckAction } from "@/components/ui/CheckAction";
 import { useSpaceDetail, useSupportDetail } from "@/features/business/queries";
 import { track } from "@/lib/analytics";
 import { useDocChecks } from "@/features/business/state";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { SpaceDetail } from "@/mocks/business";
-import { AboutSection, AnswerButtons, RuleAction } from "./parts";
+import { AboutSection, RuleAction } from "./parts";
 
 const card = "bg-surface mx-[16px] flex flex-col rounded-card px-[20px] py-[16px]";
 const h3 = "m-0 text-[17px] font-extrabold";
@@ -42,20 +43,16 @@ export function MSupportDetail({ id }: { id: string }) {
   );
 }
 
-type OnAnswer = (questionId: string, value: "YES" | "NO") => void;
-
 function MBizDetail({
   data,
   loading,
   error,
   back,
-  answer,
 }: {
   data: SpaceDetail | undefined;
   loading: boolean;
   error: boolean;
   back: Back;
-  answer?: OnAnswer;
 }) {
   if (!data) {
     return (
@@ -74,18 +71,10 @@ function MBizDetail({
       </MPage>
     );
   }
-  return <MSpaceDetailView data={data} back={back} onAnswer={answer} />;
+  return <MSpaceDetailView data={data} back={back} />;
 }
 
-function MSpaceDetailView({
-  data,
-  back,
-  onAnswer,
-}: {
-  data: SpaceDetail;
-  back: Back;
-  onAnswer?: OnAnswer;
-}) {
+function MSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
   const met = data.rules.filter((r) => r.met).length;
   const no = data.rules.filter((r) => r.notMet).length;
@@ -96,9 +85,6 @@ function MSpaceDetailView({
       <MBackHeader title={back.title} backHref={back.href} />
       <main className="flex flex-1 flex-col gap-[12px] pb-[24px]">
         <section className="bg-surface flex flex-col">
-          <div className="bg-brand-soft text-brand flex h-[180px] items-center justify-center">
-            <Building size={56} strokeWidth={1.2} aria-hidden />
-          </div>
           <div className="flex flex-col gap-[10px] p-[20px]">
             <div className="flex flex-wrap gap-[6px]">
               <VerdictBadge verdict={data.verdict} size="md" />
@@ -172,33 +158,15 @@ function MSpaceDetailView({
                     <span className="text-text-sub text-[12px] font-bold">
                       {k + 1}번째 길 {o.met ? "· 충족" : o.notMet ? "· 해당 안 됨" : ""}
                     </span>
-                    {o.rules.map((x, m) =>
-                      x.questionId && onAnswer ? (
-                        <div key={m} className="flex flex-col gap-[6px]">
-                          <span className="text-[14px] leading-[1.5]">{x.mRule || o.label}</span>
-                          <RuleAction r={x} onAnswer={onAnswer} />
-                        </div>
-                      ) : (
-                        // 질문이 아닌 조건도 웹처럼 결과를 보여요 (충족 · 해당 안 돼요 · 확인 필요 · 입력)
-                        <div key={m} className="flex items-center justify-between gap-[8px]">
-                          <span className="text-[14px] leading-[1.5]">{x.mRule || o.label}</span>
-                          <RuleAction r={x} onAnswer={onAnswer} />
-                        </div>
-                      ),
-                    )}
+                    {o.rules.map((x, m) => (
+                      // 웹처럼 길 안 조건마다 결과를 보여요 (충족 · 해당 안 돼요 · 입력하고 확인 · 원문 확인)
+                      <div key={m} className="flex items-center justify-between gap-[8px]">
+                        <span className="text-[14px] leading-[1.5]">{x.mRule || o.label}</span>
+                        <RuleAction r={x} web={false} />
+                      </div>
+                    ))}
                   </div>
                 ))}
-              </div>
-            ) : r.questionId && onAnswer ? (
-              <div
-                key={`${i}-${r.label}`}
-                className={cn(
-                  row(i === data.rules.length - 1),
-                  "flex-col items-stretch gap-[8px] py-[10px]",
-                )}
-              >
-                <span className="text-[14px] leading-[1.5]">{r.mRule}</span>
-                <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />
               </div>
             ) : r.met ? (
               <div
@@ -227,12 +195,7 @@ function MSpaceDetailView({
                 {r.notMet ? (
                   <span className="text-text-sub flex-none font-bold">해당 안 돼요</span>
                 ) : (
-                  <Link
-                    href={routes.bizOnboarding}
-                    className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-                  >
-                    확인 필요 · 입력
-                  </Link>
+                  <CheckAction inputHref={r.inputHref} web={false} />
                 )}
               </div>
             ),
@@ -364,6 +327,7 @@ function MSpaceDetailView({
         >
           공고 원문
         </a>
+        {data.favoriteType === "NOTICE" && <MNoticeChatButton noticeId={data.id} />}
         <MFavoriteHeart
           type={data.favoriteType ?? "SPACE_RECRUITMENT"}
           id={data.id}

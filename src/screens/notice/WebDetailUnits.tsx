@@ -5,7 +5,12 @@ import Link from "next/link";
 import { ArrowRight, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import {
+  DETAIL_MAIN_BASIS_WITH_CHAT,
+  NoticeChat,
+  WebNoticeChatButton,
+  useNoticeChatOpen,
+} from "@/components/chat/NoticeChat";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
@@ -34,6 +39,8 @@ export function WebDetailUnits({ id }: { id: string }) {
   const units = n?.kind === "units" ? n.units : [];
   const { onlyOk, setOnlyOk, shown, selected, select, countAll, countOk } = useUnitPicker(units);
   const pdf = usePdfViewer();
+  // 채팅 패널이 열린 동안은 본문 기본 폭을 줄여서 오른쪽 칸(관심 등록 · 이야기 닫기)이 본문 아래로 내려가지 않게 해요
+  const chatOpen = useNoticeChatOpen(n?.id ?? id);
   useJudgmentViewed(id, n);
   if (n?.kind !== "units") return null;
   const { doc } = n;
@@ -322,7 +329,10 @@ export function WebDetailUnits({ id }: { id: string }) {
           </section>
 
           <div className="flex flex-wrap items-start gap-[16px]">
-            <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 560px" }}>
+            <div
+              className="flex min-w-0 flex-col gap-[16px]"
+              style={{ flex: `999 1 ${chatOpen ? DETAIL_MAIN_BASIS_WITH_CHAT : 560}px` }}
+            >
               <NoticeToc doc={doc} variant="web" />
               <NoticeSections
                 doc={doc}
@@ -383,6 +393,10 @@ export function WebDetailUnits({ id }: { id: string }) {
               >
                 {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
               </button>
+              <WebNoticeChatButton
+                noticeId={n.id}
+                className="rounded-tile bg-surface text-text min-h-[54px]"
+              />
             </aside>
           </div>
         </WebMain>

@@ -1,6 +1,6 @@
 "use client";
 
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import { MNoticeChatButton, NoticeChat } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
@@ -428,6 +428,7 @@ export function MDetail({ id }: { id: string }) {
           id={n.id}
           onAdd={() => track("notice_bookmark", noticeParams(n))}
         />
+        <MNoticeChatButton noticeId={n.id} />
         <button
           type="button"
           onClick={() => openOriginal()}

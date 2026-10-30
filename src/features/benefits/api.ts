@@ -3,6 +3,7 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { toApplicant } from "@/features/conditions/applicant";
+import { inputHrefOf } from "@/features/conditions/needs";
 import { useConditions } from "@/features/conditions/store";
 import { useCriteria } from "@/features/eligibility/criteria";
 import { formatWon } from "@/features/notice/format";
@@ -181,6 +182,10 @@ export function toBenefitDetail(
         result: resultOf[g.status],
         reason:
           g.status === "MET" ? undefined : (g.items.find((i) => i.reason)?.reason ?? undefined),
+        inputHref:
+          g.status === "UNKNOWN"
+            ? inputHrefOf(g.items.filter((i) => i.status === "UNKNOWN").flatMap((i) => i.needs))
+            : undefined,
       }))
     : d.conditions
         .filter((c) => c.type !== "EXCLUSIVE" && c.type !== "PRIORITY")

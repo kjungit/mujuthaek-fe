@@ -1,11 +1,16 @@
 "use client";
 
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import {
+  DETAIL_MAIN_BASIS_WITH_CHAT,
+  NoticeChat,
+  WebNoticeChatButton,
+  useNoticeChatOpen,
+} from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Building, ChevronRight, FileText, MapPin } from "lucide-react";
+import { ArrowRight, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
@@ -397,6 +402,8 @@ export function WebDetail({ id }: { id: string }) {
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
   const pdf = usePdfViewer();
+  // 채팅 패널이 열린 동안은 본문 기본 폭을 줄여서 오른쪽 칸(내 자격 · 이야기 닫기)이 본문 아래로 내려가지 않게 해요
+  const chatOpen = useNoticeChatOpen(n?.id ?? id);
   useJudgmentViewed(id, n);
   const [lifeSite, setLifeSite] = useState<string>();
   if (!n) {
@@ -455,14 +462,14 @@ export function WebDetail({ id }: { id: string }) {
           </nav>
 
           <div className="flex flex-wrap items-start gap-[28px]">
-            <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 600px" }}>
+            <div
+              className="flex min-w-0 flex-col gap-[16px]"
+              style={{ flex: `999 1 ${chatOpen ? DETAIL_MAIN_BASIS_WITH_CHAT : 600}px` }}
+            >
               <section
                 aria-label="공고 요약"
                 className="rounded-card-lg bg-surface overflow-hidden"
               >
-                <div className="bg-placeholder-bg text-off flex h-[220px] items-center justify-center">
-                  <Building size={64} strokeWidth={1.2} aria-hidden />
-                </div>
                 <div className="flex flex-col gap-[20px] px-[30px] pt-[28px] pb-[30px]">
                   <div className="flex flex-col gap-[10px]">
                     <NoticeTags
@@ -504,7 +511,7 @@ export function WebDetail({ id }: { id: string }) {
                 </div>
               </section>
 
-              {/* 이 공고 이야기는 공고 요약 바로 아래 (공급 주택 목록 위) */}
+              {/* 이 공고 이야기 창 (여는 곳은 오른쪽 「이야기」 단추) */}
               <NoticeChat noticeId={n.id} variant="web" />
 
               {n.units && n.units.length > 0 && <BlockUnits units={n.units} />}
@@ -621,6 +628,10 @@ export function WebDetail({ id }: { id: string }) {
                   <FileText size={18} aria-hidden />
                   {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
                 </button>
+                <WebNoticeChatButton
+                  noticeId={n.id}
+                  className="rounded-tile bg-surface text-text min-h-[56px]"
+                />
                 <div className="flex flex-col items-center gap-[2px] pt-[4px]">
                   <span className="text-text-sub text-[13px]">
                     판정은 참고용이에요. 신청 전에 원문을 확인해 주세요

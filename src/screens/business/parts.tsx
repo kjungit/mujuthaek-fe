@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Building, Store, Users, type LucideIcon } from "lucide-react";
 import { Badge, verdictLabel } from "@/components/ui/Badge";
+import { CheckAction } from "@/components/ui/CheckAction";
 import { FilterChip } from "@/components/ui/Chip";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -18,9 +18,23 @@ export const spaceIcon: Record<SpaceType, LucideIcon> = {
   room: Users,
 };
 
-/** 창업 공간은 연한 초록, 나머지는 이미지 자리 회색 */
-export const spaceThumb = (type: SpaceType) =>
-  type === "startup" ? "bg-brand-soft text-brand" : "bg-placeholder-bg text-placeholder-icon";
+/** 공간 종류 이름 */
+export const spaceTypeLabel: Record<SpaceType, string> = {
+  startup: "창업 공간",
+  shop: "공공 상가",
+  room: "회의실",
+};
+
+/** 카드 첫 줄의 공간 종류: 작은 아이콘 + 이름 (공간 사진이 없어서 큰 이미지 칸 대신 써요) */
+export function SpaceTypeTag({ type }: { type: SpaceType }) {
+  const Icon = spaceIcon[type];
+  return (
+    <span className="text-text-sub inline-flex flex-none items-center gap-[4px] text-[13px] font-bold">
+      <Icon size={14} aria-hidden />
+      {spaceTypeLabel[type]}
+    </span>
+  );
+}
 
 export const spaceFilters = (mobile: boolean) =>
   [
@@ -127,36 +141,6 @@ export function RegionScopeChips({
   );
 }
 
-/** 질문형 조건 답하기: 예 · 아니요 (다시 누르면 답을 지워요) */
-export function AnswerButtons({
-  questionId,
-  answer,
-  onAnswer,
-}: {
-  questionId: string;
-  answer?: "YES" | "NO";
-  onAnswer: (questionId: string, value: "YES" | "NO") => void;
-}) {
-  return (
-    <span role="group" aria-label="답하기" className="flex flex-none gap-[6px]">
-      {(["YES", "NO"] as const).map((v) => (
-        <button
-          key={v}
-          type="button"
-          aria-pressed={answer === v}
-          onClick={() => onAnswer(questionId, v)}
-          className={cn(
-            "min-h-[40px] cursor-pointer rounded-[10px] border-0 px-[14px] text-[14px] font-bold",
-            answer === v ? "bg-text text-white" : "bg-fill text-text-sub",
-          )}
-        >
-          {v === "YES" ? "예" : "아니요"}
-        </button>
-      ))}
-    </span>
-  );
-}
-
 /** 공고 안내: 출처가 준 요약 · 기관 · 문의처 · 접수 방법 · 링크 (모집 정책 · 사업 지원) */
 export function AboutSection({
   about,
@@ -215,28 +199,13 @@ export function AboutSection({
   );
 }
 
-/** 자격 조건 한 줄의 결과 (웹·모바일 공통): 질문이면 예 · 아니요, 아니면 충족 · 해당 안 돼요 · 확인 필요(사업 정보 입력으로).
- * 오른쪽 칸: 질문이면 예 · 아니요, 아니면 결과 (확인 필요면 사업 정보 입력으로) */
-export function RuleAction({
-  r,
-  onAnswer,
-}: {
-  r: SpaceRule;
-  onAnswer?: (questionId: string, value: "YES" | "NO") => void;
-}) {
-  if (r.questionId && onAnswer)
-    return <AnswerButtons questionId={r.questionId} answer={r.answer} onAnswer={onAnswer} />;
+/** 자격 조건 한 줄의 결과 (웹·모바일 공통): 충족 · 해당 안 돼요 · 확인 필요(넣을 입력이 있을 때만 입력 화면으로, 없으면 원문 확인).
+ * 공고마다 예 · 아니요로 묻지 않아요 */
+export function RuleAction({ r, web }: { r: SpaceRule; web: boolean }) {
   if (r.met) return <span className="text-ok-text flex-none text-[14px] font-bold">충족</span>;
   if (r.notMet)
     return <span className="text-text-sub flex-none text-[14px] font-bold">해당 안 돼요</span>;
   if (r.options)
     return <span className="text-check-text flex-none text-[14px] font-bold">확인 필요</span>;
-  return (
-    <Link
-      href={routes.bizOnboarding}
-      className="bg-check-bg text-check-text hover:text-check-text inline-flex min-h-[40px] flex-none items-center rounded-[10px] px-[12px] text-[14px] font-bold no-underline"
-    >
-      확인 필요 · 입력
-    </Link>
-  );
+  return <CheckAction inputHref={r.inputHref} web={web} />;
 }

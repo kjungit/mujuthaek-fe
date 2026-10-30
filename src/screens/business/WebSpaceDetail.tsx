@@ -1,10 +1,15 @@
 "use client";
 
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import {
+  DETAIL_MAIN_BASIS_WITH_CHAT,
+  NoticeChat,
+  WebNoticeChatButton,
+  useNoticeChatOpen,
+} from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
-import { Building, Check, ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
@@ -18,8 +23,6 @@ import { AboutSection, RuleAction } from "./parts";
 
 const card = "rounded-card-lg bg-surface flex flex-col";
 const h2 = "tracking-title m-0 text-[22px] font-extrabold";
-
-type OnAnswer = (questionId: string, value: "YES" | "NO") => void;
 
 /** 조건 상태 동그라미: 충족 ✓ · 해당 안 됨 ✕ · 확인 필요 ? */
 function RuleMark({ met, notMet, small }: { met: boolean; notMet?: boolean; small?: boolean }) {
@@ -60,7 +63,7 @@ function RuleMark({ met, notMet, small }: { met: boolean; notMet?: boolean; smal
   );
 }
 
-function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?: OnAnswer }) {
+function RuleList({ rules }: { rules: SpaceDetail["rules"] }) {
   return (
     <div className="flex flex-col">
       {rules.map((r, i) => {
@@ -84,7 +87,7 @@ function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?:
                   </span>
                 )}
               </span>
-              <RuleAction r={r} onAnswer={onAnswer} />
+              <RuleAction r={r} web />
             </div>
             {r.options && (
               <ol className="m-0 ml-[40px] flex list-none flex-col gap-[8px] p-0">
@@ -100,7 +103,7 @@ function RuleList({ rules, onAnswer }: { rules: SpaceDetail["rules"]; onAnswer?:
                     {o.rules.map((x, m) => (
                       <div key={m} className="flex items-center gap-[10px]">
                         <span className="flex-1 text-[14px]">{x.rule || o.label}</span>
-                        <RuleAction r={x} onAnswer={onAnswer} />
+                        <RuleAction r={x} web />
                       </div>
                     ))}
                   </li>
@@ -140,13 +143,11 @@ function WebBizDetail({
   loading,
   error,
   back,
-  answer,
 }: {
   data: SpaceDetail | undefined;
   loading: boolean;
   error: boolean;
   back: Back;
-  answer?: OnAnswer;
 }) {
   if (!data) {
     return (
@@ -167,19 +168,13 @@ function WebBizDetail({
       </WebPage>
     );
   }
-  return <WebSpaceDetailView data={data} back={back} onAnswer={answer} />;
+  return <WebSpaceDetailView data={data} back={back} />;
 }
 
-function WebSpaceDetailView({
-  data,
-  back,
-  onAnswer,
-}: {
-  data: SpaceDetail;
-  back: Back;
-  onAnswer?: OnAnswer;
-}) {
+function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
+  // 채팅 패널이 열린 동안은 본문 기본 폭을 줄여서 오른쪽 칸(내 자격 · 이야기 닫기)이 본문 아래로 내려가지 않게 해요
+  const chatOpen = useNoticeChatOpen(data.id);
   // 모집 정책은 공간 정보 대신 자격 조건이 많아서 넓은 칸에 보여줘요
   const wideRules = data.rules.length > 0 && Boolean(data.summaryNote);
   const met = data.rules.filter((r) => r.met).length;
@@ -199,11 +194,11 @@ function WebSpaceDetailView({
         </Link>
 
         <div className="flex flex-wrap items-start gap-[24px]">
-          <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 560px" }}>
+          <div
+            className="flex min-w-0 flex-col gap-[16px]"
+            style={{ flex: `999 1 ${chatOpen ? DETAIL_MAIN_BASIS_WITH_CHAT : 560}px` }}
+          >
             <section aria-label="공고 요약" className={cn(card, "overflow-hidden")}>
-              <div className="bg-brand-soft text-brand flex h-[240px] items-center justify-center">
-                <Building size={64} strokeWidth={1.2} aria-hidden />
-              </div>
               <div className="flex flex-col gap-[20px] px-[32px] pt-[28px] pb-[32px]">
                 <div className="flex flex-col gap-[10px]">
                   <div className="flex flex-wrap gap-[6px]">
@@ -255,7 +250,7 @@ function WebSpaceDetailView({
                   공고 원문에서 뽑은 조건이에요 · 확인 필요는 사업 정보를 넣거나 원문으로 확인해
                   주세요
                 </span>
-                <RuleList rules={data.rules} onAnswer={onAnswer} />
+                <RuleList rules={data.rules} />
               </section>
             )}
 
@@ -418,7 +413,7 @@ function WebSpaceDetailView({
                   ? "자격 조건을 정리하고 있어요 · 원문을 확인해 주세요"
                   : `${data.rules.length}개 조건 중 ${met}개 충족 · ${unmet}개 확인 필요${no ? ` · ${no}개 해당 안 됨` : ""}`}
               </div>
-              {!wideRules && <RuleList rules={data.rules} onAnswer={onAnswer} />}
+              {!wideRules && <RuleList rules={data.rules} />}
             </section>
 
             <section aria-label="신청" className={cn(card, "gap-[10px] p-[22px]")}>
@@ -438,6 +433,12 @@ function WebSpaceDetailView({
                 공고 원문 보기
                 <ExternalLink size={18} aria-hidden />
               </a>
+              {data.favoriteType === "NOTICE" && (
+                <WebNoticeChatButton
+                  noticeId={data.id}
+                  className="rounded-control bg-fill text-text min-h-[52px]"
+                />
+              )}
               <span className="text-text-sub pt-[4px] text-center text-[13px]">
                 자격만 판정해요 · 선정 가능성은 알려드리지 않아요
               </span>
