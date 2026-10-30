@@ -1,6 +1,11 @@
 "use client";
 
-import { NoticeChat, WebNoticeChatButton } from "@/components/chat/NoticeChat";
+import {
+  DETAIL_MAIN_BASIS_WITH_CHAT,
+  NoticeChat,
+  WebNoticeChatButton,
+  useNoticeChatOpen,
+} from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import { useEffect, useMemo, useState } from "react";
@@ -397,6 +402,8 @@ export function WebDetail({ id }: { id: string }) {
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
   const pdf = usePdfViewer();
+  // 채팅 패널이 열린 동안은 본문 기본 폭을 줄여서 오른쪽 칸(내 자격 · 이야기 닫기)이 본문 아래로 내려가지 않게 해요
+  const chatOpen = useNoticeChatOpen(n?.id ?? id);
   useJudgmentViewed(id, n);
   const [lifeSite, setLifeSite] = useState<string>();
   if (!n) {
@@ -455,7 +462,10 @@ export function WebDetail({ id }: { id: string }) {
           </nav>
 
           <div className="flex flex-wrap items-start gap-[28px]">
-            <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 600px" }}>
+            <div
+              className="flex min-w-0 flex-col gap-[16px]"
+              style={{ flex: `999 1 ${chatOpen ? DETAIL_MAIN_BASIS_WITH_CHAT : 600}px` }}
+            >
               <section
                 aria-label="공고 요약"
                 className="rounded-card-lg bg-surface overflow-hidden"

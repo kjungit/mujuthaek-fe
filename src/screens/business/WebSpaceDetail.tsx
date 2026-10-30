@@ -1,6 +1,11 @@
 "use client";
 
-import { NoticeChat, WebNoticeChatButton } from "@/components/chat/NoticeChat";
+import {
+  DETAIL_MAIN_BASIS_WITH_CHAT,
+  NoticeChat,
+  WebNoticeChatButton,
+  useNoticeChatOpen,
+} from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
@@ -168,6 +173,8 @@ function WebBizDetail({
 
 function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
   const { checks, toggle, done } = useDocChecks(data.docs.map((d) => d.ready));
+  // 채팅 패널이 열린 동안은 본문 기본 폭을 줄여서 오른쪽 칸(내 자격 · 이야기 닫기)이 본문 아래로 내려가지 않게 해요
+  const chatOpen = useNoticeChatOpen(data.id);
   // 모집 정책은 공간 정보 대신 자격 조건이 많아서 넓은 칸에 보여줘요
   const wideRules = data.rules.length > 0 && Boolean(data.summaryNote);
   const met = data.rules.filter((r) => r.met).length;
@@ -187,7 +194,10 @@ function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
         </Link>
 
         <div className="flex flex-wrap items-start gap-[24px]">
-          <div className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "999 1 560px" }}>
+          <div
+            className="flex min-w-0 flex-col gap-[16px]"
+            style={{ flex: `999 1 ${chatOpen ? DETAIL_MAIN_BASIS_WITH_CHAT : 560}px` }}
+          >
             <section aria-label="공고 요약" className={cn(card, "overflow-hidden")}>
               <div className="bg-brand-soft text-brand flex h-[240px] items-center justify-center">
                 <Building size={64} strokeWidth={1.2} aria-hidden />

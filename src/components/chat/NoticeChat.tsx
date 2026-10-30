@@ -58,6 +58,29 @@ const TOGGLE_EVENT = "noticechat:toggle";
 /** 채팅 창이 열리고 닫힐 때 알려요 (detail = { noticeId, open }). PC 단추가 「이야기 닫기」로 바뀌는 데 써요 */
 const STATE_EVENT = "noticechat:state";
 
+/**
+ * 「이야기」 단추에 다는 표시 (값 = 공고 ID). 채팅을 닫을 때 연 단추를 못 찾으면(말풍선으로 열어 그 말풍선이 없어졌거나,
+ * Safari처럼 눌러도 단추에 포커스가 가지 않는 브라우저) 지금 보이는 이 단추로 포커스를 돌려줘요
+ */
+const OPENER_ATTR = "data-notice-chat-opener";
+
+/** 지금 보이는 이 공고의 「이야기」 단추 (웹·모바일 화면이 둘 다 그려져 있어서 보이는 쪽) */
+function visibleOpener(noticeId: string) {
+  return Array.from(document.querySelectorAll<HTMLElement>(`[${OPENER_ATTR}]`)).find(
+    (el) => el.getAttribute(OPENER_ATTR) === noticeId && el.offsetParent !== null,
+  );
+}
+
+/**
+ * PC 패널 너비. 상세 화면은 채팅이 열리면 본문 기본 폭을 줄여요(DETAIL_MAIN_BASIS_WITH_CHAT).
+ * 본문 420 + 간격 28 + 오른쪽 칸 360 + 바깥 여백 64 + 스크롤바 ≈ 890이라, 패널이 「화면 폭 - 900」까지만 차지하면(360~440)
+ * 1280px 노트북까지 오른쪽 칸(내 자격 · 관심 등록 · 이야기 닫기)이 본문 옆에 남아요. 그보다 좁으면 오른쪽 칸이 본문 아래로 내려가요
+ */
+const PANEL_WIDTH = "clamp(360px, 100vw - 900px, 440px)";
+
+/** PC 상세 화면 본문의 기본 폭(px). 채팅 패널이 열린 동안 이만큼으로 줄여서 오른쪽 칸이 본문 아래로 내려가지 않게 해요 */
+export const DETAIL_MAIN_BASIS_WITH_CHAT = 420;
+
 const iconBtn =
   "text-text inline-flex size-[44px] flex-none cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent";
 
@@ -73,19 +96,24 @@ export function NoticeChat({ noticeId, variant }: Props) {
   const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 
-  // 닫히면(X · Esc · 뒤로 가기 · 다시 누르기) 포커스를 연 단추로 돌려줘요 (화면은 움직이지 않게)
+  // 닫히면(X · Esc · 뒤로 가기 · 다시 누르기) 포커스를 연 단추로 돌려줘요 (화면은 움직이지 않게).
+  // 연 단추가 없어졌거나(말풍선) 포커스가 없었으면(Safari는 눌러도 단추에 포커스를 주지 않아요) 지금 보이는 「이야기」 단추로
   const returnTo = useRef<HTMLElement | null>(null);
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !open) {
       const active = document.activeElement;
       if (!active || active === document.body || !document.contains(active)) {
-        if (returnTo.current?.isConnected) returnTo.current.focus({ preventScroll: true });
+        const from = returnTo.current;
+        // 연 단추가 남아 있어도 숨겨졌으면(열린 채 PC ↔ 모바일 경계를 넘음) 지금 보이는 단추로
+        const usable = from?.isConnected && from !== document.body && from.offsetParent !== null;
+        const back = usable ? from : visibleOpener(noticeId);
+        back?.focus({ preventScroll: true });
       }
       returnTo.current = null;
     }
     wasOpen.current = open;
-  }, [open]);
+  }, [open, noticeId]);
 
   // 「이야기」 단추(모바일 아래 고정 줄 · PC 오른쪽 단추 묶음)와 말풍선이 보내는 신호로 열고 닫아요
   useEffect(() => {
@@ -156,8 +184,8 @@ export function NoticeChat({ noticeId, variant }: Props) {
   );
 }
 
-/** 채팅 창이 열려 있는지 (STATE_EVENT로 들어요). 단추 글자와 말풍선에 써요 */
-function useChatOpen(noticeId: string) {
+/** 채팅 창이 열려 있는지 (STATE_EVENT로 들어요). 단추 글자 · 말풍선 · 상세 화면 본문 폭에 써요 */
+export function useNoticeChatOpen(noticeId: string) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const onState = (e: Event) => {
@@ -217,7 +245,17 @@ function useChatNudge(
     }, NUDGE_DELAY_MS);
     return () => clearTimeout(t);
   }, [noticeId, anchor, ready, open]);
-  return { shown: visible && !open, dismiss: () => setVisible(false) };
+  return {
+    shown: visible && !open,
+    /** 채팅을 열면서 말풍선을 치워요 (포커스는 채팅 창으로 가요) */
+    dismiss: () => setVisible(false),
+    /** X로 닫아요. 포커스가 말풍선 안에 있었으면 「이야기」 단추로 옮겨요 (없어진 X에 남아 문서 처음으로 돌아가지 않게) */
+    close: () => {
+      const inside = document.activeElement?.closest("[data-chat-nudge]");
+      setVisible(false);
+      if (inside) anchor.current?.focus({ preventScroll: true });
+    },
+  };
 }
 
 /** 말풍선 미리보기 문구: 최근 이야기가 있으면 앞부분만, 없으면 권하는 말 */
@@ -245,7 +283,10 @@ function NudgeBody({
   arrowLeft?: number;
 }) {
   return (
-    <div className="bg-text shadow-float relative rounded-[14px] py-[12px] pr-[44px] pl-[16px]">
+    <div
+      data-chat-nudge
+      className="bg-text shadow-float relative rounded-[14px] py-[12px] pr-[44px] pl-[16px]"
+    >
       <button
         type="button"
         onClick={onOpen}
@@ -289,7 +330,7 @@ const M_BAR_GUTTER = 16;
  */
 export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
   const chat = useNoticeChat(noticeId, { live: false });
-  const open = useChatOpen(noticeId);
+  const open = useNoticeChatOpen(noticeId);
   const anchor = useRef<HTMLButtonElement>(null);
   const nudge = useChatNudge(
     noticeId,
@@ -326,7 +367,7 @@ export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
           <NudgeBody
             latest={visible.at(-1)}
             onOpen={openChat}
-            onDismiss={nudge.dismiss}
+            onDismiss={nudge.close}
             arrow="down"
             arrowLeft={arrowLeft}
           />
@@ -335,6 +376,7 @@ export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
       <button
         ref={anchor}
         type="button"
+        data-notice-chat-opener={noticeId}
         aria-haspopup="dialog"
         aria-label={countLabel ? `이 공고 이야기 ${countLabel}개 보기` : "이 공고 이야기 열기"}
         onClick={openChat}
@@ -357,7 +399,7 @@ export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
 /**
  * PC 오른쪽 단추 묶음(관심 등록 · 원문 보기 아래)의 「이야기」 단추. 공고를 읽다가 바로 열 수 있어요.
  * 열려 있으면 「이야기 닫기」로 바뀌고 누르면 닫혀요. 모양은 옆 단추에 맞춰 className으로 받아요.
- * 처음 보는 공고면 단추 바로 아래에 말풍선을 붙여 이야기해 보라고 알려요 (오른쪽 칸 안에 들어가서 본문·다른 단추를 가리지 않아요)
+ * 처음 보는 공고면 단추 바로 아래에 말풍선을 겹쳐 띄워 이야기해 보라고 알려요. 아래의 판정 안내 · 제보 줄을 잠깐 덮고, 본문 · 위쪽 단추는 가리지 않아요
  */
 export function WebNoticeChatButton({
   noticeId,
@@ -367,7 +409,7 @@ export function WebNoticeChatButton({
   className?: string;
 }) {
   const chat = useNoticeChat(noticeId, { live: false });
-  const open = useChatOpen(noticeId);
+  const open = useNoticeChatOpen(noticeId);
   const anchor = useRef<HTMLButtonElement>(null);
   const nudge = useChatNudge(
     noticeId,
@@ -388,10 +430,11 @@ export function WebNoticeChatButton({
     window.dispatchEvent(new CustomEvent(TOGGLE_EVENT, { detail: noticeId }));
   };
   return (
-    <div className="flex flex-col gap-[12px]">
+    <div className="relative flex flex-col">
       <button
         ref={anchor}
         type="button"
+        data-notice-chat-opener={noticeId}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={toggle}
@@ -403,8 +446,11 @@ export function WebNoticeChatButton({
         <MessageCircle size={18} aria-hidden />
         {label}
       </button>
+      {/* 단추 아래에 겹쳐 띄워요(높이를 차지하지 않게). 공고 상세의 오른쪽 칸 아래 고정 묶음이 커지면 단추가 위로 튀고 「내 자격」이 가려져서요 */}
       {nudge.shown && (
-        <NudgeBody latest={visible.at(-1)} onOpen={toggle} onDismiss={nudge.dismiss} arrow="up" />
+        <div className="absolute top-full right-0 left-0 z-[1] mt-[12px]">
+          <NudgeBody latest={visible.at(-1)} onOpen={toggle} onDismiss={nudge.close} arrow="up" />
+        </div>
       )}
     </div>
   );
@@ -503,12 +549,13 @@ function ChatWindow({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, web]);
 
-  // PC: 패널 너비만큼 본문을 좁혀요 (PDF 원문 패널처럼). 패널이 오른쪽 칸(내 자격·관심 등록)을 가리지 않게
+  // PC: 패널 너비만큼 본문을 좁혀요 (PDF 원문 패널처럼). 패널이 오른쪽 칸(내 자격·관심 등록)을 가리지 않게.
+  // 상세 화면은 그동안 본문 기본 폭을 줄여서 오른쪽 칸을 본문 옆에 둬요 (PANEL_WIDTH)
   useEffect(() => {
     if (!web) return;
     const body = document.body.style;
     const before = body.paddingRight;
-    body.paddingRight = "min(440px, 100vw)";
+    body.paddingRight = PANEL_WIDTH;
     return () => {
       body.paddingRight = before;
     };
@@ -624,7 +671,8 @@ function ChatWindow({
       role="dialog"
       aria-modal="false"
       aria-labelledby="chat-window-h"
-      className="bg-surface border-line shadow-float fixed top-0 right-0 bottom-0 z-[30] flex w-[min(440px,100vw)] flex-col gap-[8px] border-l border-solid"
+      className="bg-surface border-line shadow-float fixed top-0 right-0 bottom-0 z-[30] flex flex-col gap-[8px] border-l border-solid"
+      style={{ width: PANEL_WIDTH }}
     >
       {header}
       {body}
