@@ -16,6 +16,7 @@ import {
   reviewQueue,
   type AdminCounts,
   type ReportItem,
+  type ReportStatus,
   type ReviewReason,
 } from "@/mocks/admin";
 import {
@@ -23,7 +24,10 @@ import {
   liveCounts,
   liveCriteria,
   liveOverview,
+  liveChatReportPage,
+  liveReportCounts,
   liveReportDetail,
+  liveReportQueuePage,
   liveReports,
   liveReviewDetail,
   liveReviewQueuePage,
@@ -271,6 +275,54 @@ export function useAdminReports() {
   return useQuery(mockQuery(adminKeys.reports, adminReports));
 }
 
+type ReportQueuePage = Awaited<ReturnType<typeof liveReportQueuePage>>;
+
+/**
+ * 제보 대기열 (무한 스크롤): 고른 상태의 제보를 최신순으로 20건씩 이어 받아요(공고·혜택·사업 제보와 생활권 제보를 서버가 섞어요).
+ * 화면을 떠나면 받아 둔 페이지를 버려요.
+ */
+export function useReportQueue(status: ReportStatus) {
+  const q = useInfiniteQuery({
+    queryKey: [...live(adminKeys.reports), "queue", status],
+    queryFn: ({ pageParam }) => liveReportQueuePage(status, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: ReportQueuePage) => last.nextCursor,
+    enabled: LIVE,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+  });
+  if (!LIVE) {
+    const items = adminReports.items.filter((i) => i.st === status);
+    return { items, loading: false, more: false, loadingMore: false, loadMore: () => {} };
+  }
+  return {
+    items: q.data?.pages.flatMap((p) => p.items) ?? [],
+    loading: q.isPending,
+    more: q.hasNextPage,
+    loadingMore: q.isFetchingNextPage,
+    /** 목록 아래 끝이 보이면 다음 20건 */
+    loadMore: () => {
+      if (q.hasNextPage && !q.isFetchingNextPage) void q.fetchNextPage();
+    },
+  };
+}
+
+/** 제보 상태별 건수 (탭 숫자). 목업이면 목업 목록에서 세요 */
+export function useReportCounts() {
+  const q = useQuery({
+    queryKey: [...live(adminKeys.reports), "counts"],
+    queryFn: liveReportCounts,
+    enabled: LIVE,
+    staleTime: 0,
+  });
+  if (!LIVE) {
+    const n = (st: ReportStatus) => adminReports.items.filter((i) => i.st === st).length;
+    return { new: n("new"), doing: n("doing"), done: n("done") + adminReports.doneBefore };
+  }
+  return q.data ?? null;
+}
+
 /** 제보 상세 받기 설정 (화면이 고른 제보, 처리 직전 답장 확인에 같이 써요) */
 export const reportDetailQuery = (id: string, summary: string) => ({
   queryKey: [...live(adminKeys.reports), "detail", id] as const,
@@ -322,6 +374,52 @@ export function useAdminChatReports(status: ChatReviewStatus) {
           ),
     staleTime: 0,
   });
+}
+
+type ChatReportQueuePage = Awaited<ReturnType<typeof liveChatReportPage>>;
+
+/** 채팅 신고 (무한 스크롤): 고른 상태의 신고를 20건씩 이어 받아 글마다 묶어요. 화면을 떠나면 받아 둔 페이지를 버려요 */
+export function useChatReportQueue(status: ChatReviewStatus) {
+  const q = useInfiniteQuery({
+    queryKey: ["admin", "live", "chat-reports", status, "queue"],
+    queryFn: ({ pageParam }) => liveChatReportPage(status, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: ChatReportQueuePage) => last.nextCursor,
+    enabled: LIVE,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+  });
+  if (!LIVE) {
+    const groups = groupChatReports(
+      chatReportsMock.filter((r) => r.reviewStatus === status),
+      chatReportTitlesMock,
+    );
+    return {
+      groups,
+      loading: false,
+      failed: false,
+      more: false,
+      loadingMore: false,
+      loadMore: () => {},
+    };
+  }
+  const pages = q.data?.pages ?? [];
+  const groups = groupChatReports(
+    pages.flatMap((p) => p.reports),
+    Object.assign({}, ...pages.map((p) => p.titles)),
+  );
+  return {
+    groups,
+    loading: q.isPending,
+    failed: q.isError,
+    more: q.hasNextPage,
+    loadingMore: q.isFetchingNextPage,
+    /** 목록 아래 끝이 보이면 다음 20건 */
+    loadMore: () => {
+      if (q.hasNextPage && !q.isFetchingNextPage) void q.fetchNextPage();
+    },
+  };
 }
 
 /** 지금 접속자. 화면을 열어 둔 동안 30초마다 다시 받아요(백엔드도 30초 다시 써요) */
