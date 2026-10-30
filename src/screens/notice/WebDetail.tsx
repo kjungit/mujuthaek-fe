@@ -1,6 +1,6 @@
 "use client";
 
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import { NoticeChat, WebNoticeChatButton } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import { useEffect, useMemo, useState } from "react";
@@ -621,6 +621,10 @@ export function WebDetail({ id }: { id: string }) {
                   <FileText size={18} aria-hidden />
                   {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
                 </button>
+                <WebNoticeChatButton
+                  noticeId={n.id}
+                  className="rounded-tile bg-surface text-text min-h-[56px]"
+                />
                 <div className="flex flex-col items-center gap-[2px] pt-[4px]">
                   <span className="text-text-sub text-[13px]">
                     판정은 참고용이에요. 신청 전에 원문을 확인해 주세요

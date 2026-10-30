@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronRight, FileText, MapPin } from "lucide-react";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import { NoticeChat, WebNoticeChatButton } from "@/components/chat/NoticeChat";
 import { NoticeSections, NoticeToc } from "@/components/notice/NoticeSections";
 import { NoticeTags } from "@/components/notice/NoticeTags";
 import { PdfViewer } from "@/components/notice/PdfViewer";
@@ -383,6 +383,10 @@ export function WebDetailUnits({ id }: { id: string }) {
               >
                 {pdf.open ? "원문 닫기" : `${n.agency} 공고 원문 보기`}
               </button>
+              <WebNoticeChatButton
+                noticeId={n.id}
+                className="rounded-tile bg-surface text-text min-h-[54px]"
+              />
             </aside>
           </div>
         </WebMain>

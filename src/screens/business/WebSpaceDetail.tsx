@@ -1,6 +1,6 @@
 "use client";
 
-import { NoticeChat } from "@/components/chat/NoticeChat";
+import { NoticeChat, WebNoticeChatButton } from "@/components/chat/NoticeChat";
 import { ReportButton } from "@/components/report/ReportButton";
 import { WebFavoriteButton } from "@/components/favorites/FavoriteButtons";
 import Link from "next/link";
@@ -426,6 +426,12 @@ function WebSpaceDetailView({ data, back }: { data: SpaceDetail; back: Back }) {
                 공고 원문 보기
                 <ExternalLink size={18} aria-hidden />
               </a>
+              {data.favoriteType === "NOTICE" && (
+                <WebNoticeChatButton
+                  noticeId={data.id}
+                  className="rounded-control bg-fill text-text min-h-[52px]"
+                />
+              )}
               <span className="text-text-sub pt-[4px] text-center text-[13px]">
                 자격만 판정해요 · 선정 가능성은 알려드리지 않아요
               </span>

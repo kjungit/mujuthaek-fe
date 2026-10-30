@@ -52,6 +52,10 @@ const COUNT_FROM = MAX_LENGTH - 50;
 
 /** 모바일 아래 고정 줄의 「이야기」 단추가 보내는 신호: 그 공고의 채팅 창을 열어요 (detail = 공고 ID) */
 const OPEN_EVENT = "noticechat:open";
+/** PC 오른쪽 단추 묶음의 「이야기」 단추가 보내는 신호: 열려 있으면 닫고, 닫혀 있으면 열어요 (detail = 공고 ID) */
+const TOGGLE_EVENT = "noticechat:toggle";
+/** 채팅 창이 열리고 닫힐 때 알려요 (detail = { noticeId, open }). PC 단추가 「이야기 닫기」로 바뀌는 데 써요 */
+const STATE_EVENT = "noticechat:state";
 
 const iconBtn =
   "text-text inline-flex size-[44px] flex-none cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent";
@@ -83,18 +87,38 @@ export function NoticeChat({ noticeId, variant }: Props) {
     wasOpen.current = open;
   }, [open]);
 
-  // 아래 고정 줄의 「이야기」 단추(MNoticeChatButton)로도 열어요. 웹·모바일 화면이 둘 다 그려져 있어서, 보이는 쪽만 열어요
+  // 다른 「이야기」 단추(모바일 아래 고정 줄 · PC 오른쪽 단추 묶음)로도 열고 닫아요.
+  // 웹·모바일 화면이 둘 다 그려져 있어서, 보이는 쪽 채팅만 움직여요
   useEffect(() => {
-    const onOpen = (e: Event) => {
-      if ((e as CustomEvent<string>).detail !== noticeId) return;
-      if (!opener.current || opener.current.offsetParent === null) return;
+    const mineAndVisible = (e: Event) =>
+      (e as CustomEvent<string>).detail === noticeId &&
+      !!opener.current &&
+      opener.current.offsetParent !== null;
+    const openFrom = () => {
       returnTo.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
       show();
     };
+    const onOpen = (e: Event) => {
+      if (mineAndVisible(e)) openFrom();
+    };
+    const onToggle = (e: Event) => {
+      if (!mineAndVisible(e)) return;
+      if (open) hide();
+      else openFrom();
+    };
     window.addEventListener(OPEN_EVENT, onOpen);
-    return () => window.removeEventListener(OPEN_EVENT, onOpen);
-  }, [noticeId, show]);
+    window.addEventListener(TOGGLE_EVENT, onToggle);
+    return () => {
+      window.removeEventListener(OPEN_EVENT, onOpen);
+      window.removeEventListener(TOGGLE_EVENT, onToggle);
+    };
+  }, [noticeId, show, hide, open]);
+
+  // 열림 상태를 알려요 (PC 「이야기」 단추 글자)
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(STATE_EVENT, { detail: { noticeId, open } }));
+  }, [noticeId, open]);
 
   // 열린 채로 화면 크기가 PC ↔ 모바일 경계(1024px)를 넘으면 닫아요 (보이지 않는 쪽 창이 남지 않게)
   useEffect(() => {
@@ -211,6 +235,51 @@ export function MNoticeChatButton({ noticeId }: { noticeId: string }) {
           {countLabel}
         </span>
       )}
+    </button>
+  );
+}
+
+/**
+ * PC 오른쪽 단추 묶음(관심 등록 · 원문 보기 아래)의 「이야기」 단추. 스크롤해도 늘 보이는 자리라 공고를 읽다가 바로 열 수 있어요.
+ * 열려 있으면 「이야기 닫기」로 바뀌고 누르면 닫혀요. 모양은 옆 단추에 맞춰 className으로 받아요
+ */
+export function WebNoticeChatButton({
+  noticeId,
+  className,
+}: {
+  noticeId: string;
+  className?: string;
+}) {
+  const chat = useNoticeChat(noticeId, { live: false });
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onState = (e: Event) => {
+      const d = (e as CustomEvent<{ noticeId: string; open: boolean }>).detail;
+      if (d.noticeId === noticeId) setOpen(d.open);
+    };
+    window.addEventListener(STATE_EVENT, onState);
+    return () => window.removeEventListener(STATE_EVENT, onState);
+  }, [noticeId]);
+  if (chat.roomError && !chat.room) return null;
+  const count = chat.messages.filter((m) => m.status === "VISIBLE").length;
+  const label = open
+    ? "이야기 닫기"
+    : count > 0
+      ? `이 공고 이야기 ${count}${chat.hasOlder ? "+" : ""}개`
+      : "이 공고 이야기";
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      onClick={() => window.dispatchEvent(new CustomEvent(TOGGLE_EVENT, { detail: noticeId }))}
+      className={cn(
+        "flex cursor-pointer items-center justify-center gap-[6px] border-0 text-[16px] font-bold",
+        className,
+      )}
+    >
+      <MessageCircle size={18} aria-hidden />
+      {label}
     </button>
   );
 }
