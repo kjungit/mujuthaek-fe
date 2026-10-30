@@ -21,6 +21,7 @@ export function UnitInput({
   describedBy,
   value,
   onChange,
+  disabled,
 }: {
   unit: string;
   placeholder: string;
@@ -28,6 +29,7 @@ export function UnitInput({
   describedBy?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }) {
   return (
     <span className="relative flex">
@@ -38,7 +40,14 @@ export function UnitInput({
         aria-describedby={describedBy}
         value={value}
         onChange={onChange}
-        className={cn(pInput, "flex-1", unit.length > 1 ? "pr-[60px]" : "pr-[44px]", className)}
+        disabled={disabled}
+        className={cn(
+          pInput,
+          "flex-1",
+          "disabled:opacity-50",
+          unit.length > 1 ? "pr-[60px]" : "pr-[44px]",
+          className,
+        )}
       />
       <span className="text-text-sub pointer-events-none absolute top-1/2 right-[16px] -translate-y-1/2 text-[16px] font-semibold">
         {unit}
@@ -98,8 +107,20 @@ export function DeviceSaveCard({ form, compact }: { form: ProfileForm; compact?:
   );
 }
 
-/** 자녀 수 − / + */
-export function KidsStepper({ form, className }: { form: ProfileForm; className?: string }) {
+/** 숫자 − / + (자녀 수 · 가구원 수) */
+function CountStepper({
+  name,
+  text,
+  onDown,
+  onUp,
+  className,
+}: {
+  name: string;
+  text: string;
+  onDown: () => void;
+  onUp: () => void;
+  className?: string;
+}) {
   const btn = "bg-fill text-text size-[44px] cursor-pointer rounded-[10px] border-0 text-[20px]";
   return (
     <div
@@ -108,16 +129,42 @@ export function KidsStepper({ form, className }: { form: ProfileForm; className?
         className,
       )}
     >
-      <button type="button" aria-label="자녀 수 줄이기" onClick={form.kidsDown} className={btn}>
+      <button type="button" aria-label={`${name} 줄이기`} onClick={onDown} className={btn}>
         −
       </button>
       <span aria-live="polite" className="text-[18px] font-extrabold">
-        {form.kids}명
+        {text}
       </span>
-      <button type="button" aria-label="자녀 수 늘리기" onClick={form.kidsUp} className={btn}>
+      <button type="button" aria-label={`${name} 늘리기`} onClick={onUp} className={btn}>
         +
       </button>
     </div>
+  );
+}
+
+/** 자녀 수 − / + */
+export function KidsStepper({ form, className }: { form: ProfileForm; className?: string }) {
+  return (
+    <CountStepper
+      name="자녀 수"
+      text={`${form.kids}명`}
+      onDown={form.kidsDown}
+      onUp={form.kidsUp}
+      className={className}
+    />
+  );
+}
+
+/** 함께 사는 가족 수 (나 포함) − / +. 모르면 「다시 골라 주세요」 */
+export function HouseholdStepper({ form, className }: { form: ProfileForm; className?: string }) {
+  return (
+    <CountStepper
+      name="함께 사는 가족 수"
+      text={form.household === null ? "다시 골라 주세요" : `${form.household}명`}
+      onDown={form.householdDown}
+      onUp={form.householdUp}
+      className={className}
+    />
   );
 }
 

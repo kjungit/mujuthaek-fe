@@ -55,10 +55,12 @@ export function MBenefits() {
             );
           })}
         </div>
-        <div className="bg-surface flex items-baseline justify-between rounded-[22px] px-[18px] py-[16px]">
-          <span className="text-text-sub text-[14px]">1년에 받을 수 있는 돈</span>
-          <span className="tracking-title text-[22px] font-extrabold">{data.yearlyAmount}</span>
-        </div>
+        {data.yearlyAmount !== "–" && (
+          <div className="bg-surface flex items-baseline justify-between rounded-[22px] px-[18px] py-[16px]">
+            <span className="text-text-sub text-[14px]">1년에 받을 수 있는 돈</span>
+            <span className="tracking-title text-[22px] font-extrabold">{data.yearlyAmount}</span>
+          </div>
+        )}
         {data.loading && (
           <p className="text-text-sub m-0 px-[4px] py-[24px] text-center text-[15px]">
             내 조건으로 혜택을 판정하는 중이에요

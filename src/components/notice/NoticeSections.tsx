@@ -115,7 +115,8 @@ export function NoticeToc({ doc, variant }: { doc: NoticeDoc; variant: Variant }
       aria-label="공고 목차"
       className={cn(
         "bg-bg sticky z-[1] flex gap-[6px] overflow-x-auto",
-        web ? "top-0 -mx-[4px] px-[4px] py-[10px]" : "top-[56px] px-[16px] py-[8px]",
+        // 상단 바(웹 69px·모바일 56px) 바로 아래에 붙어요
+        web ? "top-[69px] -mx-[4px] px-[4px] py-[10px]" : "top-[56px] px-[16px] py-[8px]",
       )}
     >
       {keys.map((k) => (
@@ -489,7 +490,7 @@ export function NoticeSections({ doc, variant, onOpenPage }: SectionsProps) {
           key={k}
           id={sectionId(k)}
           aria-label={sectionTitles[k].heading}
-          className={cn(card, web ? "scroll-mt-[64px]" : "scroll-mt-[112px]")}
+          className={cn(card, web ? "scroll-mt-[136px]" : "scroll-mt-[112px]")}
         >
           {header(k)}
           {body[k]()}

@@ -3,6 +3,7 @@
 import { reportHref } from "@/features/me/tabs";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import {
   groupResults,
@@ -17,6 +18,7 @@ import { routes } from "@/lib/routes";
 import { ResultBadge } from "./ResultBadge";
 
 export function MSearch() {
+  const router = useRouter();
   const {
     query,
     setQuery,
@@ -36,13 +38,15 @@ export function MSearch() {
   return (
     <div className="bg-surface text-text flex min-h-screen w-full flex-col">
       <header className="border-line-soft bg-surface sticky top-0 z-[2] flex items-center gap-[4px] border-b border-solid py-[8px] pr-[12px] pl-[6px]">
-        <Link
-          href={routes.home}
+        <button
+          type="button"
           aria-label="뒤로"
-          className="text-text hover:text-text inline-flex size-[44px] flex-none items-center justify-center rounded-sm"
+          // 들어온 화면으로 돌아가요. 바로 열었으면(이전 기록 없음) 홈으로
+          onClick={() => (window.history.length > 1 ? router.back() : router.push(routes.home))}
+          className="text-text inline-flex size-[44px] flex-none cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent"
         >
           <ChevronLeft size={24} aria-hidden />
-        </Link>
+        </button>
         <form
           role="search"
           onSubmit={(e) => {
@@ -54,6 +58,7 @@ export function MSearch() {
           <label className="flex flex-1">
             <span className="sr-only">검색어</span>
             <input
+              autoFocus
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -107,6 +112,14 @@ export function MSearch() {
         {error && (
           <p role="alert" className="text-text-sub m-0 px-[20px] py-[32px] text-center text-[14px]">
             검색하지 못했어요. 잠시 뒤 다시 해 주세요
+          </p>
+        )}
+        {!error && loading && results.length === 0 && (
+          <p
+            role="status"
+            className="text-text-sub m-0 px-[20px] py-[32px] text-center text-[14px]"
+          >
+            검색하는 중이에요
           </p>
         )}
         {!error && !loading && results.length === 0 && (

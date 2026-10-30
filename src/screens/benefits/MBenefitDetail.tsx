@@ -4,7 +4,7 @@ import { ReportButton } from "@/components/report/ReportButton";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { Badge, VerdictBadge } from "@/components/ui/Badge";
-import { useBenefit } from "@/features/benefits/queries";
+import { useBenefit, applyHref } from "@/features/benefits/queries";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
@@ -58,9 +58,11 @@ export function MBenefitDetail({ id }: { id: string }) {
               </dd>
             </div>
           </dl>
-          <div className="rounded-control bg-check-bg text-check-text px-[14px] py-[12px] text-[14px] leading-[1.5] font-semibold">
-            {b.overlap}
-          </div>
+          {b.overlap && (
+            <div className="rounded-control bg-check-bg text-check-text px-[14px] py-[12px] text-[14px] leading-[1.5] font-semibold">
+              <span className="font-extrabold">함께 못 받는 혜택</span> · {b.overlap}
+            </div>
+          )}
         </section>
 
         <section
@@ -132,25 +134,32 @@ export function MBenefitDetail({ id }: { id: string }) {
         </section>
         <ReportButton target={{ kind: "benefit", id: b.id }} screen="혜택 상세 (모바일)" />
       </main>
-      <MBottomActions>
-        <a
-          href={b.policyUrl || undefined}
-          target="_blank"
-          onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
-          rel="noreferrer"
-          className="rounded-control bg-fill text-text hover:text-text flex min-h-[54px] min-w-0 flex-[1_1_0] items-center justify-center text-[15px] font-bold no-underline"
-        >
-          정책 원문
-        </a>
-        <a
-          href={b.applyUrl || undefined}
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-control bg-brand flex min-h-[54px] min-w-0 flex-[2_1_0] items-center justify-center text-[16px] font-extrabold text-white no-underline hover:text-white"
-        >
-          신청하러 가기
-        </a>
-      </MBottomActions>
+      {(b.policyUrl || applyHref(b)) && (
+        <MBottomActions>
+          {/* 주소가 없으면 누를 수 없는 버튼이 되어서 숨겨요 (웹과 같아요) */}
+          {b.policyUrl && (
+            <a
+              href={b.policyUrl}
+              target="_blank"
+              onClick={() => track("notice_source_open", { notice_kind: "benefit", via: "site" })}
+              rel="noreferrer"
+              className="rounded-control bg-fill text-text hover:text-text flex min-h-[54px] min-w-0 flex-[1_1_0] items-center justify-center text-[15px] font-bold no-underline"
+            >
+              정책 원문
+            </a>
+          )}
+          {applyHref(b) && (
+            <a
+              href={applyHref(b)}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-control bg-brand flex min-h-[54px] min-w-0 flex-[2_1_0] items-center justify-center text-[16px] font-extrabold text-white no-underline hover:text-white"
+            >
+              신청하러 가기
+            </a>
+          )}
+        </MBottomActions>
+      )}
     </MPage>
   );
 }

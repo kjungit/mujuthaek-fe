@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, ChevronRight } from "lucide-react";
+import { DeadlineAlertPrompt } from "@/components/alerts/DeadlineAlertPrompt";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
@@ -81,12 +82,20 @@ export function MHome() {
             >
               <span className="text-text-sub text-[13px] font-semibold">받을 수 있는 혜택</span>
               <span className="tracking-title text-[22px] font-extrabold">
-                {data.benefits ? `연 ${data.benefits.yearlyAmount}` : loading ? "…" : "–"}
+                {error
+                  ? "–"
+                  : data.benefits
+                    ? `연 ${data.benefits.yearlyAmount}`
+                    : loading
+                      ? "…"
+                      : "–"}
               </span>
               <span className="text-text-sub text-[13px]">
-                {data.benefits
-                  ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
-                  : "받을 수 있는 혜택을 판정하고 있어요"}
+                {error
+                  ? "혜택을 불러오지 못했어요"
+                  : data.benefits
+                    ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
+                    : "받을 수 있는 혜택을 판정하고 있어요"}
               </span>
             </Link>
 
@@ -143,8 +152,9 @@ export function MHome() {
                 <h2 id="new-h" className="m-0 text-[17px] font-extrabold">
                   이번 주 새 소식
                 </h2>
+                {/* 새로 올라온 공고 전체는 공고 목록으로 (알림함이 아니에요) */}
                 <Link
-                  href={routes.alerts}
+                  href={routes.homes}
                   className="inline-flex min-h-[44px] items-center text-[14px] font-bold no-underline"
                 >
                   전체
@@ -168,10 +178,17 @@ export function MHome() {
                     <span className="text-text-sub text-[12px]">{item.meta}</span>
                     <VerdictBadge verdict={item.verdict} size="xs" />
                   </span>
-                  <span className="text-[15px] font-bold">{item.title}</span>
+                  <span className="flex items-baseline justify-between gap-[8px]">
+                    <span className="text-[15px] font-bold">{item.title}</span>
+                    {item.due && (
+                      <span className="flex-none text-[13px] font-extrabold">{item.due}</span>
+                    )}
+                  </span>
                 </Link>
               ))}
             </section>
+
+            <DeadlineAlertPrompt variant="mobile" />
 
             {data.suggestedBenefit && (
               <Link

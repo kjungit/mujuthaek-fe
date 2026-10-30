@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, Lock, User } from "lucide-react";
 import { ContactEmailCard } from "@/components/auth/ContactEmailParts";
 import { WithdrawButton } from "@/components/me/WithdrawButton";
+import { StoredInfoList, saveOnDeviceNote } from "@/components/me/StoredInfo";
 import { MTabBar } from "@/components/layout/MTabBar";
 import { MTopBar } from "@/components/layout/MTopBar";
 import { MPage } from "@/components/layout/Responsive";
@@ -48,9 +49,11 @@ export function MMe() {
   const favorites = useFavorites();
   const reports = useMyReports();
   const replies = reports.items.filter((r) => r.reply).length;
-  // 웹 주소(/me?tab=reports …)로 들어오면 모바일 세부 화면으로
+  // 웹 주소(/me?tab=reports …)로 들어오면 모바일 세부 화면으로. PC 폭(lg, 1024px 이상)에서는 이 화면이 숨어 있어도
+  // 그려져 있어서(Responsive), 여기서 옮기면 웹 탭을 누를 때마다 /me/{tab}으로 다시 이동해 버벅이고 탭이 되돌아가요
   const tab = params.get("tab");
   useEffect(() => {
+    if (window.matchMedia("(min-width: 1024px)").matches) return;
     if (tab && ["favorites", "interests", "notifications", "reports"].includes(tab)) {
       const rest = new URLSearchParams(params.toString());
       rest.delete("tab");
@@ -144,7 +147,7 @@ export function MMe() {
           <div className={cn(row, "justify-between")}>
             <span className="flex flex-col gap-[2px]">
               <span className="text-[16px] font-semibold">이 기기에 조건 저장</span>
-              <span className="text-text-sub text-[13px]">소득·자산은 저장하지 않아요</span>
+              <span className="text-text-sub text-[13px]">{saveOnDeviceNote(saveOnDevice)}</span>
             </span>
             <Toggle checked={saveOnDevice} onChange={setSaveOnDevice} label="이 기기에 조건 저장" />
           </div>
@@ -168,6 +171,10 @@ export function MMe() {
             />
           </Link>
         </nav>
+
+        <section aria-label="저장된 정보" className="rounded-card bg-surface px-[18px] py-[14px]">
+          <StoredInfoList compact />
+        </section>
 
         <nav aria-label="고객센터" className="rounded-card bg-surface flex flex-col p-[6px]">
           {supportLinks.map((l) => (

@@ -7,6 +7,8 @@ export const routes = {
   /** 간편 로그인 뒤 돌아오는 곳 (백엔드가 보내요) */
   authCallback: "/auth/callback",
   welcome: "/welcome",
+  /** 회원 탈퇴를 마친 뒤 (백엔드가 보내요) */
+  withdrawn: "/withdrawn",
   profile: "/profile",
   home: "/home",
   benefits: "/benefits",
@@ -37,3 +39,14 @@ export const routes = {
 } as const;
 
 export type Mode = "home" | "business";
+
+/** 조건 입력 뒤 돌아갈 곳을 붙인 조건 입력 주소 (예: /homes에서 「조건 수정」) */
+export const profileThen = (next: string) => `${routes.profile}?next=${encodeURIComponent(next)}`;
+
+/** 돌아갈 곳으로 쓸 수 있는 앱 안 경로만 (「/」로 시작, 「//」·「/\\」·외부 주소는 버려요) */
+export function safeNext(value: string | null | undefined): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+    return null;
+  }
+  return value;
+}

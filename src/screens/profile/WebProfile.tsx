@@ -5,6 +5,7 @@ import { ArrowRight, Check, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import {
   ChipGroup,
+  HouseholdStepper,
   KidsStepper,
   PriorityChips,
   RankCriteriaFields,
@@ -23,6 +24,7 @@ import {
   useProfileForm,
   type ProfileForm,
 } from "@/features/profile/useProfileForm";
+import { useSession } from "@/features/auth/session";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 
@@ -33,6 +35,9 @@ const steps = [
 ];
 
 const help = "text-text-sub text-[13px] font-medium";
+
+/** 받기 전·실패면 「–」 */
+const count = (n: number | null) => (n === null ? "–" : n);
 const headerLink =
   "text-text-sub hover:text-text-sub inline-flex min-h-[44px] items-center gap-[4px] px-[12px] text-[15px] font-semibold no-underline";
 
@@ -42,6 +47,7 @@ function Step1({ form }: { form: ProfileForm }) {
       <BirthField
         value={form.field("birth").value}
         onChange={(birth) => form.field("birth").onChange({ target: { value: birth } })}
+        showProblem={form.birthBlocked}
         selectClassName={pSelect}
       />
       <SearchRegionsField form={form} selectClassName={pSelect} />
@@ -82,25 +88,22 @@ function Step2({ form }: { form: ProfileForm }) {
           <span className="text-[15px] font-bold">자녀 수</span>
           <KidsStepper form={form} />
         </div>
-        <label className={pLabel}>
-          함께 사는 가족 (나 포함)
-          <select className={cn(pSelect, "font-medium")} {...form.field("householdSize")}>
-            <SelectOptions
-              items={form.data.options.householdSize}
-              value={form.field("householdSize").value}
-            />
-          </select>
-        </label>
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[15px] font-bold">함께 사는 가족 (나 포함)</span>
+          <HouseholdStepper form={form} />
+        </div>
       </div>
       <label className={pLabel}>
         연소득 (세전)
         <UnitInput unit="만 원" placeholder="3,200" {...form.sessionField("income")} />
         <span className={help}>작년 원천징수영수증의 총급여를 넣으면 가장 정확해요</span>
       </label>
-      <label className={pLabel}>
-        자산 합계 (예금 · 자동차 · 부동산)
-        <UnitInput unit="만 원" placeholder="4,500" {...form.sessionField("asset")} />
-        <span className="text-text-sub flex items-center gap-[8px] text-[14px] font-medium">
+      <div className="flex flex-col gap-[8px]">
+        <label className={pLabel}>
+          자산 합계 (예금 · 자동차 · 부동산)
+          <UnitInput unit="만 원" placeholder="4,500" {...form.sessionField("asset")} />
+        </label>
+        <label className="text-text-sub flex cursor-pointer items-center gap-[8px] text-[14px] font-medium">
           <input
             type="checkbox"
             checked={form.assetUnknown}
@@ -108,8 +111,31 @@ function Step2({ form }: { form: ProfileForm }) {
             className="m-[3px_3px_3px_4px] size-[18px]"
           />{" "}
           잘 모르겠어요 · 자산 조건은 &apos;확인 필요&apos;로 보여주세요
+        </label>
+      </div>
+      <div className="flex flex-col gap-[8px]">
+        <label className={pLabel}>
+          자동차 가액
+          <UnitInput
+            unit="만 원"
+            placeholder="1,800"
+            disabled={form.noCar}
+            {...form.sessionField("car")}
+          />
+        </label>
+        <label className="text-text-sub flex cursor-pointer items-center gap-[8px] text-[14px] font-medium">
+          <input
+            type="checkbox"
+            checked={form.noCar}
+            onChange={(e) => form.setNoCar(e.target.checked)}
+            className="m-[3px_3px_3px_4px] size-[18px]"
+          />{" "}
+          차가 없어요
+        </label>
+        <span className={help}>
+          보험개발원 차량기준가액을 넣으면 가장 정확해요. 공고의 자동차가액 기준과 비교해요
         </span>
-      </label>
+      </div>
       <RankCriteriaFields form={form} />
     </div>
   );
@@ -161,13 +187,14 @@ function Step3({ form }: { form: ProfileForm }) {
 
 export function WebProfile() {
   const form = useProfileForm();
+  const session = useSession();
   const current = steps[form.step - 1];
   const primary =
     "rounded-control bg-brand inline-flex min-h-[56px] items-center gap-[8px] px-[26px] text-[17px] font-extrabold text-white";
 
   return (
     <div className="bg-bg text-text flex min-h-screen w-full flex-col">
-      <header className="border-line bg-surface border-b border-solid">
+      <header className="border-line bg-surface sticky top-0 z-20 border-b border-solid">
         <div className="mx-auto box-border flex min-h-[68px] w-full max-w-[1200px] items-center justify-between gap-[16px] px-[32px]">
           <Link
             href={routes.main}
@@ -178,9 +205,11 @@ export function WebProfile() {
             <span className="tracking-logo text-[19px] font-extrabold">무주택자들</span>
           </Link>
           <div className="flex items-center gap-[8px]">
-            <Link href={routes.login} className={headerLink}>
-              로그인
-            </Link>
+            {session.data === null && (
+              <Link href={routes.login} className={headerLink}>
+                로그인
+              </Link>
+            )}
             <Link href={routes.main} className={headerLink}>
               <X size={18} aria-hidden />
               나가기
@@ -287,29 +316,47 @@ export function WebProfile() {
           <aside className="flex min-w-0 flex-col gap-[16px]" style={{ flex: "1 1 280px" }}>
             <section
               aria-label="지금 조건으로"
+              aria-busy={form.preview.updating}
               className="rounded-card bg-surface flex flex-col gap-[14px] p-[24px]"
             >
               <span className="text-text-sub text-[15px] font-bold">지금 조건으로</span>
               <div className="flex items-baseline justify-between">
                 <span className="text-[15px]">지원 가능한 공고</span>
-                <span className="tracking-title text-[26px] font-extrabold">
-                  {form.preview.homes}곳
+                <span
+                  className={cn(
+                    "tracking-title text-[26px] font-extrabold",
+                    form.preview.updating && "opacity-50",
+                  )}
+                >
+                  {count(form.preview.homes)}곳
                 </span>
               </div>
               <div className="flex items-baseline justify-between">
                 <span className="text-[15px]">받을 수 있는 혜택</span>
-                <span className="tracking-title text-[26px] font-extrabold">
-                  {form.preview.benefits}개
+                <span
+                  className={cn(
+                    "tracking-title text-[26px] font-extrabold",
+                    form.preview.updating && "opacity-50",
+                  )}
+                >
+                  {count(form.preview.benefits)}개
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[15px]">확인 필요한 조건</span>
+                <span className="text-[15px]">확인이 필요한 공고</span>
                 <span className="rounded-badge bg-check-bg text-check-text px-[10px] py-[4px] text-[14px] font-extrabold">
-                  {form.preview.needCheck}개
+                  {count(form.preview.needCheck)}곳
                 </span>
               </div>
-              <span className="border-line-soft text-text-sub border-t border-solid pt-[12px] text-[13px]">
-                입력할수록 정확해져요
+              <span
+                role="status"
+                className="border-line-soft text-text-sub border-t border-solid pt-[12px] text-[13px]"
+              >
+                {form.preview.error
+                  ? "지금은 셀 수 없어요. 확인하기를 누르면 홈에서 볼 수 있어요"
+                  : form.preview.updating
+                    ? "바뀐 조건으로 세는 중이에요"
+                    : "입력할수록 정확해져요"}
               </span>
             </section>
 

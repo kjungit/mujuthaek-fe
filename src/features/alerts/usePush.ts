@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getPushSubscription, isPushSupported, subscribePush, unsubscribePush } from "@/lib/push";
+import { isPushSupported, subscribePush, unsubscribePush } from "@/lib/push";
 
 /**
  * 이 브라우저의 푸시 알림 구독 상태.
@@ -9,18 +9,28 @@ import { getPushSubscription, isPushSupported, subscribePush, unsubscribePush } 
  */
 export function usePush() {
   const [enabled, setEnabled] = useState(false);
+  /** 이 브라우저의 구독 여부를 다 확인했는지 (확인 전에는 enabled가 false예요) */
+  const [checked, setChecked] = useState(false);
   const [pending, setPending] = useState(false);
   /** 켜기에 실패한 이유 (화면에 보여 줘요) */
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isPushSupported()) return;
     let alive = true;
-    getPushSubscription()
+    // 지원하지 않거나 서비스 워커가 아직 없으면 구독 없음 (ready는 등록이 실패하면 끝나지 않아서 쓰지 않아요)
+    (isPushSupported()
+      ? navigator.serviceWorker
+          .getRegistration()
+          .then((r) => r?.pushManager.getSubscription() ?? null)
+      : Promise.resolve(null)
+    )
       .then((sub) => {
         if (alive) setEnabled(!!sub);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setChecked(true);
+      });
     return () => {
       alive = false;
     };
@@ -58,5 +68,5 @@ export function usePush() {
     }
   }, []);
 
-  return { enabled, pending, error, turnOn, turnOff };
+  return { enabled, checked, pending, error, turnOn, turnOff };
 }

@@ -4,7 +4,6 @@ import { reportHref } from "@/features/me/tabs";
 import Link from "next/link";
 import {
   ArrowRight,
-  BellRing,
   BriefcaseBusiness,
   Building,
   ChevronRight,
@@ -13,13 +12,9 @@ import {
   FileText,
   House,
   Landmark,
-  ListChecks,
   Lock,
-  MessageSquareWarning,
-  Scale,
   Sparkles,
   Store,
-  User,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -28,6 +23,8 @@ import { VerdictBadge } from "@/components/ui/Badge";
 import { useMainLanding } from "@/features/main/queries";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/features/auth/session";
+import { useStartLinks } from "@/features/main/start";
+import { faqs, howSteps, trust } from "@/features/main/landing";
 import { routes } from "@/lib/routes";
 import type { MainSourceGroup } from "@/mocks/main";
 
@@ -78,66 +75,11 @@ const judgeSteps = [
   },
 ];
 
-const howSteps: { icon: LucideIcon; title: string; desc: string }[] = [
-  {
-    icon: User,
-    title: "조건 입력",
-    desc: "나이, 거주지, 소득, 무주택 기간을 알려주세요. 모르는 칸은 비워도 돼요",
-  },
-  {
-    icon: ListChecks,
-    title: "판정 결과 확인",
-    desc: "지원 가능한 공고와 받을 수 있는 혜택을 판정 근거와 함께 보여드려요",
-  },
-  {
-    icon: BellRing,
-    title: "마감 전에 알림",
-    desc: "관심 등록한 공고와 혜택은 접수 시작과 마감 전에 알려드려요",
-  },
-];
-
 const sourceIcon: Record<MainSourceGroup["key"], LucideIcon> = {
   homes: House,
   policy: Landmark,
   business: BriefcaseBusiness,
 };
-
-const trust: { icon: LucideIcon; title: string; desc: string }[] = [
-  {
-    icon: Lock,
-    title: "소득·자산은 저장하지 않아요",
-    desc: "판정할 때만 쓰고 어디에도 저장하지 않아요. 나머지 조건은 이 기기에만 30일 동안 둬요",
-  },
-  {
-    icon: Scale,
-    title: "판정은 참고용이에요",
-    desc: "최종 자격은 공고 원문과 기관에서 정해져요. 그래서 원문 링크를 꼭 함께 보여드려요",
-  },
-  {
-    icon: MessageSquareWarning,
-    title: "틀린 정보는 바로 제보",
-    desc: "빠진 정책이나 판정 오류를 알려주시면 확인해서 반영해요",
-  },
-];
-
-const faqs = [
-  {
-    q: "회원가입을 해야 하나요?",
-    a: "아니요. 로그인 없이 조건을 입력하면 바로 결과를 볼 수 있어요. 관심 공고와 알림을 저장하고 싶을 때만 로그인하면 돼요.",
-  },
-  {
-    q: "판정 결과는 믿어도 되나요?",
-    a: "공고 원문을 바탕으로 판정하고 근거 문장을 함께 보여드려요. 다만 최종 자격은 기관 심사로 정해져서, 신청 전에 원문을 꼭 확인해 주세요.",
-  },
-  {
-    q: "어느 지역 공고까지 나오나요?",
-    a: "LH와 청약홈은 전국 공고를, 지방 공사는 서울·경기·인천·부산·대구·대전·울산·경북·경남 공고를 모아요.",
-  },
-  {
-    q: "새 공고는 얼마나 빨리 올라오나요?",
-    a: "평일 근무 시간에는 기관 게시판을 매시간 확인해요. 내 조건에 맞는 새 공고가 나오면 알림으로 알려드려요.",
-  },
-];
 
 function StatCard({
   icon: Icon,
@@ -165,12 +107,13 @@ function StatCard({
 export function WebMain() {
   // 로그인했으면 로그인 대신 이름 · 내 홈 (불러오는 동안은 둘 다 숨겨요)
   const { data: session } = useSession();
+  const links = useStartLinks();
   const { data } = useMainLanding();
   const { example, judgeExample } = data;
 
   return (
     <div className="bg-surface text-text flex min-h-screen w-full flex-col">
-      <header className="border-line-soft border-b border-solid">
+      <header className="border-line-soft bg-surface sticky top-0 z-20 border-b border-solid">
         <div
           className={cn(
             wrap,
@@ -245,10 +188,10 @@ export function WebMain() {
             </p>
             <div className="mt-[8px] flex flex-wrap gap-[10px]">
               <Link
-                href={routes.profile}
+                href={links.start.href}
                 className="rounded-control bg-brand inline-flex min-h-[60px] items-center gap-[8px] px-[26px] text-[18px] font-bold text-white no-underline hover:text-white"
               >
-                로그인 없이 시작하기
+                {links.start.label}
                 <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
               </Link>
               <a
@@ -259,10 +202,12 @@ export function WebMain() {
               </a>
             </div>
             <div className="text-text-sub flex flex-wrap gap-x-[20px] gap-y-[8px] text-[15px]">
-              <span className="inline-flex items-center gap-[6px]">
-                <CircleCheck size={18} className="text-brand" aria-hidden />
-                가입 없이 바로
-              </span>
+              {!session && (
+                <span className="inline-flex items-center gap-[6px]">
+                  <CircleCheck size={18} className="text-brand" aria-hidden />
+                  가입 없이 바로
+                </span>
+              )}
               <span className="inline-flex items-center gap-[6px]">
                 <Lock size={18} className="text-brand" aria-hidden />
                 소득·자산은 저장하지 않아요
@@ -308,7 +253,7 @@ export function WebMain() {
         <section aria-label="찾는 공간 고르기" className={cn(wrap, "pb-[96px]")}>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-[16px]">
             <Link
-              href={routes.profile}
+              href={links.homes}
               className="rounded-card-lg bg-brand-soft text-text hover:text-text flex items-center gap-[20px] px-[32px] py-[30px] no-underline"
             >
               <span className="bg-surface text-brand flex size-[64px] flex-none items-center justify-center rounded-[20px]">
@@ -591,14 +536,16 @@ export function WebMain() {
                 내 조건으로 지금 확인해보세요
               </span>
               <span className="text-brand-deep-text-2 text-[18px]">
-                가입 없이 바로, 받을 수 있는 집과 혜택부터
+                {session
+                  ? "받을 수 있는 집과 혜택부터 바로"
+                  : "가입 없이 바로, 받을 수 있는 집과 혜택부터"}
               </span>
             </div>
             <Link
-              href={routes.profile}
+              href={links.start.href}
               className="rounded-control bg-surface text-brand-strong hover:text-brand-strong inline-flex min-h-[60px] items-center gap-[8px] px-[28px] text-[18px] font-extrabold no-underline"
             >
-              로그인 없이 시작하기
+              {links.start.label}
               <ArrowRight size={20} strokeWidth={2.2} aria-hidden />
             </Link>
           </div>

@@ -3,7 +3,7 @@ import type { DeviceConditions, SessionConditions } from "./types";
 
 /**
  * 판정 입력 (POST 본문의 applicant). 서버로는 정확한 값 대신 구간만 보내요:
- * 생년월일 → 출생 연월, 기간 → 구간, 소득 → 기준 대비 % 구간(10% 단위), 자산 → 기준표 금액 사이.
+ * 생년월일 → 출생 연월, 기간 → 구간, 소득 → 기준 대비 % 구간(10% 단위), 자산·자동차 → 기준표 금액 사이.
  * 쓸 수 있는 돈은 보내지 않아요 (준비할 돈과 비교는 화면에서)
  */
 export type Applicant = {
@@ -21,6 +21,8 @@ export type Applicant = {
   income?: Partial<Record<IncomeStandard, PercentRange>>;
   incomeYear?: number;
   assets?: WonRange;
+  /** 자동차가액 구간 (기준값 carCutsWon 사이). 공고의 자동차가액 조건 판정에 써요 */
+  car?: WonRange;
   rankChecks?: string[];
 };
 
@@ -111,11 +113,22 @@ export function wonBand(won: number, cuts: number[]): WonRange {
   return i === 0 ? { leWon: sorted[0] } : { gtWon: sorted[i - 1], leWon: sorted[i] };
 }
 
-/** 가구원 수 "1명" · "4명 이상" → 1 · 4 */
-const householdSizeOf = (v: string) => {
-  const n = Number(v.replace(/\D/g, ""));
-  return n > 0 ? n : undefined;
-};
+/** 가구원 수 "1명" … "10명" → 1 … 10. 모르면 undefined */
+const householdSizeOf = (v: string) => (/^\d+명$/.test(v) ? Number.parseInt(v, 10) : undefined);
+
+/**
+ * 가구원 수별 표에서 월액 찾기. 표의 가장 큰 가구원 수보다 많으면 마지막 두 칸의 차이만큼 한 명마다 더해요
+ * (기준 중위소득 고시의 8인 이상 계산 방식, 서버 BaseValues와 같아요)
+ */
+export function amountForSize(table: Record<string, number> | null | undefined, size: number) {
+  if (!table) return undefined;
+  if (table[String(size)]) return table[String(size)];
+  const largest = Math.max(...Object.keys(table).map(Number));
+  const last = table[String(largest)];
+  const beforeLast = table[String(largest - 1)];
+  if (size < largest || !last || !beforeLast) return undefined;
+  return last + (last - beforeLast) * (size - largest);
+}
 
 /**
  * 저장한 조건 → 판정 입력. 기준값(criteria)이 없으면 소득·자산은 빼요 (그 조건은 확인 필요).
@@ -159,8 +172,8 @@ export function toApplicant(
   if (income !== null && size) {
     const monthly = income / 12;
     const bands: Applicant["income"] = {};
-    const median = criteria.medianIncomeMonthlyWon?.[String(size)];
-    const urban = criteria.urbanWorkerIncomeMonthlyWon?.[String(size)];
+    const median = amountForSize(criteria.medianIncomeMonthlyWon, size);
+    const urban = amountForSize(criteria.urbanWorkerIncomeMonthlyWon, size);
     if (median) bands.MEDIAN_INCOME = { ...percentBand(monthly, median), year: criteria.year };
     if (urban) {
       bands.URBAN_WORKER_INCOME = {
@@ -176,6 +189,11 @@ export function toApplicant(
   const asset = session.assetUnknown ? null : manWon(session.asset);
   if (asset !== null && criteria.assetCutsWon.length) {
     a.assets = wonBand(asset, criteria.assetCutsWon);
+  }
+  // 차가 없으면 0원. 값을 넣지 않았으면 보내지 않아요(자동차가액 조건은 '확인 필요')
+  const car = session.noCar ? 0 : manWon(session.car ?? "");
+  if (car !== null && criteria.carCutsWon.length) {
+    a.car = wonBand(car, criteria.carCutsWon);
   }
   return a;
 }

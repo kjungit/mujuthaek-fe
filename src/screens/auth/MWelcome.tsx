@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import {
+  AlertError,
   AlertToggle,
   ConditionTags,
   ConfirmCondButton,
@@ -47,6 +48,7 @@ export function MWelcome() {
             <span className="text-text-sub text-[14px] leading-[1.5]">
               새 공고와 관심 공고 마감 3일·1일 전에 알려드려요
             </span>
+            <AlertError setup={setup} />
           </span>
           <AlertToggle setup={setup} />
         </section>

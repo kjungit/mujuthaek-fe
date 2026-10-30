@@ -5,6 +5,7 @@ import { ReportButton } from "@/components/report/ReportButton";
 import { MFavoriteHeart } from "@/components/favorites/FavoriteButtons";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, MapPin } from "lucide-react";
 import { MBackHeader, MBottomActions } from "@/components/layout/MBackHeader";
 import { MPage } from "@/components/layout/Responsive";
 import { EligibilityCard } from "@/components/notice/EligibilityCard";
@@ -16,7 +17,15 @@ import { MRankCard } from "@/components/notice/RankCard";
 import { VerdictBadge } from "@/components/ui/Badge";
 import { dueText, formatPeriod, statusLabel, pdfSections } from "@/features/notice/format";
 import { useNoticeJudgment, withMine, type NoticeJudgment } from "@/features/notice/judgment";
-import { bySite, toUnit, useNoticeUnits } from "@/features/notice/units";
+import {
+  bySite,
+  directionsUrl,
+  scrollToVisible,
+  toUnit,
+  useNoticeUnits,
+} from "@/features/notice/units";
+import { SitesMap } from "@/components/notice/SitesMap";
+import { unitStatus, useUnitPicker } from "@/features/notice/useUnitPicker";
 import { UnitPrices } from "@/components/notice/UnitPrices";
 import type { StandardNotice } from "@/mocks/notice";
 import { noticeParams, useJudgmentViewed } from "@/features/notice/analytics";
@@ -33,26 +42,42 @@ const card = "rounded-card bg-surface mx-[16px] flex flex-col";
 /** 처음에 보여주는 집 수 */
 const MOBILE_UNIT_COUNT = 5;
 
-/** 실제 API 주택목록 (모바일은 목록만) */
+/** 실제 API 주택목록: 집을 고르면 가격 · 준비할 돈 · 생활권 · 길찾기 (웹 ApiBlockUnits와 같은 기능) */
 function MApiUnits({
   notice,
   judgment,
+  onShowLife,
 }: {
   notice: StandardNotice;
   judgment: NoticeJudgment | null;
+  onShowLife: (siteId: string) => void;
 }) {
   const q = useNoticeUnits(notice.id, true);
-  const [onlyOk, setOnlyOk] = useState(false);
   const [all, setAll] = useState(false);
   const sites = useMemo(() => notice.sites ?? [], [notice.sites]);
   const units = useMemo(
     () => (q.data?.pages ?? []).flatMap((p) => p.items.map((u) => toUnit(u, sites, judgment))),
     [q.data, sites, judgment],
   );
+  const {
+    onlyOk,
+    setOnlyOk,
+    shown: filtered,
+    selected,
+    select,
+    countAll,
+    countOk,
+  } = useUnitPicker(units);
   if (q.isPending || units.length === 0) return null;
-  const okCount = units.filter((u) => u.ok).length;
-  const filtered = onlyOk ? units.filter((u) => u.ok) : units;
   const shown = all ? filtered : filtered.slice(0, MOBILE_UNIT_COUNT);
+  const located = sites.some((s) => s.lat !== null && s.lng !== null);
+  const site = sites.find((s) => s.id === selected?.siteId);
+  const directions = directionsUrl(site);
+  // 필터를 바꾸면 처음 몇 집부터 다시 보여요
+  const filter = (ok: boolean) => {
+    setOnlyOk(ok);
+    setAll(false);
+  };
   const chip = (on: boolean) =>
     cn(
       "rounded-pill min-h-[36px] cursor-pointer border-0 px-[12px] text-[13px] font-bold",
@@ -61,27 +86,43 @@ function MApiUnits({
 
   return (
     <section aria-labelledby="units-h" className={cn(card, "gap-[10px] px-[20px] py-[16px]")}>
-      <h3 id="units-h" className="m-0 text-[17px] font-extrabold">
-        공급 주택 목록 <span className="text-brand">{units.length}곳</span>
-      </h3>
+      <div className="flex flex-col gap-[2px]">
+        <h3 id="units-h" className="m-0 text-[17px] font-extrabold">
+          공급 주택 목록 <span className="text-brand">{countAll}곳</span>
+        </h3>
+        <span className="text-text-sub text-[13px]">
+          집을 고르면 가격과 준비할 돈{located ? ", 지도 위치" : ""}를 보여드려요
+        </span>
+      </div>
       <div role="group" aria-label="목록 필터" className="flex gap-[6px]">
         <button
           type="button"
           aria-pressed={!onlyOk}
-          onClick={() => setOnlyOk(false)}
+          onClick={() => filter(false)}
           className={chip(!onlyOk)}
         >
-          전체 {units.length}
+          전체 {countAll}
         </button>
         <button
           type="button"
           aria-pressed={onlyOk}
-          onClick={() => setOnlyOk(true)}
+          onClick={() => filter(true)}
           className={chip(onlyOk)}
         >
-          신청 가능만 {okCount}
+          신청 가능만 {countOk}
         </button>
       </div>
+      {located && (
+        <SitesMap
+          sites={sites}
+          selectedSiteId={selected?.siteId}
+          onSelectSite={(siteId) => {
+            const first = units.find((u) => u.siteId === siteId);
+            if (first) select(first.id);
+          }}
+          className="rounded-tile h-[220px] w-full overflow-hidden"
+        />
+      )}
       {bySite(shown, filtered).map((g) => (
         <div key={g.key} className="flex flex-col gap-[8px]">
           {g.name && (
@@ -93,30 +134,40 @@ function MApiUnits({
             </h4>
           )}
           <ul aria-label={g.name} className="m-0 flex list-none flex-col gap-[8px] p-0">
-            {g.units.map((u) => (
-              <li
-                key={u.id}
-                className="bg-bg rounded-tile flex flex-col gap-[3px] px-[14px] py-[12px]"
-              >
-                <span className="flex items-center justify-between gap-[8px]">
-                  <span className="text-[15px] font-bold">
-                    {g.name ? (u.label ?? u.name) : u.name}
-                  </span>
-                  <span
+            {g.units.map((u) => {
+              const on = selected?.id === u.id;
+              return (
+                <li key={u.id}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => select(u.id)}
                     className={cn(
-                      "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
-                      u.ok ? "bg-ok-bg text-ok-text" : "bg-surface text-text-sub",
+                      "rounded-tile text-text flex w-full cursor-pointer flex-col gap-[3px] border-2 border-solid px-[14px] py-[12px] text-left",
+                      on ? "border-brand bg-brand-soft" : "bg-bg border-transparent",
                     )}
                   >
-                    {u.ok ? "신청 가능" : u.otherTarget}
-                  </span>
-                </span>
-                <span className="text-text-sub text-[13px]">
-                  {u.type} · {u.area} · {u.floor}
-                </span>
-                <UnitPrices unit={u} />
-              </li>
-            ))}
+                    <span className="flex items-center justify-between gap-[8px]">
+                      <span className="text-[15px] font-bold">
+                        {g.name ? (u.label ?? u.name) : u.name}
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded-badge flex-none px-[8px] py-[3px] text-[12px] font-bold",
+                          u.ok ? "bg-ok-bg text-ok-text" : "bg-surface text-text-sub",
+                        )}
+                      >
+                        {unitStatus(u)}
+                      </span>
+                    </span>
+                    <span className="text-text-sub text-[13px]">
+                      {u.type} · {u.area} · {u.floor}
+                    </span>
+                    <UnitPrices unit={u} />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))}
@@ -130,6 +181,69 @@ function MApiUnits({
           {q.isFetchingNextPage ? "불러오는 중" : "더 보기"}
         </button>
       )}
+      {selected && (
+        <div
+          aria-live="polite"
+          className="bg-bg flex flex-col gap-[6px] rounded-[18px] px-[16px] py-[14px]"
+        >
+          <span className="flex flex-wrap items-center gap-[6px]">
+            <span className="text-[16px] font-extrabold">{selected.name}</span>
+            <span
+              className={cn(
+                "rounded-badge px-[8px] py-[3px] text-[12px] font-bold",
+                selected.ok ? "bg-ok-bg text-ok-text" : "bg-surface text-text-sub",
+              )}
+            >
+              {unitStatus(selected)}
+            </span>
+          </span>
+          <span className="text-text-sub text-[13px]">
+            {[`${selected.type} ${selected.area}`, selected.floor, selected.station]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+          {selected.prices ? (
+            selected.prices.map((p) => (
+              <span key={p.target} className="text-[14px]">
+                <span className="text-text-sub mr-[6px] text-[13px]">{p.target}</span>
+                보증금 <strong>{p.deposit}</strong> · <strong>{p.rent}</strong>
+              </span>
+            ))
+          ) : (
+            <span className="text-[14px]">
+              보증금 <strong>{selected.deposit}</strong> · <strong>{selected.rent}</strong>
+            </span>
+          )}
+          <span className="text-[14px]">
+            준비할 돈 <strong className="text-brand-strong">{selected.prep}</strong>
+          </span>
+          {((selected.siteId && selected.lifeScore !== undefined) || directions) && (
+            <div className="grid grid-cols-2 gap-[8px] pt-[4px]">
+              {selected.siteId && selected.lifeScore !== undefined && (
+                <button
+                  type="button"
+                  onClick={() => onShowLife(selected.siteId!)}
+                  className="bg-surface text-text inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-[6px] rounded-sm border-0 text-[14px] font-bold"
+                >
+                  <MapPin size={16} aria-hidden />
+                  생활권 {selected.lifeScore}점
+                </button>
+              )}
+              {directions && (
+                <a
+                  href={directions}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-brand inline-flex min-h-[44px] items-center justify-center gap-[6px] rounded-sm text-[14px] font-bold text-white no-underline hover:text-white"
+                >
+                  <ArrowRight size={16} strokeWidth={2.2} aria-hidden />
+                  길찾기
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -139,6 +253,8 @@ export function MDetail({ id }: { id: string }) {
   const n = data?.kind === "standard" ? data : undefined;
   const j = useNoticeJudgment(n);
   const pdf = usePdfViewer();
+  const [lifeSite, setLifeSite] = useState<string>();
+  const [allBenefits, setAllBenefits] = useState(false);
   useJudgmentViewed(id, n);
   if (!n) {
     return (
@@ -157,7 +273,13 @@ export function MDetail({ id }: { id: string }) {
       </MPage>
     );
   }
-  const benefits = (n.benefits ?? []).slice(0, MOBILE_BENEFIT_COUNT);
+  const benefitsAll = n.benefits ?? [];
+  const benefits = allBenefits ? benefitsAll : benefitsAll.slice(0, MOBILE_BENEFIT_COUNT);
+  /** 주택목록에서 고른 집 단지의 생활권으로 (웹과 같아요) */
+  const showLife = (siteId: string) => {
+    setLifeSite(siteId);
+    scrollToVisible("life");
+  };
   const doc = withMine(n.doc, j.judgment?.mineTypes ?? []);
   const money = j.judgment?.money;
   const pdfUrl = doc.source.pdfUrl;
@@ -177,7 +299,7 @@ export function MDetail({ id }: { id: string }) {
             verdict={j.judgment?.verdict ?? "check"}
             rank={n.ranking?.myRank}
             due={dueText(n)}
-            tags={n.tags.slice(0, 1)}
+            tags={n.tags}
             size="md"
           />
           <h2 className="tracking-h1 m-0 text-[24px] font-extrabold">{n.title}</h2>
@@ -220,7 +342,7 @@ export function MDetail({ id }: { id: string }) {
             </span>
             {money.loan && (
               <span className="flex justify-between text-[15px]">
-                <span>{money.loanShortName}</span>
+                <span>{money.loanName}</span>
                 <span>− {money.loan}</span>
               </span>
             )}
@@ -240,9 +362,11 @@ export function MDetail({ id }: { id: string }) {
           onOpenOriginal={(page) => openOriginal(page ?? doc.pages.eligibility ?? 1, "신청 자격")}
         />
 
-        {n.hasUnits && <MApiUnits notice={n} judgment={j.judgment} />}
+        {n.hasUnits && <MApiUnits notice={n} judgment={j.judgment} onShowLife={showLife} />}
 
-        {n.life && <LifeCard life={n.life} variant="mobile" />}
+        {n.life && (
+          <LifeCard life={n.life} variant="mobile" siteId={lifeSite} onSiteChange={setLifeSite} />
+        )}
 
         {n.ranking && <MRankCard ranking={n.ranking} />}
 
@@ -253,9 +377,14 @@ export function MDetail({ id }: { id: string }) {
 
         {benefits.length > 0 && (
           <section aria-labelledby="bn-h" className={cn(card, "px-[20px] pt-[16px] pb-[6px]")}>
-            <h3 id="bn-h" className="mx-0 mt-0 mb-[6px] text-[17px] font-extrabold">
+            <h3 id="bn-h" className="mx-0 mt-0 mb-[2px] text-[17px] font-extrabold">
               입주하면 받을 수 있는 혜택
             </h3>
+            {n.benefitArea && (
+              <span className="text-text-tertiary mb-[4px] text-[13px]">
+                {n.benefitArea} · 내 조건 판정
+              </span>
+            )}
             {benefits.map((b, i) => (
               <Link
                 key={b.id}
@@ -272,6 +401,15 @@ export function MDetail({ id }: { id: string }) {
                 <VerdictBadge verdict={b.verdict} size="xs" className="flex-none" />
               </Link>
             ))}
+            {benefitsAll.length > benefits.length && (
+              <button
+                type="button"
+                onClick={() => setAllBenefits(true)}
+                className="text-text-sub min-h-[44px] cursor-pointer border-0 bg-transparent text-[14px] font-bold"
+              >
+                {benefitsAll.length - benefits.length}개 더 보기
+              </button>
+            )}
           </section>
         )}
 

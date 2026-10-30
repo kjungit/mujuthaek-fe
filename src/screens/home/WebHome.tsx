@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  BellRing,
   Building,
   ChevronRight,
   FileText,
@@ -15,10 +14,10 @@ import {
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebMain, WebPage } from "@/components/layout/Responsive";
 import { VerdictBadge } from "@/components/ui/Badge";
+import { DeadlineAlertPrompt } from "@/components/alerts/DeadlineAlertPrompt";
 import { WebNoConditionsState } from "@/components/states/NoConditionsState";
 import { useConditionSummary } from "@/features/conditions/useConditionSummary";
 import { useHomeSummary } from "@/features/home/queries";
-import { subscribePush } from "@/lib/push";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import type { HomeNewsItem } from "@/mocks/home";
@@ -152,9 +151,11 @@ export function WebHome() {
                         : "–"
                 }
                 note={
-                  data.benefits
-                    ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
-                    : "받을 수 있는 혜택을 판정하고 있어요"
+                  error
+                    ? "혜택을 불러오지 못했어요"
+                    : data.benefits
+                      ? `${data.benefits.count}개 · 확인 필요 ${data.benefits.needCheck}개`
+                      : "받을 수 있는 혜택을 판정하고 있어요"
                 }
               />
             </section>
@@ -270,25 +271,7 @@ export function WebHome() {
                   ))}
                 </section>
 
-                <section
-                  aria-label="알림 받기"
-                  className="rounded-card bg-surface flex items-center gap-[14px] px-[24px] py-[22px]"
-                >
-                  <span className="rounded-control bg-fill text-text flex size-[44px] flex-none items-center justify-center">
-                    <BellRing size={22} strokeWidth={1.8} aria-hidden />
-                  </span>
-                  <span className="flex flex-1 flex-col gap-[2px]">
-                    <span className="text-[16px] font-bold">마감 전에 알려드릴까요?</span>
-                    <span className="text-text-sub text-[14px]">관심 공고 D-3, D-1에 알림</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => subscribePush().catch(() => {})}
-                    className="bg-brand min-h-[40px] flex-none cursor-pointer rounded-[10px] border-0 px-[14px] text-[14px] font-bold text-white"
-                  >
-                    켜기
-                  </button>
-                </section>
+                <DeadlineAlertPrompt variant="web" />
               </aside>
             </div>
           </>

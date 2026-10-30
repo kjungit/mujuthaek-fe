@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { MLegalDetails, MLegalMain, MLegalTabs } from "@/components/content/Legal";
+import { MLegalMain, MLegalSection, MLegalTabs } from "@/components/content/Legal";
 import { MBackHeader } from "@/components/layout/MBackHeader";
 import { usePrivacy } from "@/features/content/queries";
 import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
-
-const MOBILE_HIGHLIGHT_COUNT = 2;
 
 export function MPrivacy() {
   const { data } = usePrivacy();
@@ -17,7 +15,14 @@ export function MPrivacy() {
       <MBackHeader title="개인정보처리방침" backHref={routes.me} />
       <MLegalMain>
         <MLegalTabs current="privacy" />
-        <span className="text-text-sub text-[14px]">{data.effective}</span>
+        <label className="text-text-sub flex items-center justify-between gap-[8px] text-[14px]">
+          {data.effective}
+          <select className="bg-fill text-text min-h-[40px] rounded-[10px] border-0 px-[10px] text-[14px] font-semibold">
+            {data.versions.map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
+        </label>
         <Link
           href={data.upcoming.href}
           className="rounded-control bg-check-bg text-check-text hover:text-check-text px-[14px] py-[12px] text-[14px] leading-[1.5] font-bold no-underline"
@@ -25,7 +30,7 @@ export function MPrivacy() {
           {data.upcoming.mobile}
         </Link>
         <div className="flex flex-col gap-[8px]">
-          {data.highlights.slice(0, MOBILE_HIGHLIGHT_COUNT).map((h) => (
+          {data.highlights.map((h) => (
             <div
               key={h.title}
               className={cn(
@@ -47,14 +52,10 @@ export function MPrivacy() {
             </div>
           ))}
         </div>
-        {data.mobileSections.map((s) => (
-          <MLegalDetails key={s.title} section={s} />
+        {data.sections.map((s, i) => (
+          <MLegalSection key={s.id} section={s} open={i === 0} />
         ))}
-        <section className="bg-bg rounded-tile flex flex-col gap-[6px] p-[16px]">
-          <span className="text-text text-[16px] font-extrabold">{data.officer.title}</span>
-          <span className="text-[14px]">{data.officer.line}</span>
-          <span className="text-text-sub text-[13px] leading-[1.6]">{data.officer.note}</span>
-        </section>
+        <span className="text-text-sub text-[13px]">{data.closing.web}</span>
       </MLegalMain>
     </div>
   );

@@ -59,16 +59,26 @@ type LegacyDevice = Partial<{
   workplace: string;
 }>;
 
-/** 예전 조건 정리: 이름으로 저장한 지역 → 코드, 지금은 받지 않는 칸(직장 위치)은 버려요 */
+/**
+ * 예전 조건 정리: 이름으로 저장한 지역 → 코드, 지금은 받지 않는 칸(직장 위치)은 버려요. 찾아볼 지역은 한 곳만 (예전엔 3곳까지).
+ * 예전 가구원 수 「4명 이상」은 4명인지 그보다 많은지 몰라서 비워요 (다시 고를 때까지 소득 조건은 확인 필요)
+ */
 function migrateDevice(raw: DeviceConditions & LegacyDevice): DeviceConditions {
   const { sido, sigungu, searchRegions, ...rest } = raw;
   delete rest.workplace;
-  if (typeof rest.regionCode === "string" && Array.isArray(rest.searchRegionCodes)) return rest;
+  if (typeof rest.householdSize === "string" && rest.householdSize.includes("이상")) {
+    rest.householdSize = "";
+  }
+  if (typeof rest.regionCode === "string" && Array.isArray(rest.searchRegionCodes))
+    return { ...rest, searchRegionCodes: rest.searchRegionCodes.slice(0, 1) };
   const toCode = (p: LegacyPlace) => snapshotRegions.codeByNames(p.sido, p.sigungu);
   return {
     ...rest,
     regionCode: (sido && toCode({ sido, sigungu: sigungu ?? "" })) || "",
-    searchRegionCodes: (searchRegions ?? []).map(toCode).filter((c): c is string => Boolean(c)),
+    searchRegionCodes: (searchRegions ?? [])
+      .map(toCode)
+      .filter((c): c is string => Boolean(c))
+      .slice(0, 1),
   };
 }
 

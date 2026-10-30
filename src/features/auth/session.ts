@@ -3,10 +3,12 @@
 // 로그인 상태: 쿠키의 refresh token으로 access token을 받고 내 정보(GET /api/users/me)를 불러와요.
 // 로그인하지 않았으면(401) null. 화면은 이걸로 로그인/내 홈을 나눠 보여줘요
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect } from "react";
 import { api, ApiError, authToken } from "@/lib/api/client";
 import { USE_MOCKS } from "@/lib/api/config";
 import { endpoints } from "@/lib/api/endpoints";
+import { routes } from "@/lib/routes";
 
 /** GET /api/users/me (백엔드 MeResponse) */
 export type Session = {
@@ -70,3 +72,12 @@ export const providerLabel: Record<string, string> = {
   NAVER: "네이버",
   GOOGLE: "구글",
 };
+
+/** 로그인 화면: 이미 로그인했으면 로그인 버튼 대신 내 홈으로 보내요 */
+export function useLeaveIfLoggedIn() {
+  const { data } = useSession();
+  const router = useRouter();
+  useEffect(() => {
+    if (data) router.replace(routes.home);
+  }, [data, router]);
+}
