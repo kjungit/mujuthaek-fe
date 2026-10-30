@@ -113,7 +113,8 @@ export function AdminWebPolicyDuplicates({ head }: { head: React.ReactNode }) {
         </div>
       )}
 
-      <div className="flex flex-col gap-[16px]">
+      {/* 화면 높이에 고정하고 칸 안에서 스크롤해요(검수·정보 제보와 같은 방식). 건수가 적어 한 번에 받아요 */}
+      <div className="flex h-[max(560px,calc(100dvh-210px))] flex-col gap-[16px] overflow-y-auto overscroll-contain">
         {items.map((d) => (
           <section
             key={keyOf(d)}

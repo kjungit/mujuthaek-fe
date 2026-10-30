@@ -96,17 +96,6 @@ type NoticeReviewDetail = {
   impact: string | null;
   log: { at: string; who: string; text: string }[];
 };
-type BenefitReviewList = {
-  items: {
-    id: string;
-    title: string;
-    reasons: string[];
-    reported: boolean;
-    sourceCode: string | null;
-    rawVersion: number;
-    queuedAt: string;
-  }[];
-};
 type BenefitCondition = {
   type: string;
   value: unknown;
@@ -527,10 +516,10 @@ const REVIEW_REASON_API: Record<ReviewReason, string> = {
   format: "FORMAT",
 };
 /** 대기열 한 번에 받는 건수 (백엔드 최대 100) */
-const QUEUE_PAGE_SIZE = 50;
+const QUEUE_PAGE_SIZE = 20;
 
 /**
- * 검수 대기열 한 페이지: 공고·혜택 검수를 들어온 시각 순으로 섞어 50건씩 받아요(무한 스크롤). 원문·추출 결과는 고른 건만
+ * 검수 대기열 한 페이지: 공고·혜택 검수를 들어온 시각 순으로 섞어 20건씩 받아요(무한 스크롤). 원문·추출 결과는 고른 건만
  * {@link liveReviewDetail}로 받아요. kinds는 내 권한으로 볼 수 있는 종류(NOTICE·BENEFIT)예요
  */
 export async function liveReviewQueuePage(
@@ -690,11 +679,9 @@ export async function liveReports(): Promise<{
   newBefore: number;
   items: ReportItem[];
 }> {
+  // 상세(제보 설명·같은 묶음 설명·답장)는 고른 제보만 받아요(liveReportDetail). 목록마다 상세를 다 받으면 요청이 100번 넘게 나가요
   const list = await api.get<ReportList>("/api/admin/reports");
-  const details = await Promise.all(
-    list.items.map((i) => api.get<ReportDetail>(`/api/admin/reports/${i.id}`)),
-  );
-  const items: (ReportItem & { at: string })[] = list.items.map((r, i) => ({
+  const items: (ReportItem & { at: string })[] = list.items.map((r) => ({
     at: r.createdAt,
     id: r.id,
     st: STATUS[r.status] ?? "new",
@@ -707,7 +694,7 @@ export async function liveReports(): Promise<{
     general: r.targetType === "GENERAL",
     current: r.currentValue ?? "-",
     reported: r.reportedValue ?? "-",
-    source: details[i].note ?? r.summary ?? "-", // 화면에서는 「제보 설명」으로 보여요(기관 원문이 아님)
+    source: r.summary ?? "-", // 화면에서는 「제보 설명」으로 보여요(기관 원문이 아님). 상세를 받으면 그 설명으로
     summary: r.summary ?? r.field,
     age: ago(r.createdAt),
     groupCount: r.groupCount,
@@ -721,11 +708,8 @@ export async function liveReports(): Promise<{
         : r.programId
           ? `${routes.bizSupport}/${r.programId}`
           : "",
-    notes: (details[i].notes ?? []).map((n) => ({
-      text: n.text,
-      meta: `사용자 · ${when(n.createdAt)}`,
-    })),
-    reply: details[i].reply ?? "",
+    notes: [],
+    reply: "",
   }));
   items.push(...(await liveAreaReports()));
   items.sort((a, b) => b.at.localeCompare(a.at)); // 공고·생활권 제보를 들어온 차례(최근 먼저)로
@@ -759,10 +743,7 @@ export const isAreaReport = (id: string) => id.startsWith(AREA_REPORT);
 
 async function liveAreaReports(): Promise<(ReportItem & { at: string })[]> {
   const list = await api.get<AreaReportList>("/api/admin/area-reports");
-  const [details, notices] = await Promise.all([
-    Promise.all(
-      list.items.map((i) => api.get<AreaReportDetail>(`/api/admin/area-reports/${i.id}`)),
-    ),
+  const [notices] = await Promise.all([
     // 생활권 제보는 공고 제목을 주지 않아 공고 상세에서 제목·단지 이름을 찾아요
     Promise.all(
       [...new Set(list.items.map((i) => i.noticeId))].map((id) =>
@@ -776,7 +757,7 @@ async function liveAreaReports(): Promise<(ReportItem & { at: string })[]> {
       ),
     ).then((rows) => new Map(rows)),
   ]);
-  return list.items.map((r, i) => {
+  return list.items.map((r) => {
     const notice = notices.get(r.noticeId);
     const site = notice?.sites.find((s) => s.id === r.noticeLocationId)?.name;
     return {
@@ -788,18 +769,126 @@ async function liveAreaReports(): Promise<(ReportItem & { at: string })[]> {
       field: r.field,
       current: r.currentValue ?? "-",
       reported: r.reportedValue ?? "-",
-      source: details[i].note ?? r.summary ?? "-",
+      source: r.summary ?? "-",
       summary: r.summary ?? r.field,
       age: ago(r.createdAt),
       groupCount: r.groupCount,
       link: routes.notice(r.noticeId),
-      notes: (details[i].notes ?? []).map((n) => ({
-        text: n.text,
-        meta: `사용자 · ${when(n.createdAt)}`,
-      })),
-      reply: details[i].reply ?? "",
+      notes: [],
+      reply: "",
     };
   });
+}
+
+// ---------- 제보 대기열 (무한 스크롤) ----------
+const REPORT_PAGE_SIZE = 20;
+const REPORT_STATUS_API: Record<ReportStatus, string> = {
+  new: "NEW",
+  doing: "DOING",
+  done: "DONE",
+};
+
+type ReportQueueApiPage = {
+  items: {
+    kind: "REPORT" | "AREA";
+    id: string;
+    status: string;
+    screen: string | null;
+    targetType: string;
+    noticeId: string | null;
+    programId: string | null;
+    benefitPolicyId: string | null;
+    benefitId: string | null;
+    title: string | null;
+    field: string;
+    currentValue: string | null;
+    reportedValue: string | null;
+    summary: string | null;
+    createdAt: string;
+    groupCount: number;
+  }[];
+  nextCursor: string | null;
+};
+
+/**
+ * 제보 대기열 한 페이지: 공고·혜택·사업 제보와 생활권 제보를 서버가 최신순으로 섞어 20건씩 줘요(상태마다 따로).
+ * 설명·같은 묶음 설명·답장은 고른 제보만 받아요({@link liveReportDetail}).
+ */
+export async function liveReportQueuePage(
+  status: ReportStatus,
+  cursor: string | null,
+): Promise<{ items: ReportItem[]; nextCursor: string | null }> {
+  const q = new URLSearchParams({
+    status: REPORT_STATUS_API[status],
+    size: String(REPORT_PAGE_SIZE),
+  });
+  if (cursor) q.set("cursor", cursor);
+  const page = await api.get<ReportQueueApiPage>(`/api/admin/reports/queue?${q}`);
+  const items = page.items.map((r): ReportItem => {
+    const area = r.kind === "AREA";
+    const general = r.targetType === "GENERAL";
+    return {
+      id: area ? AREA_REPORT + r.id : r.id,
+      st: STATUS[r.status] ?? "new",
+      where: `${r.screen ?? "-"} · ${area ? "생활권" : (reportTargetLabel[r.targetType] ?? "공고")}`,
+      target: general
+        ? (generalKindLabel[r.field] ?? "일반 제보")
+        : (r.title ?? (area ? "공고" : "-")),
+      field: general ? (generalKindLabel[r.field] ?? r.field) : r.field,
+      general,
+      current: r.currentValue ?? "-",
+      reported: r.reportedValue ?? "-",
+      source: r.summary ?? "-", // 상세를 받으면 그 설명으로
+      summary: r.summary ?? r.field,
+      age: ago(r.createdAt),
+      groupCount: r.groupCount,
+      // 「원문 보기」: 공고 · 혜택(혜택 ID, 아직 없으면 혜택 목록) · 사업 지원 상세
+      link: r.noticeId
+        ? routes.notice(r.noticeId)
+        : r.benefitPolicyId
+          ? r.benefitId
+            ? routes.benefit(r.benefitId)
+            : routes.benefits
+          : r.programId
+            ? `${routes.bizSupport}/${r.programId}`
+            : "",
+      notes: [],
+      reply: "",
+    };
+  });
+  return { items, nextCursor: page.nextCursor };
+}
+
+/** 제보 상태별 건수: 공고·혜택·사업 제보와 생활권 제보를 더해요 */
+export async function liveReportCounts(): Promise<{ new: number; doing: number; done: number }> {
+  type Counts = { newCount: number; doing: number; done: number };
+  const [r, a] = await Promise.all([
+    api.get<Counts>("/api/admin/reports/counts"),
+    api.get<Counts>("/api/admin/area-reports/counts").catch(() => null),
+  ]);
+  return {
+    new: r.newCount + (a?.newCount ?? 0),
+    doing: r.doing + (a?.doing ?? 0),
+    done: r.done + (a?.done ?? 0),
+  };
+}
+
+/**
+ * 고른 제보 하나의 상세: 제보 설명(없으면 요약), 같은 묶음의 다른 제보 설명, 저장된 답장. 공고 제보·생활권 제보(id 앞 「area:」) 모두.
+ * 목록은 이 값 없이 받고(요청 한 번), 화면이 고른 제보만 이걸로 채워요.
+ */
+export async function liveReportDetail(
+  id: string,
+  summary: string,
+): Promise<Pick<ReportItem, "source" | "notes" | "reply">> {
+  const d = isAreaReport(id)
+    ? await api.get<AreaReportDetail>(`/api/admin/area-reports/${id.slice(AREA_REPORT.length)}`)
+    : await api.get<ReportDetail>(`/api/admin/reports/${id}`);
+  return {
+    source: d.note ?? summary,
+    notes: (d.notes ?? []).map((n) => ({ text: n.text, meta: `사용자 · ${when(n.createdAt)}` })),
+    reply: d.reply ?? "",
+  };
 }
 
 /** 처리 끝: 고침(FIXED)·그대로(KEPT)와 답장. 처리 시작 전이면 먼저 시작해요. */
@@ -825,18 +914,20 @@ export async function liveCounts(): Promise<AdminCounts> {
   const settle = <T>(p: Promise<T>) => p.catch(() => null);
   const [n, b, r, area, src, chat, dup] = await Promise.all([
     settle(api.get<{ reviewPending: number }>("/api/admin/reviews/counts")),
-    settle(api.get<BenefitReviewList>("/api/admin/benefit-reviews")),
+    // 혜택은 건수만 받아요(목록 전체를 받아 세지 않게)
+    settle(api.get<{ benefitPending: number }>("/api/admin/benefit-reviews/counts")),
     settle(api.get<{ newCount: number }>("/api/admin/reports/counts")),
     settle(api.get<{ newCount: number }>("/api/admin/area-reports/counts")),
     settle(api.get<CollectorStatus>("/api/admin/sources")),
-    settle(chatReportPage("PENDING")),
+    // 채팅 신고는 숫자 API만 받아요(신고 100건을 받아 글 수를 세지 않게)
+    settle(api.get<{ pendingMessages: number }>("/api/admin/chat/reports/counts")),
     settle(api.get<{ pending: number }>("/api/admin/policy-duplicates/counts")),
   ]);
   return {
-    reviewPending: n && b ? n.reviewPending + b.items.length : null,
+    reviewPending: n && b ? n.reviewPending + b.benefitPending : null,
     sourceIssues: src ? src.summary.fail + src.summary.late + src.summary.paused : null,
     newReports: r ? r.newCount + (area?.newCount ?? 0) : null,
-    chatReports: chat ? new Set(chat.items.map((x) => x.messageId)).size : null,
+    chatReports: chat ? chat.pendingMessages : null,
     policyDuplicates: dup ? dup.pending : null,
   };
 }
@@ -848,7 +939,7 @@ export async function liveOverview(base: AdminOverview): Promise<AdminOverview> 
     api
       .get<{ reviewPending: number; oldestReceivedAt: string | null }>("/api/admin/reviews/counts")
       .catch(none),
-    api.get<BenefitReviewList>("/api/admin/benefit-reviews").catch(none),
+    api.get<{ benefitPending: number }>("/api/admin/benefit-reviews/counts").catch(none),
     api
       .get<{ newCount: number; doing: number; done: number }>("/api/admin/reports/counts")
       .catch(none),
@@ -921,7 +1012,7 @@ export async function liveOverview(base: AdminOverview): Promise<AdminOverview> 
       minute: "2-digit",
     }),
     review: n
-      ? { count: n.reviewPending + (b?.items.length ?? 0), oldest: span(n.oldestReceivedAt) }
+      ? { count: n.reviewPending + (b?.benefitPending ?? 0), oldest: span(n.oldestReceivedAt) }
       : { count: null, oldest: FAILED },
     reports: reports
       ? {
@@ -1230,10 +1321,20 @@ export function liveBotTraffic(days: number) {
 // ---------- 채팅 신고 (백엔드 chat 모듈) ----------
 type ChatReportPage = { items: ChatReport[]; nextCursor: string | null; hasNext: boolean };
 
-const chatReportPage = (status: ChatReviewStatus, cursor?: string) =>
+const chatReportPage = (status: ChatReviewStatus, cursor?: string, size = 100) =>
   api.get<ChatReportPage>(
-    `/api/admin/chat/reports?status=${status}&size=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+    `/api/admin/chat/reports?status=${status}&size=${size}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
   );
+
+/**
+ * 채팅 신고 한 페이지(20건, 무한 스크롤)와 그 페이지에 나온 공고의 제목. 화면은 받아 둔 페이지를 모두 모아 글마다 묶어요
+ * ({@link groupChatReports}): 한 글의 신고가 다음 페이지에 이어지면 그 글 묶음에 더해져요.
+ */
+export async function liveChatReportPage(status: ChatReviewStatus, cursor: string | null) {
+  const page = await chatReportPage(status, cursor ?? undefined, 20);
+  const titles = await noticeTitles([...new Set(page.items.map((r) => r.noticeId))]);
+  return { reports: page.items, titles, nextCursor: page.hasNext ? page.nextCursor : null };
+}
 
 /** 상태별 신고를 모두 받아요(한 번에 100건, 최대 500건) */
 async function allChatReports(status: ChatReviewStatus) {
