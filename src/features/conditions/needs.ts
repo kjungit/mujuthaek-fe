@@ -5,8 +5,8 @@ import { routes } from "@/lib/routes";
  * 화면에 입력 칸을 새로 만들면 여기에도 넣어 주세요.
  */
 const PROFILE_INPUTS = new Set([
-  "birthMonth",
-  "birthDate", // 사업공간·사업 지원: 출생 정보가 아예 없을 때만 와요
+  "birthDate",
+  "birthMonth", // 예전 서버: 출생 연월로 판정할 때 와요
   "regionCode",
   "residenceRegionCode",
   "householdHead",

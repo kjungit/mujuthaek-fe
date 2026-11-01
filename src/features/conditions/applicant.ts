@@ -2,12 +2,13 @@ import type { Criteria } from "@/features/eligibility/criteria";
 import type { DeviceConditions, SessionConditions } from "./types";
 
 /**
- * 판정 입력 (POST 본문의 applicant). 서버로는 정확한 값 대신 구간만 보내요:
- * 생년월일 → 출생 연월, 기간 → 구간, 소득 → 기준 대비 % 구간(10% 단위), 자산·자동차 → 기준표 금액 사이.
+ * 판정 입력 (POST 본문의 applicant). 나이는 생년월일로 정확히 판정하도록 생년월일을 보내요 (서버는 저장하지 않아요).
+ * 나머지는 정확한 값 대신 구간만 보내요: 기간 → 구간, 소득 → 기준 대비 % 구간(10% 단위), 자산·자동차 → 기준표 금액 사이.
  * 쓸 수 있는 돈은 보내지 않아요 (준비할 돈과 비교는 화면에서)
  */
 export type Applicant = {
-  birthMonth?: string;
+  /** 생년월일 "1997-03-15" */
+  birthDate?: string;
   regionCode?: string;
   householdHead?: boolean;
   householdSize?: number;
@@ -91,10 +92,20 @@ export function judgeRegionCode(code: string | null | undefined) {
   return /^\d{2}$/.test(code) ? `${code}000` : code;
 }
 
-/** "1997.03.15" → "1997-03". 해·달을 다 모르면 없음 */
-export function birthMonthOf(birth: string) {
-  const [y = "", m = ""] = birth.split(".");
-  return /^\d{4}$/.test(y) && /^(0[1-9]|1[0-2])$/.test(m) ? `${y}-${m}` : undefined;
+/**
+ * 저장한 생년월일 "1997.03.15" (예전 "19970315" · "1997-03-15"도) → "1997-03-15".
+ * 없는 날이거나 앞날이면 없음 (서버가 요청 전체를 400으로 막지 않게요)
+ */
+export function birthDateOf(birth: string, today = new Date()) {
+  const match = /^(\d{4})[.-]?(\d{2})[.-]?(\d{2})$/.exec(birth.trim());
+  if (!match) return undefined;
+  const [, y, m, d] = match;
+  const date = new Date(Number(y), Number(m) - 1, Number(d));
+  const real =
+    date.getFullYear() === Number(y) &&
+    date.getMonth() === Number(m) - 1 &&
+    date.getDate() === Number(d);
+  return real && date <= today ? `${y}-${m}-${d}` : undefined;
 }
 
 /** 월 소득이 기준 월액의 몇 % 구간인지 (10% 단위: 90 초과 ~ 100 이하) */
@@ -145,7 +156,7 @@ export function toApplicant(
   const months = subscriptionMonths[device.bankbookPeriod];
   const payments = device.paymentCount.replace(/\D/g, "");
   const a: Applicant = {
-    birthMonth: birthMonthOf(device.birth),
+    birthDate: birthDateOf(device.birth),
     regionCode: judgeRegionCode(device.regionCode),
     householdHead: device.head === "head",
     householdSize: size,
