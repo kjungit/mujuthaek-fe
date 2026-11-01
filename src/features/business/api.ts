@@ -13,7 +13,7 @@ import {
   type BizSession,
   type BusinessApplicant,
 } from "@/features/business/profile";
-import { birthMonthOf, judgeRegionCode } from "@/features/conditions/applicant";
+import { birthDateOf, judgeRegionCode } from "@/features/conditions/applicant";
 import { inputHrefOf } from "@/features/conditions/needs";
 import { useConditions } from "@/features/conditions/store";
 import type { DeviceConditions } from "@/features/conditions/types";
@@ -162,9 +162,10 @@ export type ApiSupportSearch = {
 /** POST /api/v1/supports/{id}/evaluate (백엔드 SupportEvaluationResponse). 판정 응답 모양은 사업공간과 같아요 */
 type ApiSupportEvaluation = Omit<ApiSpaceEvaluation, "policy"> & { subField: ApiSubField };
 
-/** 판정 입력 (판정 엔진 모양): 출생 연월 · 사는 곳 + 사업 정보. 생년월일 대신 연월만 보내요 (구간만 보내는 원칙) */
+/** 판정 입력 (판정 엔진 모양): 생년월일 · 사는 곳 + 사업 정보. 나이를 정확히 판정하도록 생년월일을 보내요 (서버는 저장하지 않아요) */
 type SpaceApplicant = {
-  birthMonth?: string;
+  /** 생년월일 "1997-03-15" */
+  birthDate?: string;
   residenceRegionCode?: string;
   business?: BusinessApplicant;
   /** 신청 제한 사유 코드. 해당 없음이면 빈 목록, 안 골랐으면 보내지 않아요 */
@@ -268,7 +269,7 @@ function applicantOf(
   session: BizSession,
 ): SpaceApplicant {
   return {
-    birthMonth: device ? birthMonthOf(device.birth) : undefined,
+    birthDate: device ? birthDateOf(device.birth) : undefined,
     residenceRegionCode: judgeRegionCode(device?.regionCode),
     business: profile ? toBusinessApplicant(profile, session.revenue) : undefined,
     restrictions: session.restrictions ?? undefined,
